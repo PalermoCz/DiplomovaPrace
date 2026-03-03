@@ -130,6 +130,23 @@ public class InMemoryBuildingConfigurationService : IBuildingConfigurationServic
         return Task.FromResult(result!);
     }
 
+    public Task<FloorConfig> UpdateFloorDimensionsAsync(
+        string buildingId, string floorId, double width, double height)
+    {
+        FloorConfig? result = null;
+        MutateBuilding(buildingId, b =>
+        {
+            var floors = b.Floors.Select(f =>
+            {
+                if (f.Id != floorId) return f;
+                result = f with { ViewBoxWidth = width, ViewBoxHeight = height, UpdatedAt = Now() };
+                return result;
+            }).ToList();
+            return b with { Floors = floors, UpdatedAt = Now() };
+        });
+        return Task.FromResult(result!);
+    }
+
     public Task DeleteFloorAsync(string buildingId, string floorId)
     {
         MutateBuilding(buildingId, b => b with
@@ -219,6 +236,7 @@ public class InMemoryBuildingConfigurationService : IBuildingConfigurationServic
             Type: type,
             Position: position,
             DisplaySettings: DeviceDisplaySettings.CreateDefault(type),
+            Consumption: DefaultConsumption(type),
             CreatedAt: Now(),
             UpdatedAt: Now(),
             IsDeleted: false
@@ -243,12 +261,20 @@ public class InMemoryBuildingConfigurationService : IBuildingConfigurationServic
     }
 
     public Task<DeviceConfig> UpdateDevicePropertiesAsync(
-        string deviceId, string name, DeviceType type, DeviceDisplaySettings displaySettings)
+        string deviceId, string name, DeviceType type, DeviceDisplaySettings displaySettings,
+        double consumption)
     {
         DeviceConfig? result = null;
         MutateDevice(deviceId, d =>
         {
-            result = d with { Name = name, Type = type, DisplaySettings = displaySettings, UpdatedAt = Now() };
+            result = d with
+            {
+                Name = name,
+                Type = type,
+                DisplaySettings = displaySettings,
+                Consumption = consumption,
+                UpdatedAt = Now()
+            };
             return result;
         });
         return Task.FromResult(result!);
@@ -300,6 +326,18 @@ public class InMemoryBuildingConfigurationService : IBuildingConfigurationServic
     private static DateTime Now() => DateTime.UtcNow;
     private void Notify() => OnConfigurationChanged?.Invoke();
 
+    /// <summary>Výchozí spotřeba v Wattech dle typu zařízení.</summary>
+    private static double DefaultConsumption(DeviceType type) => type switch
+    {
+        DeviceType.Light             => 100.0,
+        DeviceType.HVAC              => 1500.0,
+        DeviceType.TemperatureSensor => 5.0,
+        DeviceType.HumiditySensor    => 5.0,
+        DeviceType.MotionSensor      => 5.0,
+        DeviceType.DoorSensor        => 3.0,
+        _                            => 0.0
+    };
+
     /// <summary>Atomicky zamění BuildingConfig dle transformační funkce. Vrací nový stav.</summary>
     private BuildingConfig MutateBuilding(string buildingId, Func<BuildingConfig, BuildingConfig> mutate)
     {
@@ -314,7 +352,7 @@ public class InMemoryBuildingConfigurationService : IBuildingConfigurationServic
                 Notify();
                 return updated;
             }
-            // Jiný vlákno změnil záznam — opakuj (CAS loop)
+            // Jiné vlákno změnilo záznam — opakuj (CAS loop)
         }
     }
 
@@ -445,6 +483,7 @@ public class InMemoryBuildingConfigurationService : IBuildingConfigurationServic
                     Type: d.Type,
                     Position: d.Position,
                     DisplaySettings: DeviceDisplaySettings.CreateDefault(d.Type),
+                    Consumption: DefaultConsumption(d.Type),
                     CreatedAt: now,
                     UpdatedAt: now,
                     IsDeleted: false)).ToList(),

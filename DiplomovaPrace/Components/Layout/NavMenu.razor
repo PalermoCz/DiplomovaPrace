@@ -1,6 +1,11 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+@rendermode InteractiveServer
+@inject IBuildingConfigurationService ConfigService
+@inject IActiveBuildingService ActiveBuildingService
+@implements IDisposable
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">DiplomovaPrace</a>
+        <a class="navbar-brand" href="">IoT Vizualizace</a>
     </div>
 </div>
 
@@ -8,15 +13,10 @@
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
 
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="building">
-                <span class="bi bi-building-nav-menu" aria-hidden="true"></span> Budova
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-building-nav-menu" aria-hidden="true"></span> Vizualizace
             </NavLink>
         </div>
 
@@ -25,6 +25,66 @@
                 <span class="bi bi-pencil-square" aria-hidden="true"></span> Editor
             </NavLink>
         </div>
+
+        @if (_buildings.Count > 0)
+        {
+            <div class="nav-item px-3 mt-2">
+                <div class="nav-section-label text-uppercase text-muted small px-1 mb-1">Budovy</div>
+                @foreach (var b in _buildings)
+                {
+                    <button class="nav-link btn btn-link w-100 text-start px-1 @(b.Id == ActiveBuildingService.ActiveBuildingId ? "active" : "")"
+                            @onclick="() => SelectBuilding(b.Id)">
+                        <span class="bi bi-diagram-3" aria-hidden="true"></span>
+                        @b.Name
+                    </button>
+                }
+                <button class="nav-link btn btn-link w-100 text-start px-1 text-success"
+                        @onclick="CreateBuilding">
+                    <span aria-hidden="true">+</span> Nová budova
+                </button>
+            </div>
+        }
+
     </nav>
 </div>
 
+@code {
+    private List<DiplomovaPrace.Models.Configuration.BuildingConfig> _buildings = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var all = await ConfigService.GetAllBuildingsAsync();
+        _buildings = all.ToList();
+
+        if (ActiveBuildingService.ActiveBuildingId is null && _buildings.Count > 0)
+            ActiveBuildingService.SetActiveBuilding(_buildings[0].Id);
+
+        ConfigService.OnConfigurationChanged   += OnDataChanged;
+        ActiveBuildingService.OnActiveBuildingChanged += OnDataChanged;
+    }
+
+    private async void OnDataChanged()
+    {
+        var all = await ConfigService.GetAllBuildingsAsync();
+        _buildings = all.ToList();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void SelectBuilding(string id)
+    {
+        ActiveBuildingService.SetActiveBuilding(id);
+    }
+
+    private async Task CreateBuilding()
+    {
+        var created = await ConfigService.CreateBuildingAsync(
+            $"Budova {_buildings.Count + 1}", null, null);
+        ActiveBuildingService.SetActiveBuilding(created.Id);
+    }
+
+    public void Dispose()
+    {
+        ConfigService.OnConfigurationChanged          -= OnDataChanged;
+        ActiveBuildingService.OnActiveBuildingChanged -= OnDataChanged;
+    }
+}

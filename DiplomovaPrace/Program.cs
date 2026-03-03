@@ -16,6 +16,8 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<SimulationService>
 // Editor služby
 builder.Services.AddSingleton<IBuildingConfigurationService, InMemoryBuildingConfigurationService>();
 builder.Services.AddScoped<IEditorSessionService, EditorSessionService>();
+builder.Services.AddSingleton<IActiveBuildingService, ActiveBuildingService>();
+builder.Services.AddSingleton<ExpressionEvaluator>();
 
 var app = builder.Build();
 

@@ -4,7 +4,8 @@ using DiplomovaPrace.Models.Configuration;
 
 /// <summary>
 /// Statická třída pro validaci konfigurace patra.
-/// Detekuje: překryv místností, zařízení mimo svoji místnost, duplicitní názvy.
+/// Detekuje: překryv místností, místnosti mimo hranice patra, neplatné rozměry,
+/// zařízení mimo svoji místnost, duplicitní názvy.
 /// Neobsahuje závislosti — čisté funkce nad konfiguračními modely.
 /// </summary>
 public static class BuildingValidator
@@ -16,6 +17,16 @@ public static class BuildingValidator
     {
         var issues = new List<ValidationIssue>();
         var activeRooms = floor.Rooms.Where(r => !r.IsDeleted).ToList();
+
+        // Neplatné rozměry patra
+        if (floor.ViewBoxWidth <= 0 || floor.ViewBoxHeight <= 0)
+        {
+            issues.Add(new ValidationIssue(
+                $"Neplatné rozměry patra: {floor.ViewBoxWidth}×{floor.ViewBoxHeight}",
+                IssueType.Error));
+            // Zbývající kontroly nemají smysl bez platných hranic
+            return issues;
+        }
 
         // Duplicitní názvy místností
         var roomNameGroups = activeRooms.GroupBy(r => r.Name.Trim(), StringComparer.OrdinalIgnoreCase);
@@ -39,6 +50,20 @@ public static class BuildingValidator
                 issues.Add(new ValidationIssue(
                     $"Překryv místností: \"{activeRooms[j].Name}\" a \"{activeRooms[i].Name}\"",
                     IssueType.Error, RoomId: activeRooms[j].Id));
+            }
+        }
+
+        // Místnosti mimo hranice patra
+        foreach (var room in activeRooms)
+        {
+            var g = room.Geometry;
+            if (g.X < 0 || g.Y < 0 ||
+                g.X + g.Width > floor.ViewBoxWidth ||
+                g.Y + g.Height > floor.ViewBoxHeight)
+            {
+                issues.Add(new ValidationIssue(
+                    $"Místnost \"{room.Name}\" leží mimo hranice patra ({floor.ViewBoxWidth}×{floor.ViewBoxHeight})",
+                    IssueType.Error, RoomId: room.Id));
             }
         }
 

@@ -21,6 +21,7 @@ window.editorCanvas = (function () {
     var _state = null;
     var _spaceDown = false;
     var _handlers = {};
+    var _floorBounds = { w: 8000, h: 3000 }; // velké výchozí — neomezuje dokud nenastaven
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -174,10 +175,10 @@ window.editorCanvas = (function () {
 
         if (s.type === 'draw') {
             removePreview();
-            var rx = Math.min(s.startX, s.currX);
-            var ry = Math.min(s.startY, s.currY);
-            var rw = Math.abs(s.currX - s.startX);
-            var rh = Math.abs(s.currY - s.startY);
+            var rx = Math.max(0, Math.min(s.startX, s.currX));
+            var ry = Math.max(0, Math.min(s.startY, s.currY));
+            var rw = Math.min(Math.abs(s.currX - s.startX), _floorBounds.w - rx);
+            var rh = Math.min(Math.abs(s.currY - s.startY), _floorBounds.h - ry);
             if (rw > 20 && rh > 20 && _dotNet)
                 _dotNet.invokeMethodAsync('JsOnRoomDrawn', rx, ry, rw, rh);
             return;
@@ -190,8 +191,8 @@ window.editorCanvas = (function () {
                 if (_dotNet) _dotNet.invokeMethodAsync('JsOnElementClicked', s.deviceId, 'Device');
             } else {
                 var pos = clientToContent(e.clientX, e.clientY);
-                var finalX = s.origCx + (pos.x - s.startCX);
-                var finalY = s.origCy + (pos.y - s.startCY);
+                var finalX = Math.max(0, Math.min(_floorBounds.w, s.origCx + (pos.x - s.startCX)));
+                var finalY = Math.max(0, Math.min(_floorBounds.h, s.origCy + (pos.y - s.startCY)));
                 if (_dotNet) _dotNet.invokeMethodAsync('JsOnDeviceDragEnd', s.deviceId, finalX, finalY);
             }
         }
@@ -339,6 +340,12 @@ window.editorCanvas = (function () {
 
         /** Volá se z OnAfterRenderAsync — Blazor nemění transform, ale jen pro jistotu znovu aplikujeme. */
         reapplyTransform: function () { applyTransform(); },
+
+        /** Nastaví hranice patra pro clamping kreslení místností a tahu zařízení. */
+        setFloorBounds: function (w, h) {
+            _floorBounds.w = w;
+            _floorBounds.h = h;
+        },
 
         dispose: function (svgId) {
             var id = svgId || _svgId;

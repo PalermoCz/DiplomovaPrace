@@ -1,0 +1,107 @@
+@* Souhrnný panel pro vybrané patro — počty, spotřeba, teplotní průměr *@
+
+@inject IBuildingStateService StateService
+@implements IDisposable
+
+<div class="summary-panel mb-3">
+    <div class="prop-section-title">Přehled patra</div>
+
+    <div class="summary-stats d-flex gap-3 mb-2 flex-wrap">
+        <div class="summary-stat">
+            <span class="summary-stat-label">Místnosti</span>
+            <span class="summary-stat-value">@_roomCount</span>
+        </div>
+        <div class="summary-stat">
+            <span class="summary-stat-label">Zařízení</span>
+            <span class="summary-stat-value">@_deviceCount</span>
+        </div>
+        <div class="summary-stat">
+            <span class="summary-stat-label">Spotřeba</span>
+            <span class="summary-stat-value">@_totalConsumption.ToString("F0") W</span>
+        </div>
+        @if (_avgTemp.HasValue)
+        {
+            <div class="summary-stat">
+                <span class="summary-stat-label">Avg teplota</span>
+                <span class="summary-stat-value">@_avgTemp.Value.ToString("F1") °C</span>
+            </div>
+        }
+    </div>
+
+    @if (_rooms.Count > 0)
+    {
+        <table class="table table-sm table-borderless summary-table mb-0">
+            <thead>
+                <tr>
+                    <th>Místnost</th>
+                    <th class="text-end">Zařízení</th>
+                    <th class="text-end">Spotřeba</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in _rooms)
+                {
+                    <tr>
+                        <td>@r.Name</td>
+                        <td class="text-end">@r.DeviceCount</td>
+                        <td class="text-end">@r.Consumption.ToString("F0") W</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public FloorConfig Floor { get; set; } = default!;
+
+    private int _roomCount;
+    private int _deviceCount;
+    private double _totalConsumption;
+    private double? _avgTemp;
+    private List<RoomRow> _rooms = [];
+
+    private sealed record RoomRow(string Name, int DeviceCount, double Consumption);
+
+    protected override void OnInitialized()
+    {
+        StateService.OnStateChanged += HandleStateChanged;
+        Refresh();
+    }
+
+    protected override void OnParametersSet() => Refresh();
+
+    private void Refresh()
+    {
+        var activeRooms = Floor.Rooms.Where(r => !r.IsDeleted).ToList();
+        _roomCount = activeRooms.Count;
+
+        _rooms = activeRooms.Select(r =>
+        {
+            var activeDevices = r.Devices.Where(d => !d.IsDeleted).ToList();
+            var consumption = activeDevices.Sum(d => d.Consumption);
+            return new RoomRow(r.Name, activeDevices.Count, consumption);
+        }).ToList();
+
+        _deviceCount       = _rooms.Sum(r => r.DeviceCount);
+        _totalConsumption  = _rooms.Sum(r => r.Consumption);
+
+        var tempValues = Floor.Rooms
+            .Where(r => !r.IsDeleted)
+            .SelectMany(r => r.Devices.Where(d => !d.IsDeleted && d.Type == DeviceType.TemperatureSensor))
+            .Select(d => StateService.GetDeviceState(d.Id)?.NumericValue)
+            .Where(v => v.HasValue)
+            .Select(v => v!.Value)
+            .ToList();
+
+        _avgTemp = tempValues.Count > 0 ? tempValues.Average() : null;
+    }
+
+    private async void HandleStateChanged()
+    {
+        Refresh();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => StateService.OnStateChanged -= HandleStateChanged;
+}

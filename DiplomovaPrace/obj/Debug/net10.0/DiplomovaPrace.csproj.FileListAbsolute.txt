@@ -86,4 +86,4 @@
 /workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/DiplomovaPrace.genruntimeconfig.cache
 /workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/ref/DiplomovaPrace.dll
 /workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/compressed/4rxuglimrs-{0}-ywbxfsh2q5-ywbxfsh2q5.gz
-/workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/compressed/qcxho35633-{0}-qiwn1lacwl-qiwn1lacwl.gz
+/workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/compressed/qcxho35633-{0}-ghurh8vap6-ghurh8vap6.gz

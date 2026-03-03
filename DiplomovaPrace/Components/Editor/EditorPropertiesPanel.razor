@@ -25,11 +25,13 @@
             break;
 
         case EditorSelectionType.Floor when _floor is not null:
+            <FloorSummaryPanel Floor="_floor" />
             <FloorForm Floor="_floor"
                        OnSave="OnUpdateFloor" />
             break;
 
         case EditorSelectionType.Room when _room is not null:
+            <RoomSummaryPanel Room="_room" />
             <RoomForm Room="_room"
                       OnSave="OnUpdateRoomName"
                       OnDelete="() => OnDeleteRoom.InvokeAsync(_room.Id)" />
@@ -58,7 +60,7 @@
     [Parameter] public IReadOnlyList<ValidationIssue> ValidationIssues { get; set; } = [];
 
     [Parameter] public EventCallback<(string Name, string? Description, string? Address)> OnUpdateBuilding { get; set; }
-    [Parameter] public EventCallback<(string Name, int Level)> OnUpdateFloor { get; set; }
+    [Parameter] public EventCallback<(string Name, int Level, double Width, double Height)> OnUpdateFloor { get; set; }
     [Parameter] public EventCallback<string> OnUpdateRoomName { get; set; }
     [Parameter] public EventCallback<DeviceConfig> OnUpdateDevice { get; set; }
     [Parameter] public EventCallback<string> OnDeleteRoom { get; set; }

@@ -1,8 +1,11 @@
 @* Root komponenta vizualizace budovy.
    Implementuje Observer pattern: subscribe v OnInitialized, dispose v Dispose.
-   HandleStateChanged marshalluje na UI vlákno přes InvokeAsync. *@
+   HandleStateChanged marshalluje na UI vlákno přes InvokeAsync.
+   Multi-building: reaguje na IActiveBuildingService.OnActiveBuildingChanged. *@
 
 @inject IBuildingStateService StateService
+@inject IBuildingConfigurationService ConfigService
+@inject IActiveBuildingService ActiveBuildingService
 @implements IDisposable
 
 <div class="building-viewer">
@@ -38,17 +41,38 @@
     private Floor? _selectedFloor;
     private string? _selectedDeviceId;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        _selectedFloorId = StateService.Building.Floors[0].Id;
-        _selectedFloor = StateService.Building.Floors[0];
-        StateService.OnStateChanged += HandleStateChanged;
+        // Pokud je aktivní budova nastavena, načteme ji do runtime domény
+        if (ActiveBuildingService.ActiveBuildingId is not null)
+            await ApplyActiveBuildingAsync(ActiveBuildingService.ActiveBuildingId);
+
+        SelectFirstFloor();
+
+        StateService.OnStateChanged               += HandleStateChanged;
+        ActiveBuildingService.OnActiveBuildingChanged += HandleActiveBuildingChanged;
+    }
+
+    private void SelectFirstFloor()
+    {
+        var floors = StateService.Building.Floors;
+        if (floors.Count > 0)
+        {
+            _selectedFloorId = floors[0].Id;
+            _selectedFloor   = floors[0];
+        }
+        else
+        {
+            _selectedFloorId = "";
+            _selectedFloor   = null;
+        }
+        _selectedDeviceId = null;
     }
 
     private void SelectFloor(string floorId)
     {
         _selectedFloorId = floorId;
-        _selectedFloor = StateService.Building.Floors.FirstOrDefault(f => f.Id == floorId);
+        _selectedFloor   = StateService.Building.Floors.FirstOrDefault(f => f.Id == floorId);
     }
 
     private void HandleDeviceSelected(string deviceId)
@@ -58,11 +82,32 @@
 
     private async void HandleStateChanged()
     {
+        // Refresh selected floor reference (building may have been replaced)
+        _selectedFloor = StateService.Building.Floors.FirstOrDefault(f => f.Id == _selectedFloorId);
         await InvokeAsync(StateHasChanged);
+    }
+
+    private async void HandleActiveBuildingChanged()
+    {
+        if (ActiveBuildingService.ActiveBuildingId is not null)
+        {
+            await ApplyActiveBuildingAsync(ActiveBuildingService.ActiveBuildingId);
+            SelectFirstFloor();
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ApplyActiveBuildingAsync(string buildingId)
+    {
+        var config = await ConfigService.GetBuildingAsync(buildingId);
+        if (config is null) return;
+        var domain = ConfigService.ToBuildingDomainModel(config);
+        StateService.ReplaceBuilding(domain);
     }
 
     public void Dispose()
     {
-        StateService.OnStateChanged -= HandleStateChanged;
+        StateService.OnStateChanged               -= HandleStateChanged;
+        ActiveBuildingService.OnActiveBuildingChanged -= HandleActiveBuildingChanged;
     }
 }

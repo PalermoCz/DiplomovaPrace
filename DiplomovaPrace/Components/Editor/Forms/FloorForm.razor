@@ -1,4 +1,4 @@
-@* Formulář vlastností patra *@
+@* Formulář vlastností patra — název, číslo patra, rozměry canvasu *@
 
 <div class="prop-section-title">Patro</div>
 
@@ -9,9 +9,20 @@
         <label class="form-label">Název</label>
         <InputText class="form-control" @bind-Value="_model.Name" />
     </div>
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label">Číslo patra</label>
         <InputNumber class="form-control" @bind-Value="_model.Level" />
+    </div>
+
+    <div class="prop-section-title mt-3">Rozměry canvasu</div>
+
+    <div class="mb-2">
+        <label class="form-label">Šířka (px)</label>
+        <InputNumber class="form-control" @bind-Value="_model.Width" min="100" />
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Výška (px)</label>
+        <InputNumber class="form-control" @bind-Value="_model.Height" min="100" />
     </div>
 
     <button type="submit" class="btn btn-sm btn-primary btn-save w-100">Uložit</button>
@@ -19,7 +30,7 @@
 
 @code {
     [Parameter, EditorRequired] public FloorConfig Floor { get; set; } = default!;
-    [Parameter] public EventCallback<(string Name, int Level)> OnSave { get; set; }
+    [Parameter] public EventCallback<(string Name, int Level, double Width, double Height)> OnSave { get; set; }
 
     private FormModel _model = new();
     private string? _prevId;
@@ -28,16 +39,26 @@
     {
         if (Floor.Id == _prevId) return;
         _prevId = Floor.Id;
-        _model = new FormModel { Name = Floor.Name, Level = Floor.Level };
+        _model = new FormModel
+        {
+            Name   = Floor.Name,
+            Level  = Floor.Level,
+            Width  = Floor.ViewBoxWidth,
+            Height = Floor.ViewBoxHeight
+        };
     }
 
     private async Task HandleSubmit() =>
-        await OnSave.InvokeAsync((_model.Name, _model.Level));
+        await OnSave.InvokeAsync((_model.Name, _model.Level, _model.Width, _model.Height));
 
     private sealed class FormModel
     {
         [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Název je povinný")]
         public string Name { get; set; } = "";
         public int Level { get; set; }
+        [System.ComponentModel.DataAnnotations.Range(100, 5000, ErrorMessage = "Šířka musí být 100–5000 px")]
+        public double Width { get; set; } = 800;
+        [System.ComponentModel.DataAnnotations.Range(100, 5000, ErrorMessage = "Výška musí být 100–5000 px")]
+        public double Height { get; set; } = 300;
     }
 }

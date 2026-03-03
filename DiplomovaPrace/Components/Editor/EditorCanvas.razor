@@ -151,6 +151,8 @@
     private bool _jsInitialized;
     private EditorTool _prevTool;
     private string? _prevFloorId;
+    private double _prevWidth;
+    private double _prevHeight;
 
     private double ViewBoxWidth  => Floor?.ViewBoxWidth  ?? 800;
     private double ViewBoxHeight => Floor?.ViewBoxHeight ?? 300;
@@ -162,8 +164,11 @@
             _dotNetRef = DotNetObjectReference.Create(this);
             await JSRuntime.InvokeVoidAsync("editorCanvas.init", _svgId, _dotNetRef);
             await JSRuntime.InvokeVoidAsync("editorCanvas.setTool", ActiveTool.ToString());
-            _prevTool = ActiveTool;
+            await JSRuntime.InvokeVoidAsync("editorCanvas.setFloorBounds", ViewBoxWidth, ViewBoxHeight);
+            _prevTool    = ActiveTool;
             _prevFloorId = Floor?.Id;
+            _prevWidth   = ViewBoxWidth;
+            _prevHeight  = ViewBoxHeight;
             _jsInitialized = true;
             return;
         }
@@ -180,6 +185,14 @@
         {
             _prevFloorId = Floor?.Id;
             await JSRuntime.InvokeVoidAsync("editorCanvas.resetView");
+        }
+
+        // Aktualizuj hranice patra při změně rozměrů
+        if (ViewBoxWidth != _prevWidth || ViewBoxHeight != _prevHeight)
+        {
+            _prevWidth  = ViewBoxWidth;
+            _prevHeight = ViewBoxHeight;
+            await JSRuntime.InvokeVoidAsync("editorCanvas.setFloorBounds", ViewBoxWidth, ViewBoxHeight);
         }
 
         await JSRuntime.InvokeVoidAsync("editorCanvas.reapplyTransform");

@@ -28,6 +28,9 @@ public interface IBuildingConfigurationService
     Task<FloorConfig> AddFloorAsync(string buildingId, string name, int level,
         double viewBoxWidth = 800, double viewBoxHeight = 300);
     Task<FloorConfig> UpdateFloorAsync(string buildingId, string floorId, string name, int level);
+
+    /// <summary>Aktualizuje rozměry plátna patra (SVG viewBox). Okamžitě se projeví v canvasu editoru.</summary>
+    Task<FloorConfig> UpdateFloorDimensionsAsync(string buildingId, string floorId, double width, double height);
     Task DeleteFloorAsync(string buildingId, string floorId);
 
     /// <summary>Přeřadí patra dle zadaného pořadí ID.</summary>
@@ -44,8 +47,10 @@ public interface IBuildingConfigurationService
 
     Task<DeviceConfig> AddDeviceAsync(string roomId, string name, DeviceType type, DevicePosition position);
     Task<DeviceConfig> UpdateDevicePositionAsync(string deviceId, DevicePosition newPosition);
+
+    /// <summary>Aktualizuje vlastnosti zařízení včetně spotřeby (Consumption v Wattech).</summary>
     Task<DeviceConfig> UpdateDevicePropertiesAsync(string deviceId, string name, DeviceType type,
-        DeviceDisplaySettings displaySettings);
+        DeviceDisplaySettings displaySettings, double consumption);
     Task DeleteDeviceAsync(string deviceId);
 
     // ── Bulk replace ─────────────────────────────────────────────────────────

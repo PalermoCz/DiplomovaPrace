@@ -1,4 +1,4 @@
-@* Formulář vlastností zařízení — typ, zobrazení, prahové hodnoty *@
+@* Formulář vlastností zařízení — typ, zobrazení, prahové hodnoty, spotřeba *@
 
 <div class="prop-section-title">Zařízení</div>
 
@@ -20,6 +20,12 @@
             <option value="@DeviceType.MotionSensor">Pohybový senzor</option>
             <option value="@DeviceType.DoorSensor">Dveřní senzor</option>
         </InputSelect>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Spotřeba (W)</label>
+        <InputNumber class="form-control" @bind-Value="_model.Consumption" min="0" />
+        <div class="form-text">Příkon zařízení v Wattech pro agregační výpočty.</div>
     </div>
 
     <div class="prop-section-title mt-3">Zobrazení</div>
@@ -77,6 +83,7 @@
         {
             Name          = Device.Name,
             Type          = Device.Type,
+            Consumption   = Device.Consumption,
             Unit          = Device.DisplaySettings.Unit,
             LabelOverride = Device.DisplaySettings.LabelOverride,
             ShowValue     = Device.DisplaySettings.ShowValue,
@@ -98,6 +105,7 @@
         {
             Name             = _model.Name,
             Type             = _model.Type,
+            Consumption      = _model.Consumption,
             DisplaySettings  = settings,
             UpdatedAt        = DateTime.UtcNow
         };
@@ -109,6 +117,8 @@
         [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Název je povinný")]
         public string Name { get; set; } = "";
         public DeviceType Type { get; set; } = DeviceType.TemperatureSensor;
+        [System.ComponentModel.DataAnnotations.Range(0, double.MaxValue, ErrorMessage = "Spotřeba musí být >= 0")]
+        public double Consumption { get; set; }
         public string? Unit { get; set; }
         public string? LabelOverride { get; set; }
         public bool ShowValue { get; set; }

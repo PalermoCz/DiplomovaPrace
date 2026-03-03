@@ -13,6 +13,8 @@ public record DeviceConfig(
     DeviceType Type,
     DevicePosition Position,
     DeviceDisplaySettings DisplaySettings,
+    /// <summary>Spotřeba zařízení v Wattech. Používá se v agregacích (souhrnné panely, ExpressionEvaluator).</summary>
+    double Consumption,
     DateTime CreatedAt,
     DateTime UpdatedAt,
     bool IsDeleted

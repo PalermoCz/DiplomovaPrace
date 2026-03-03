@@ -3,6 +3,7 @@
 @inject IBuildingConfigurationService ConfigService
 @inject IEditorSessionService SessionService
 @inject IBuildingStateService StateService
+@inject IActiveBuildingService ActiveBuildingService
 @inject NavigationManager Nav
 @inject IJSRuntime JSRuntime
 @implements IDisposable
@@ -93,6 +94,14 @@
                                OnUpdateDevice="HandleUpdateDevice"
                                OnDeleteRoom="HandleDeleteRoom"
                                OnDeleteDevice="HandleDeleteDevice" />
+
+        @* ── Expression panel ───────────────────────────────────────── *@
+        @if (SessionService.CurrentConfig is not null)
+        {
+            <div class="editor-expression-wrapper">
+                <ExpressionPanel BuildingId="@SessionService.CurrentConfig.Id" />
+            </div>
+        }
     </div>
 </div>
 
@@ -188,6 +197,7 @@
     protected override async Task OnInitializedAsync()
     {
         SessionService.OnSessionChanged += HandleSessionChanged;
+        ActiveBuildingService.OnActiveBuildingChanged += HandleActiveBuildingChanged;
 
         // Navigation guard — varuj při neuložených změnách
         _navGuard = Nav.RegisterLocationChangingHandler(async ctx =>
@@ -202,9 +212,23 @@
             }
         });
 
-        var buildings = await ConfigService.GetAllBuildingsAsync();
-        if (buildings.Count > 0)
-            SessionService.LoadConfig(buildings[0]);
+        // Načti aktivní budovu (nebo první z kolekce)
+        var activeId = ActiveBuildingService.ActiveBuildingId;
+        if (activeId is not null)
+        {
+            var config = await ConfigService.GetBuildingAsync(activeId);
+            if (config is not null)
+                SessionService.LoadConfig(config);
+        }
+        else
+        {
+            var buildings = await ConfigService.GetAllBuildingsAsync();
+            if (buildings.Count > 0)
+            {
+                SessionService.LoadConfig(buildings[0]);
+                ActiveBuildingService.SetActiveBuilding(buildings[0].Id);
+            }
+        }
 
         RevalidateCurrentFloor();
     }
@@ -212,6 +236,16 @@
     private async void HandleSessionChanged()
     {
         RevalidateCurrentFloor();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async void HandleActiveBuildingChanged()
+    {
+        var activeId = ActiveBuildingService.ActiveBuildingId;
+        if (activeId is null) return;
+        var config = await ConfigService.GetBuildingAsync(activeId);
+        if (config is null) return;
+        SessionService.LoadConfig(config);
         await InvokeAsync(StateHasChanged);
     }
 
@@ -461,14 +495,18 @@
         ShowToast("Budova uložena", success: true);
     }
 
-    private async Task HandleUpdateFloor((string Name, int Level) args)
+    private async Task HandleUpdateFloor((string Name, int Level, double Width, double Height) args)
     {
         if (SessionService.CurrentConfig is null || SessionService.ActiveFloorId is null) return;
         var buildingId = SessionService.CurrentConfig.Id;
         var floorId = SessionService.ActiveFloorId;
         await SessionService.ExecuteCommandAsync(
             new UpdateFloorCommand(args.Name),
-            () => ConfigService.UpdateFloorAsync(buildingId, floorId, args.Name, args.Level),
+            async () =>
+            {
+                await ConfigService.UpdateFloorAsync(buildingId, floorId, args.Name, args.Level);
+                await ConfigService.UpdateFloorDimensionsAsync(buildingId, floorId, args.Width, args.Height);
+            },
             ConfigService);
         ShowToast("Patro uloženo", success: true);
     }
@@ -489,7 +527,7 @@
         await SessionService.ExecuteCommandAsync(
             new UpdateDeviceCommand(updated.Name),
             () => ConfigService.UpdateDevicePropertiesAsync(
-                updated.Id, updated.Name, updated.Type, updated.DisplaySettings),
+                updated.Id, updated.Name, updated.Type, updated.DisplaySettings, updated.Consumption),
             ConfigService);
         ShowToast("Zařízení uloženo", success: true);
     }
@@ -586,6 +624,7 @@
     public void Dispose()
     {
         SessionService.OnSessionChanged -= HandleSessionChanged;
+        ActiveBuildingService.OnActiveBuildingChanged -= HandleActiveBuildingChanged;
         _navGuard?.Dispose();
         _toastCts?.Cancel();
     }
