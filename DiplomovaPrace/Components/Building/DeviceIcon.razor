@@ -1,0 +1,59 @@
+@inject IBuildingStateService StateService
+
+<g class="device-icon" @onclick="HandleClick" @onclick:stopPropagation="true"
+   style="cursor: pointer;">
+    <circle cx="@Fmt(Device.Position.X)"
+            cy="@Fmt(Device.Position.Y)"
+            r="12"
+            fill="@DeviceColor"
+            stroke="@(IsSelected ? "#fff" : "#2c3e50")"
+            stroke-width="@(IsSelected ? "3" : "1")" />
+
+    @((MarkupString)$"<text x=\"{Fmt(Device.Position.X)}\" y=\"{Fmt(Device.Position.Y + 4)}\" text-anchor=\"middle\" class=\"device-symbol\" fill=\"white\" font-size=\"10\" font-weight=\"bold\">{GetDeviceSymbol(Device.Type)}</text>")
+
+    @if (State?.NumericValue.HasValue == true)
+    {
+        @((MarkupString)$"<text x=\"{Fmt(Device.Position.X)}\" y=\"{Fmt(Device.Position.Y + 28)}\" text-anchor=\"middle\" class=\"device-value\" font-size=\"10\">{FormatValue(Device.Type, State)}</text>")
+    }
+</g>
+
+@code {
+    [Parameter, EditorRequired]
+    public Device Device { get; set; } = default!;
+
+    [Parameter]
+    public bool IsSelected { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnClicked { get; set; }
+
+    private DeviceState? State => StateService.GetDeviceState(Device.Id);
+
+    private string DeviceColor => StateColorMapper.GetDeviceColor(Device.Type, State);
+
+    private async Task HandleClick()
+    {
+        await OnClicked.InvokeAsync(Device.Id);
+    }
+
+    private static string Fmt(double value) =>
+        value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    private static string GetDeviceSymbol(DeviceType type) => type switch
+    {
+        DeviceType.TemperatureSensor => "T",
+        DeviceType.HumiditySensor   => "H",
+        DeviceType.Light            => "L",
+        DeviceType.HVAC             => "A",
+        DeviceType.MotionSensor     => "M",
+        DeviceType.DoorSensor       => "D",
+        _                           => "?"
+    };
+
+    private static string FormatValue(DeviceType type, DeviceState state) => type switch
+    {
+        DeviceType.TemperatureSensor => $"{state.NumericValue:F1} \u00b0C",
+        DeviceType.HumiditySensor   => $"{state.NumericValue:F0} %",
+        _                           => state.NumericValue?.ToString("F1") ?? ""
+    };
+}

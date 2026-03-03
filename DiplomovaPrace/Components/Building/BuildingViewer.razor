@@ -1,0 +1,68 @@
+@* Root komponenta vizualizace budovy.
+   Implementuje Observer pattern: subscribe v OnInitialized, dispose v Dispose.
+   HandleStateChanged marshalluje na UI vlákno přes InvokeAsync. *@
+
+@inject IBuildingStateService StateService
+@implements IDisposable
+
+<div class="building-viewer">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>@StateService.Building.Name</h4>
+        <div class="btn-group" role="group">
+            @foreach (var floor in StateService.Building.Floors)
+            {
+                <button class="btn @(floor.Id == _selectedFloorId ? "btn-primary" : "btn-outline-primary")"
+                        @onclick="() => SelectFloor(floor.Id)">
+                    @floor.Name
+                </button>
+            }
+        </div>
+    </div>
+
+    @if (_selectedFloor is not null)
+    {
+        <FloorPlan Floor="_selectedFloor"
+                   SelectedDeviceId="@_selectedDeviceId"
+                   OnDeviceSelected="HandleDeviceSelected" />
+    }
+
+    @if (_selectedDeviceId is not null)
+    {
+        <DeviceDetailPanel DeviceId="@_selectedDeviceId"
+                           OnClose="() => _selectedDeviceId = null" />
+    }
+</div>
+
+@code {
+    private string _selectedFloorId = "";
+    private Floor? _selectedFloor;
+    private string? _selectedDeviceId;
+
+    protected override void OnInitialized()
+    {
+        _selectedFloorId = StateService.Building.Floors[0].Id;
+        _selectedFloor = StateService.Building.Floors[0];
+        StateService.OnStateChanged += HandleStateChanged;
+    }
+
+    private void SelectFloor(string floorId)
+    {
+        _selectedFloorId = floorId;
+        _selectedFloor = StateService.Building.Floors.FirstOrDefault(f => f.Id == floorId);
+    }
+
+    private void HandleDeviceSelected(string deviceId)
+    {
+        _selectedDeviceId = deviceId;
+    }
+
+    private async void HandleStateChanged()
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        StateService.OnStateChanged -= HandleStateChanged;
+    }
+}

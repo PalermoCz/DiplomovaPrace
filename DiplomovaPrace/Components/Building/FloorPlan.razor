@@ -1,0 +1,35 @@
+@inject IBuildingStateService StateService
+
+<svg viewBox="0 0 800 300" class="floor-plan" xmlns="http://www.w3.org/2000/svg">
+    <rect x="30" y="30" width="740" height="240"
+          fill="none" stroke="#2c3e50" stroke-width="3" rx="5" />
+
+    @((MarkupString)$"<text x=\"400\" y=\"22\" text-anchor=\"middle\" class=\"floor-label\">{Floor.Name}</text>")
+
+    @foreach (var room in Floor.Rooms)
+    {
+        <RoomShape Room="room"
+                   IsSelected="@(_selectedRoomId == room.Id)"
+                   OnRoomClicked="HandleRoomClicked"
+                   SelectedDeviceId="@SelectedDeviceId"
+                   OnDeviceSelected="OnDeviceSelected" />
+    }
+</svg>
+
+@code {
+    [Parameter, EditorRequired]
+    public Floor Floor { get; set; } = default!;
+
+    [Parameter]
+    public string? SelectedDeviceId { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnDeviceSelected { get; set; }
+
+    private string? _selectedRoomId;
+
+    private void HandleRoomClicked(string roomId)
+    {
+        _selectedRoomId = _selectedRoomId == roomId ? null : roomId;
+    }
+}

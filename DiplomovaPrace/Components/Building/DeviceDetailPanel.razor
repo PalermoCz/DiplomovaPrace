@@ -1,0 +1,90 @@
+@inject IBuildingStateService StateService
+
+@if (_device is not null)
+{
+    <div class="card mt-3 device-detail-panel">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>@_device.Name</strong>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="OnClose">Zavřít</button>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-4">ID zařízení</dt>
+                <dd class="col-sm-8"><code>@_device.Id</code></dd>
+
+                <dt class="col-sm-4">Typ</dt>
+                <dd class="col-sm-8">@GetTypeName(_device.Type)</dd>
+
+                <dt class="col-sm-4">Místnost</dt>
+                <dd class="col-sm-8">@_device.RoomId</dd>
+
+                @if (_state is not null)
+                {
+                    @if (_state.NumericValue.HasValue)
+                    {
+                        <dt class="col-sm-4">Hodnota</dt>
+                        <dd class="col-sm-8">@_state.NumericValue.Value.ToString("F2")</dd>
+                    }
+
+                    @if (_state.IsActive.HasValue)
+                    {
+                        <dt class="col-sm-4">Stav</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge @(_state.IsActive.Value ? "bg-success" : "bg-secondary")">
+                                @(_state.IsActive.Value ? "Aktivní" : "Neaktivní")
+                            </span>
+                        </dd>
+                    }
+
+                    <dt class="col-sm-4">Alarm</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge @(_state.IsAlarm ? "bg-danger" : "bg-success")">
+                            @(_state.IsAlarm ? "ALARM" : "Normální")
+                        </span>
+                    </dd>
+
+                    <dt class="col-sm-4">Poslední aktualizace</dt>
+                    <dd class="col-sm-8">@_state.Timestamp.ToString("HH:mm:ss")</dd>
+                }
+            </dl>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public string DeviceId { get; set; } = "";
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    private Device? _device;
+    private DeviceState? _state => StateService.GetDeviceState(DeviceId);
+
+    protected override void OnParametersSet()
+    {
+        _device = FindDevice(DeviceId);
+    }
+
+    private Device? FindDevice(string deviceId)
+    {
+        foreach (var floor in StateService.Building.Floors)
+        foreach (var room in floor.Rooms)
+        foreach (var device in room.Devices)
+        {
+            if (device.Id == deviceId) return device;
+        }
+        return null;
+    }
+
+    private static string GetTypeName(DeviceType type) => type switch
+    {
+        DeviceType.TemperatureSensor => "Teplotní senzor",
+        DeviceType.HumiditySensor   => "Senzor vlhkosti",
+        DeviceType.Light            => "Osvětlení",
+        DeviceType.HVAC             => "Klimatizace",
+        DeviceType.MotionSensor     => "Pohybový senzor",
+        DeviceType.DoorSensor       => "Dveřní senzor",
+        _                           => type.ToString()
+    };
+}

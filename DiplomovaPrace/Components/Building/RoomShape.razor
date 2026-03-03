@@ -1,0 +1,45 @@
+@inject IBuildingStateService StateService
+
+<g class="room-group" @onclick="() => OnRoomClicked.InvokeAsync(Room.Id)" style="cursor: pointer;">
+    <rect x="@Fmt(Room.Geometry.X)"
+          y="@Fmt(Room.Geometry.Y)"
+          width="@Fmt(Room.Geometry.Width)"
+          height="@Fmt(Room.Geometry.Height)"
+          fill="@RoomFillColor"
+          stroke="@(IsSelected ? "#2980b9" : "#2c3e50")"
+          stroke-width="@(IsSelected ? "3" : "1.5")"
+          rx="3" />
+
+    @((MarkupString)$"<text x=\"{Fmt(Room.Geometry.X + Room.Geometry.Width / 2)}\" y=\"{Fmt(Room.Geometry.Y + 18)}\" text-anchor=\"middle\" class=\"room-label\">{Room.Name}</text>")
+
+    @foreach (var device in Room.Devices)
+    {
+        <DeviceIcon Device="device"
+                    IsSelected="@(SelectedDeviceId == device.Id)"
+                    OnClicked="OnDeviceSelected" />
+    }
+</g>
+
+@code {
+    [Parameter, EditorRequired]
+    public Room Room { get; set; } = default!;
+
+    [Parameter]
+    public bool IsSelected { get; set; }
+
+    [Parameter]
+    public string? SelectedDeviceId { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnRoomClicked { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnDeviceSelected { get; set; }
+
+    private string RoomFillColor => StateColorMapper.GetRoomFillColor(
+        Room.Devices,
+        deviceId => StateService.GetDeviceState(deviceId));
+
+    private static string Fmt(double value) =>
+        value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+}
