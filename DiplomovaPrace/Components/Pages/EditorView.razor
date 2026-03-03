@@ -3,9 +3,17 @@
 @inject IBuildingConfigurationService ConfigService
 @inject IEditorSessionService SessionService
 @inject IBuildingStateService StateService
+@inject NavigationManager Nav
+@inject IJSRuntime JSRuntime
 @implements IDisposable
 
 <PageTitle>Editor budov</PageTitle>
+
+@* Skrytý input pro import souboru *@
+<InputFile id="import-file-input"
+           style="display:none"
+           accept=".json"
+           OnChange="HandleImportFileSelected" />
 
 <div class="editor-page">
 
@@ -15,16 +23,26 @@
                    ShowGrid="@_showGrid"
                    CanAddFloor="@(SessionService.CurrentConfig is not null)"
                    CanApply="@(SessionService.CurrentConfig is not null)"
+                   CanUndo="@SessionService.CanUndo"
+                   CanRedo="@SessionService.CanRedo"
+                   UndoDescription="@SessionService.UndoDescription"
+                   RedoDescription="@SessionService.RedoDescription"
+                   ValidationErrorCount="@_validationErrorCount"
+                   PublicationState="@SessionService.PublicationState"
                    OnToolChanged="HandleToolChanged"
                    OnNewBuilding="HandleNewBuilding"
                    OnAddFloor="HandleAddFloor"
                    OnGridToggled="() => _showGrid = !_showGrid"
                    OnResetView="HandleResetView"
-                   OnApplyToVisualization="HandleApplyToVisualization" />
+                   OnApplyToVisualization="HandleApplyToVisualization"
+                   OnUndo="HandleUndo"
+                   OnRedo="HandleRedo"
+                   OnExport="HandleExport"
+                   OnImportClicked="HandleImportClicked" />
 
     <div class="editor-main">
 
-        @* ── Stromová navigace ────────────────────────────────────────────── *@
+        @* ── Stromová navigace ─────────────────────────────────────────── *@
         <EditorTreeNav Config="@SessionService.CurrentConfig"
                        ActiveFloorId="@SessionService.ActiveFloorId"
                        SelectedElementId="@SessionService.SelectedElementId"
@@ -34,7 +52,7 @@
                        OnAddFloor="HandleAddFloor"
                        OnDeleteFloor="HandleDeleteFloor" />
 
-        @* ── Canvas ──────────────────────────────────────────────────────── *@
+        @* ── Canvas ───────────────────────────────────────────────────── *@
         <div class="editor-canvas-wrapper">
             @if (SessionService.CurrentConfig is null)
             {
@@ -53,19 +71,22 @@
                               ActiveTool="@SessionService.ActiveTool"
                               SelectedElementId="@SessionService.SelectedElementId"
                               ShowGrid="@_showGrid"
+                              ValidationIssues="@_validationIssues"
                               OnRoomCreated="HandleRoomCreated"
                               OnDeviceMoved="HandleDeviceMoved"
                               OnElementSelected="HandleElementSelected"
                               OnCanvasClicked="HandleCanvasClicked"
-                              OnDeleteRequested="HandleDeleteRequested" />
+                              OnDeleteRequested="HandleDeleteRequested"
+                              OnKeyboardShortcut="HandleKeyboardShortcut" />
             }
         </div>
 
-        @* ── Properties panel ────────────────────────────────────────────── *@
+        @* ── Properties panel ───────────────────────────────────────── *@
         <EditorPropertiesPanel Config="@SessionService.CurrentConfig"
                                SelectedElementId="@SessionService.SelectedElementId"
                                SelectedElementType="@SessionService.SelectedElementType"
                                ActiveFloor="@SessionService.GetActiveFloor()"
+                               ValidationIssues="@_validationIssues"
                                OnUpdateBuilding="HandleUpdateBuilding"
                                OnUpdateFloor="HandleUpdateFloor"
                                OnUpdateRoomName="HandleUpdateRoomName"
@@ -143,6 +164,10 @@
     private EditorCanvas? _canvas;
     private bool _showGrid = true;
 
+    // Validace
+    private IReadOnlyList<ValidationIssue> _validationIssues = [];
+    private int _validationErrorCount;
+
     // Dialogy
     private bool _showNewBuildingDialog;
     private string _newBuildingName = "Nová budova";
@@ -155,29 +180,78 @@
     private bool _toastIsSuccess;
     private System.Threading.CancellationTokenSource? _toastCts;
 
+    // Navigation guard
+    private IDisposable? _navGuard;
+
     // ── Inicializace ──────────────────────────────────────────────────────
 
     protected override async Task OnInitializedAsync()
     {
         SessionService.OnSessionChanged += HandleSessionChanged;
+
+        // Navigation guard — varuj při neuložených změnách
+        _navGuard = Nav.RegisterLocationChangingHandler(async ctx =>
+        {
+            if (SessionService.HasUnsavedChanges)
+            {
+                var confirmed = await JSRuntime.InvokeAsync<bool>(
+                    "confirm",
+                    "Máte neuložené změny. Opravdu chcete opustit editor?");
+                if (!confirmed)
+                    ctx.PreventNavigation();
+            }
+        });
+
         var buildings = await ConfigService.GetAllBuildingsAsync();
         if (buildings.Count > 0)
             SessionService.LoadConfig(buildings[0]);
+
+        RevalidateCurrentFloor();
     }
 
-    private async void HandleSessionChanged() =>
+    private async void HandleSessionChanged()
+    {
+        RevalidateCurrentFloor();
         await InvokeAsync(StateHasChanged);
+    }
+
+    private void RevalidateCurrentFloor()
+    {
+        var floor = SessionService.GetActiveFloor();
+        if (floor is not null)
+        {
+            _validationIssues = BuildingValidator.ValidateFloor(floor);
+            _validationErrorCount = _validationIssues.Count(i => i.Type == IssueType.Error);
+        }
+        else
+        {
+            _validationIssues = [];
+            _validationErrorCount = 0;
+        }
+    }
 
     // ── Toolbar akce ──────────────────────────────────────────────────────
 
     private void HandleToolChanged(EditorTool tool) =>
         SessionService.SetActiveTool(tool);
 
-    private void HandleGridToggled() => _showGrid = !_showGrid;
-
     private async Task HandleResetView()
     {
         if (_canvas is not null) await _canvas.ResetViewAsync();
+    }
+
+    private async Task HandleUndo() =>
+        await SessionService.UndoAsync(ConfigService);
+
+    private async Task HandleRedo() =>
+        await SessionService.RedoAsync(ConfigService);
+
+    // ── Klávesové zkratky z JS ───────────────────────────────────────────
+
+    private async Task HandleKeyboardShortcut(string shortcut)
+    {
+        if (shortcut == "undo") await SessionService.UndoAsync(ConfigService);
+        else if (shortcut == "redo") await SessionService.RedoAsync(ConfigService);
     }
 
     // ── Nová budova ───────────────────────────────────────────────────────
@@ -220,14 +294,19 @@
         _showNewFloorDialog = false;
         if (SessionService.CurrentConfig is null) return;
         if (string.IsNullOrWhiteSpace(_newFloorName)) return;
-        var floor = await ConfigService.AddFloorAsync(
-            SessionService.CurrentConfig.Id,
-            _newFloorName.Trim(),
-            _newFloorLevel);
-        await RefreshSession();
-        SessionService.SelectFloor(floor.Id);
-        SessionService.SelectElement(floor.Id, EditorSelectionType.Floor);
-        SessionService.MarkDirty();
+        var buildingId = SessionService.CurrentConfig.Id;
+        var name = _newFloorName.Trim();
+        var level = _newFloorLevel;
+        FloorConfig? floor = null;
+        await SessionService.ExecuteCommandAsync(
+            new AddFloorCommand(name),
+            async () => { floor = await ConfigService.AddFloorAsync(buildingId, name, level); },
+            ConfigService);
+        if (floor is not null)
+        {
+            SessionService.SelectFloor(floor.Id);
+            SessionService.SelectElement(floor.Id, EditorSelectionType.Floor);
+        }
         ShowToast("Patro přidáno", success: true);
     }
 
@@ -237,15 +316,22 @@
         if (e.Key == "Escape") _showNewFloorDialog = false;
     }
 
-    private async Task HandleFloorSelected(string floorId) =>
+    private Task HandleFloorSelected(string floorId)
+    {
         SessionService.SelectFloor(floorId);
+        return Task.CompletedTask;
+    }
 
     private async Task HandleDeleteFloor(string floorId)
     {
         if (SessionService.CurrentConfig is null) return;
-        await ConfigService.DeleteFloorAsync(SessionService.CurrentConfig.Id, floorId);
-        await RefreshSession();
-        SessionService.MarkDirty();
+        var floor = SessionService.CurrentConfig.Floors.FirstOrDefault(f => f.Id == floorId);
+        var floorName = floor?.Name ?? floorId;
+        var buildingId = SessionService.CurrentConfig.Id;
+        await SessionService.ExecuteCommandAsync(
+            new DeleteFloorCommand(floorName),
+            () => ConfigService.DeleteFloorAsync(buildingId, floorId),
+            ConfigService);
         ShowToast("Patro smazáno", success: true);
     }
 
@@ -264,12 +350,17 @@
     private async Task HandleRoomCreated(RoomGeometry geometry)
     {
         if (SessionService.ActiveFloorId is null) return;
-        var room = await ConfigService.AddRoomAsync(
-            SessionService.ActiveFloorId, "Nová místnost", geometry);
-        await RefreshSession();
-        SessionService.SelectElement(room.Id, EditorSelectionType.Room);
-        SessionService.SetActiveTool(EditorTool.Select);
-        SessionService.MarkDirty();
+        var floorId = SessionService.ActiveFloorId;
+        RoomConfig? room = null;
+        await SessionService.ExecuteCommandAsync(
+            new AddRoomCommand("Nová místnost"),
+            async () => { room = await ConfigService.AddRoomAsync(floorId, "Nová místnost", geometry); },
+            ConfigService);
+        if (room is not null)
+        {
+            SessionService.SelectElement(room.Id, EditorSelectionType.Room);
+            SessionService.SetActiveTool(EditorTool.Select);
+        }
         ShowToast("Místnost přidána — upravte název v panelu vpravo", success: true);
     }
 
@@ -280,7 +371,6 @@
         var floor = SessionService.GetActiveFloor();
         if (floor is null) return;
 
-        // Najdi místnost v bodě kliknutí
         var room = floor.Rooms.FirstOrDefault(r =>
             !r.IsDeleted &&
             pos.X >= r.Geometry.X && pos.X <= r.Geometry.X + r.Geometry.Width &&
@@ -292,13 +382,22 @@
             return;
         }
 
-        var device = await ConfigService.AddDeviceAsync(
-            room.Id, "Nové zařízení", DeviceType.TemperatureSensor,
-            new DevicePosition(pos.X, pos.Y));
-        await RefreshSession();
-        SessionService.SelectElement(device.Id, EditorSelectionType.Device);
-        SessionService.SetActiveTool(EditorTool.Select);
-        SessionService.MarkDirty();
+        var roomId = room.Id;
+        DeviceConfig? device = null;
+        await SessionService.ExecuteCommandAsync(
+            new AddDeviceCommand("Nové zařízení"),
+            async () =>
+            {
+                device = await ConfigService.AddDeviceAsync(
+                    roomId, "Nové zařízení", DeviceType.TemperatureSensor,
+                    new DevicePosition(pos.X, pos.Y));
+            },
+            ConfigService);
+        if (device is not null)
+        {
+            SessionService.SelectElement(device.Id, EditorSelectionType.Device);
+            SessionService.SetActiveTool(EditorTool.Select);
+        }
         ShowToast("Zařízení přidáno — nastavte vlastnosti v panelu vpravo", success: true);
     }
 
@@ -306,9 +405,12 @@
 
     private async Task HandleDeviceMoved((string DeviceId, DevicePosition Pos) args)
     {
-        await ConfigService.UpdateDevicePositionAsync(args.DeviceId, args.Pos);
-        await RefreshSession();
-        SessionService.MarkDirty();
+        var device = SessionService.FindDevice(args.DeviceId);
+        var name = device?.Name ?? args.DeviceId;
+        await SessionService.ExecuteCommandAsync(
+            new MoveDeviceCommand(name),
+            () => ConfigService.UpdateDevicePositionAsync(args.DeviceId, args.Pos),
+            ConfigService);
     }
 
     // ── Delete (z canvasu nebo properties) ───────────────────────────────
@@ -324,19 +426,25 @@
 
     private async Task HandleDeleteRoom(string roomId)
     {
-        await ConfigService.DeleteRoomAsync(roomId);
-        await RefreshSession();
+        var room = SessionService.FindRoom(roomId);
+        var name = room?.Name ?? roomId;
+        await SessionService.ExecuteCommandAsync(
+            new DeleteRoomCommand(name),
+            () => ConfigService.DeleteRoomAsync(roomId),
+            ConfigService);
         SessionService.ClearSelection();
-        SessionService.MarkDirty();
         ShowToast("Místnost smazána", success: true);
     }
 
     private async Task HandleDeleteDevice(string deviceId)
     {
-        await ConfigService.DeleteDeviceAsync(deviceId);
-        await RefreshSession();
+        var device = SessionService.FindDevice(deviceId);
+        var name = device?.Name ?? deviceId;
+        await SessionService.ExecuteCommandAsync(
+            new DeleteDeviceCommand(name),
+            () => ConfigService.DeleteDeviceAsync(deviceId),
+            ConfigService);
         SessionService.ClearSelection();
-        SessionService.MarkDirty();
         ShowToast("Zařízení smazáno", success: true);
     }
 
@@ -345,38 +453,44 @@
     private async Task HandleUpdateBuilding((string Name, string? Description, string? Address) args)
     {
         if (SessionService.CurrentConfig is null) return;
-        await ConfigService.UpdateBuildingMetadataAsync(
-            SessionService.CurrentConfig.Id, args.Name, args.Description, args.Address);
-        await RefreshSession();
-        SessionService.MarkDirty();
+        var id = SessionService.CurrentConfig.Id;
+        await SessionService.ExecuteCommandAsync(
+            new UpdateBuildingCommand(args.Name),
+            () => ConfigService.UpdateBuildingMetadataAsync(id, args.Name, args.Description, args.Address),
+            ConfigService);
         ShowToast("Budova uložena", success: true);
     }
 
     private async Task HandleUpdateFloor((string Name, int Level) args)
     {
         if (SessionService.CurrentConfig is null || SessionService.ActiveFloorId is null) return;
-        await ConfigService.UpdateFloorAsync(
-            SessionService.CurrentConfig.Id, SessionService.ActiveFloorId, args.Name, args.Level);
-        await RefreshSession();
-        SessionService.MarkDirty();
+        var buildingId = SessionService.CurrentConfig.Id;
+        var floorId = SessionService.ActiveFloorId;
+        await SessionService.ExecuteCommandAsync(
+            new UpdateFloorCommand(args.Name),
+            () => ConfigService.UpdateFloorAsync(buildingId, floorId, args.Name, args.Level),
+            ConfigService);
         ShowToast("Patro uloženo", success: true);
     }
 
     private async Task HandleUpdateRoomName(string name)
     {
         if (SessionService.SelectedElementId is null) return;
-        await ConfigService.UpdateRoomNameAsync(SessionService.SelectedElementId, name);
-        await RefreshSession();
-        SessionService.MarkDirty();
+        var roomId = SessionService.SelectedElementId;
+        await SessionService.ExecuteCommandAsync(
+            new UpdateRoomCommand(name),
+            () => ConfigService.UpdateRoomNameAsync(roomId, name),
+            ConfigService);
         ShowToast("Místnost uložena", success: true);
     }
 
     private async Task HandleUpdateDevice(DeviceConfig updated)
     {
-        await ConfigService.UpdateDevicePropertiesAsync(
-            updated.Id, updated.Name, updated.Type, updated.DisplaySettings);
-        await RefreshSession();
-        SessionService.MarkDirty();
+        await SessionService.ExecuteCommandAsync(
+            new UpdateDeviceCommand(updated.Name),
+            () => ConfigService.UpdateDevicePropertiesAsync(
+                updated.Id, updated.Name, updated.Type, updated.DisplaySettings),
+            ConfigService);
         ShowToast("Zařízení uloženo", success: true);
     }
 
@@ -385,20 +499,71 @@
     private async Task HandleApplyToVisualization()
     {
         if (SessionService.CurrentConfig is null) return;
+
+        // Blokovat při validačních chybách
+        if (_validationErrorCount > 0)
+        {
+            ShowToast($"Publikace blokována — {_validationErrorCount} validačních chyb", success: false);
+            return;
+        }
+
         var domainBuilding = ConfigService.ToBuildingDomainModel(SessionService.CurrentConfig);
         StateService.ReplaceBuilding(domainBuilding);
-        SessionService.MarkClean();
-        ShowToast("Konfigurace aplikována do vizualizace (/building)", success: true);
+        SessionService.MarkPublished();
+        ShowToast("Konfigurace publikována do vizualizace (/building)", success: true);
     }
 
-    // ── Session refresh ───────────────────────────────────────────────────
+    // ── Export / Import ───────────────────────────────────────────────────
 
-    private async Task RefreshSession()
+    private async Task HandleExport()
     {
         if (SessionService.CurrentConfig is null) return;
-        var config = await ConfigService.GetBuildingAsync(SessionService.CurrentConfig.Id);
-        if (config is not null)
-            SessionService.RefreshConfig(config);
+        var json = BuildingConfigSerializer.Serialize(SessionService.CurrentConfig);
+        var filename = $"{SessionService.CurrentConfig.Name.Replace(' ', '_')}_config.json";
+        await JSRuntime.InvokeVoidAsync("downloadTextFile", filename, json);
+        ShowToast($"Export uložen: {filename}", success: true);
+    }
+
+    private async Task HandleImportClicked()
+    {
+        await JSRuntime.InvokeVoidAsync("triggerClick", "import-file-input");
+    }
+
+    private async Task HandleImportFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null) return;
+
+        if (file.Size > 2 * 1024 * 1024) // max 2 MB
+        {
+            ShowToast("Soubor je příliš velký (max 2 MB)", success: false);
+            return;
+        }
+
+        try
+        {
+            using var stream = file.OpenReadStream(maxAllowedSize: 2 * 1024 * 1024);
+            using var reader = new System.IO.StreamReader(stream);
+            var json = await reader.ReadToEndAsync();
+
+            var config = BuildingConfigSerializer.Deserialize(json);
+            if (config is null)
+            {
+                ShowToast("Neplatný formát souboru", success: false);
+                return;
+            }
+
+            await SessionService.ExecuteCommandAsync(
+                new ImportConfigCommand(),
+                () => ConfigService.ReplaceConfigAsync(config),
+                ConfigService);
+            SessionService.LoadConfig(config);
+            ShowToast($"Import úspěšný: {config.Name}", success: true);
+        }
+        catch
+        {
+            ShowToast("Chyba při čtení souboru", success: false);
+        }
     }
 
     // ── Toast helper ──────────────────────────────────────────────────────
@@ -410,7 +575,7 @@
         _toastIsSuccess = success;
         _toastCts = new System.Threading.CancellationTokenSource();
         var token = _toastCts.Token;
-        _ = Task.Delay(3000, token).ContinueWith(_ =>
+        _ = Task.Delay(3500, token).ContinueWith(_ =>
         {
             if (token.IsCancellationRequested) return;
             _toastMessage = null;
@@ -421,6 +586,7 @@
     public void Dispose()
     {
         SessionService.OnSessionChanged -= HandleSessionChanged;
+        _navGuard?.Dispose();
         _toastCts?.Cancel();
     }
 }

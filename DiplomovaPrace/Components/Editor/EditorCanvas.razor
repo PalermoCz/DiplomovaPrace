@@ -6,6 +6,8 @@
  * JS (editor.js) obsluhuje pan/zoom/drawing/drag a volá JSInvokable metody.
  * Blazor renderuje statický obsah SVG z konfigurace.
  * Blazor nikdy nenastavuje 'transform' na #<id>-content — JS transform přežívá re-rendery.
+ *
+ * Validační chyby: místnosti s chybami mají červený obrys, zařízení s varováním žlutý.
  *@
 
 <svg id="@_svgId" class="editor-svg"
@@ -48,15 +50,29 @@
             @foreach (var room in Floor.Rooms.Where(r => !r.IsDeleted))
             {
                 var isRoomSelected = SelectedElementId == room.Id;
+                var roomIssues = ValidationIssues.Where(i => i.RoomId == room.Id).ToList();
+                var hasRoomError   = roomIssues.Any(i => i.Type == IssueType.Error);
+                var hasRoomWarning = roomIssues.Any(i => i.Type == IssueType.Warning);
+
+                var strokeColor = isRoomSelected ? "#2980b9"
+                    : hasRoomError   ? "#dc2626"
+                    : hasRoomWarning ? "#d97706"
+                    : "#78909c";
+                var strokeWidth = isRoomSelected || hasRoomError ? "2.5" : "1.5";
+                var fillColor   = isRoomSelected   ? "#dbeafe"
+                    : hasRoomError   ? "#fee2e2"
+                    : hasRoomWarning ? "#fffbeb"
+                    : "#f0f4f8";
+
                 <g data-room-id="@room.Id">
                     <rect class="editor-room-rect"
                           x="@Fmt(room.Geometry.X)"
                           y="@Fmt(room.Geometry.Y)"
                           width="@Fmt(room.Geometry.Width)"
                           height="@Fmt(room.Geometry.Height)"
-                          fill="@(isRoomSelected ? "#dbeafe" : "#f0f4f8")"
-                          stroke="@(isRoomSelected ? "#2980b9" : "#78909c")"
-                          stroke-width="@(isRoomSelected ? "2.5" : "1.5")"
+                          fill="@fillColor"
+                          stroke="@strokeColor"
+                          stroke-width="@strokeWidth"
                           rx="4" />
 
                     @((MarkupString)$"<text x=\"{Fmt(room.Geometry.X + room.Geometry.Width / 2)}\" " +
@@ -67,17 +83,25 @@
                     @foreach (var device in room.Devices.Where(d => !d.IsDeleted))
                     {
                         var isDeviceSelected = SelectedElementId == device.Id;
+                        var deviceIssues = ValidationIssues.Where(i => i.DeviceId == device.Id).ToList();
+                        var hasDeviceWarning = deviceIssues.Any();
+
                         var color = StateColorMapper.GetDeviceColor(device.Type, null);
                         var symbol = GetDeviceSymbol(device.Type);
                         var label = device.DisplaySettings.LabelOverride ?? device.Name;
+
+                        var devStroke = isDeviceSelected ? "#fff"
+                            : hasDeviceWarning ? "#d97706"
+                            : "#455a64";
+                        var devStrokeW = isDeviceSelected || hasDeviceWarning ? "3" : "1.5";
 
                         <g data-device-id="@device.Id">
                             <circle cx="@Fmt(device.Position.X)"
                                     cy="@Fmt(device.Position.Y)"
                                     r="13"
                                     fill="@color"
-                                    stroke="@(isDeviceSelected ? "#fff" : "#455a64")"
-                                    stroke-width="@(isDeviceSelected ? "3" : "1.5")" />
+                                    stroke="@devStroke"
+                                    stroke-width="@devStrokeW" />
 
                             @((MarkupString)$"<text x=\"{Fmt(device.Position.X)}\" " +
                                 $"y=\"{Fmt(device.Position.Y + 4)}\" " +
@@ -113,12 +137,14 @@
     [Parameter] public EditorTool ActiveTool { get; set; }
     [Parameter] public string? SelectedElementId { get; set; }
     [Parameter] public bool ShowGrid { get; set; }
+    [Parameter] public IReadOnlyList<ValidationIssue> ValidationIssues { get; set; } = [];
 
     [Parameter] public EventCallback<RoomGeometry> OnRoomCreated { get; set; }
     [Parameter] public EventCallback<(string DeviceId, DevicePosition Pos)> OnDeviceMoved { get; set; }
     [Parameter] public EventCallback<(string Id, EditorSelectionType Type)> OnElementSelected { get; set; }
     [Parameter] public EventCallback<(double X, double Y)> OnCanvasClicked { get; set; }
     [Parameter] public EventCallback<(string Id, EditorSelectionType Type)> OnDeleteRequested { get; set; }
+    [Parameter] public EventCallback<string> OnKeyboardShortcut { get; set; }
 
     private readonly string _svgId = "editor-canvas-svg";
     private DotNetObjectReference<EditorCanvas>? _dotNetRef;
@@ -144,21 +170,18 @@
 
         if (!_jsInitialized) return;
 
-        // Změna nástroje
         if (ActiveTool != _prevTool)
         {
             _prevTool = ActiveTool;
             await JSRuntime.InvokeVoidAsync("editorCanvas.setTool", ActiveTool.ToString());
         }
 
-        // Změna patra — resetuj zoom/pan
         if (Floor?.Id != _prevFloorId)
         {
             _prevFloorId = Floor?.Id;
             await JSRuntime.InvokeVoidAsync("editorCanvas.resetView");
         }
 
-        // Vždy znovu aplikuj JS transform (Blazor ho nemění, ale pro jistotu)
         await JSRuntime.InvokeVoidAsync("editorCanvas.reapplyTransform");
     }
 
@@ -191,6 +214,11 @@
             type = EditorSelectionType.None;
         await OnDeleteRequested.InvokeAsync((id, type));
     }
+
+    /// <summary>Volá se z JS pro klávesové zkratky (Ctrl+Z, Ctrl+Y).</summary>
+    [JSInvokable]
+    public async Task JsOnKeyboardShortcut(string shortcut) =>
+        await OnKeyboardShortcut.InvokeAsync(shortcut);
 
     // ── Helpers ──────────────────────────────────────────────────────────
 

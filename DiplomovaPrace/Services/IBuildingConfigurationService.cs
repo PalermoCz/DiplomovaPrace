@@ -48,6 +48,14 @@ public interface IBuildingConfigurationService
         DeviceDisplaySettings displaySettings);
     Task DeleteDeviceAsync(string deviceId);
 
+    // ── Bulk replace ─────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Atomicky nahradí celou BuildingConfig (např. při importu ze souboru).
+    /// Zachová Id, přepíše vše ostatní.
+    /// </summary>
+    Task ReplaceConfigAsync(BuildingConfig config);
+
     // ── Domain bridge ────────────────────────────────────────────────────────
 
     /// <summary>

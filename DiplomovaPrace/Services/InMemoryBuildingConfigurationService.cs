@@ -81,6 +81,13 @@ public class InMemoryBuildingConfigurationService : IBuildingConfigurationServic
         return Task.CompletedTask;
     }
 
+    public Task ReplaceConfigAsync(BuildingConfig config)
+    {
+        _store[config.Id] = config;
+        Notify();
+        return Task.CompletedTask;
+    }
+
     // ── Floor CRUD ───────────────────────────────────────────────────────────
 
     public Task<FloorConfig> AddFloorAsync(string buildingId, string name, int level,

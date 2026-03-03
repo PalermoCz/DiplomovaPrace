@@ -244,6 +244,19 @@ window.editorCanvas = (function () {
     }
 
     function onKeyDown(e) {
+        // Ctrl+Z = Undo, Ctrl+Y / Ctrl+Shift+Z = Redo
+        if ((e.ctrlKey || e.metaKey) && !e.repeat && !e.target.matches('input, textarea')) {
+            if (e.code === 'KeyZ' && !e.shiftKey) {
+                e.preventDefault();
+                if (_dotNet) _dotNet.invokeMethodAsync('JsOnKeyboardShortcut', 'undo');
+                return;
+            }
+            if (e.code === 'KeyY' || (e.code === 'KeyZ' && e.shiftKey)) {
+                e.preventDefault();
+                if (_dotNet) _dotNet.invokeMethodAsync('JsOnKeyboardShortcut', 'redo');
+                return;
+            }
+        }
         if (e.code === 'Space' && !e.repeat && !e.target.matches('input, textarea')) {
             _spaceDown = true;
             var svg = getSvg();
@@ -349,3 +362,31 @@ window.editorCanvas = (function () {
         }
     };
 }());
+
+// ── Globální utility ──────────────────────────────────────────────────────────
+
+/**
+ * Stáhne textový soubor do prohlížeče.
+ * Volá se z Blazoru: JSRuntime.InvokeVoidAsync("downloadTextFile", filename, content)
+ */
+window.downloadTextFile = function (filename, content) {
+    var blob = new Blob([content], { type: 'application/json;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+};
+
+/**
+ * Spustí klik na element dle ID (pro skrytý <input type="file">).
+ * Volá se z Blazoru: JSRuntime.InvokeVoidAsync("triggerClick", elementId)
+ */
+window.triggerClick = function (elementId) {
+    var el = document.getElementById(elementId);
+    if (el) el.click();
+};
+

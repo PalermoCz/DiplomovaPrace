@@ -1,6 +1,22 @@
-@* Properties panel — přepíná formuláře dle vybraného prvku *@
+@* Properties panel — přepíná formuláře dle vybraného prvku, zobrazuje validační chyby *@
 
 <div class="editor-properties">
+
+    @* ── Validační chyby pro aktuální výběr ──────────────────────────────── *@
+    @if (_elementIssues.Count > 0)
+    {
+        <div class="mb-2">
+            @foreach (var issue in _elementIssues)
+            {
+                var cls = issue.Type == IssueType.Error ? "text-danger" : "text-warning";
+                var icon = issue.Type == IssueType.Error ? "⛔" : "⚠";
+                <div class="@cls" style="font-size:0.77rem; margin-bottom:0.15rem;">
+                    @icon @issue.Message
+                </div>
+            }
+        </div>
+    }
+
     @switch (SelectedElementType)
     {
         case EditorSelectionType.Building when _building is not null:
@@ -39,6 +55,7 @@
     [Parameter] public string? SelectedElementId { get; set; }
     [Parameter] public EditorSelectionType SelectedElementType { get; set; }
     [Parameter] public FloorConfig? ActiveFloor { get; set; }
+    [Parameter] public IReadOnlyList<ValidationIssue> ValidationIssues { get; set; } = [];
 
     [Parameter] public EventCallback<(string Name, string? Description, string? Address)> OnUpdateBuilding { get; set; }
     [Parameter] public EventCallback<(string Name, int Level)> OnUpdateFloor { get; set; }
@@ -51,10 +68,12 @@
     private FloorConfig? _floor;
     private RoomConfig? _room;
     private DeviceConfig? _device;
+    private List<ValidationIssue> _elementIssues = [];
 
     protected override void OnParametersSet()
     {
         _building = null; _floor = null; _room = null; _device = null;
+        _elementIssues = [];
 
         if (Config is null || SelectedElementId is null) return;
 
@@ -62,17 +81,25 @@
         {
             case EditorSelectionType.Building:
                 _building = Config;
+                _elementIssues = ValidationIssues.ToList();
                 break;
 
             case EditorSelectionType.Floor:
                 _floor = Config.Floors.FirstOrDefault(f => f.Id == SelectedElementId && !f.IsDeleted);
+                _elementIssues = ValidationIssues.ToList();
                 break;
 
             case EditorSelectionType.Room:
                 foreach (var floor in Config.Floors)
                     foreach (var room in floor.Rooms)
                         if (room.Id == SelectedElementId && !room.IsDeleted)
-                        { _room = room; return; }
+                        {
+                            _room = room;
+                            _elementIssues = ValidationIssues
+                                .Where(i => i.RoomId == room.Id && i.DeviceId is null)
+                                .ToList();
+                            return;
+                        }
                 break;
 
             case EditorSelectionType.Device:
@@ -80,7 +107,13 @@
                     foreach (var room in floor.Rooms)
                         foreach (var device in room.Devices)
                             if (device.Id == SelectedElementId && !device.IsDeleted)
-                            { _device = device; return; }
+                            {
+                                _device = device;
+                                _elementIssues = ValidationIssues
+                                    .Where(i => i.DeviceId == device.Id)
+                                    .ToList();
+                                return;
+                            }
                 break;
         }
     }
