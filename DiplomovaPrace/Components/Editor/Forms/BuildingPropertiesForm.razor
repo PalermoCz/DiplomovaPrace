@@ -1,0 +1,54 @@
+@* Formulář vlastností budovy *@
+
+<div class="prop-section-title">Budova</div>
+
+<EditForm Model="_model" OnValidSubmit="HandleSubmit">
+    <DataAnnotationsValidator />
+
+    <div class="mb-2">
+        <label class="form-label">Název</label>
+        <InputText class="form-control" @bind-Value="_model.Name" />
+    </div>
+    <div class="mb-2">
+        <label class="form-label">Popis</label>
+        <InputText class="form-control" @bind-Value="_model.Description" placeholder="(volitelné)" />
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Adresa</label>
+        <InputText class="form-control" @bind-Value="_model.Address" placeholder="(volitelné)" />
+    </div>
+
+    <button type="submit" class="btn btn-sm btn-primary btn-save w-100">Uložit</button>
+</EditForm>
+
+@code {
+    [Parameter, EditorRequired] public BuildingConfig Building { get; set; } = default!;
+    [Parameter] public EventCallback<(string Name, string? Description, string? Address)> OnSave { get; set; }
+
+    private FormModel _model = new();
+    private string? _prevId;
+
+    protected override void OnParametersSet()
+    {
+        if (Building.Id == _prevId) return;
+        _prevId = Building.Id;
+        _model = new FormModel
+        {
+            Name = Building.Name,
+            Description = Building.Description,
+            Address = Building.Address
+        };
+    }
+
+    private async Task HandleSubmit() =>
+        await OnSave.InvokeAsync((_model.Name, _model.Description, _model.Address));
+
+    private sealed class FormModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Název je povinný")]
+        [System.ComponentModel.DataAnnotations.MaxLength(120)]
+        public string Name { get; set; } = "";
+        public string? Description { get; set; }
+        public string? Address { get; set; }
+    }
+}

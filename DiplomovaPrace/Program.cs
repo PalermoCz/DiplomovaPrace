@@ -13,6 +13,10 @@ builder.Services.AddSingleton<SimulationService>();
 builder.Services.AddSingleton<ISimulationService>(sp => sp.GetRequiredService<SimulationService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<SimulationService>());
 
+// Editor služby
+builder.Services.AddSingleton<IBuildingConfigurationService, InMemoryBuildingConfigurationService>();
+builder.Services.AddScoped<IEditorSessionService, EditorSessionService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

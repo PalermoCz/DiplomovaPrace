@@ -36,4 +36,11 @@ public interface IBuildingStateService
     /// Handlery MUSÍ volat InvokeAsync(StateHasChanged) pro thread safety.
     /// </summary>
     event Action? OnStateChanged;
+
+    /// <summary>
+    /// Nahradí strukturu budovy novou konfigurací z editoru.
+    /// Vymaže existující stavy zařízení a inicializuje výchozí stavy pro nová zařízení.
+    /// Vyvolá OnStateChanged po dokončení výměny.
+    /// </summary>
+    void ReplaceBuilding(Building newBuilding);
 }

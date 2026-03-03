@@ -13,13 +13,14 @@ public class BuildingStateService : IBuildingStateService
 {
     private readonly ConcurrentDictionary<string, DeviceState> _deviceStates = new();
 
-    public Building Building { get; }
+    private Building _building;
+    public Building Building => _building;
 
     public event Action? OnStateChanged;
 
     public BuildingStateService()
     {
-        Building = BuildingConfiguration.CreateDemoBuilding();
+        _building = BuildingConfiguration.CreateDemoBuilding();
         InitializeDefaultStates();
     }
 
@@ -39,6 +40,14 @@ public class BuildingStateService : IBuildingStateService
     public void NotifyStateChanged()
     {
         OnStateChanged?.Invoke();
+    }
+
+    public void ReplaceBuilding(Building newBuilding)
+    {
+        _building = newBuilding;
+        _deviceStates.Clear();
+        InitializeDefaultStates();
+        NotifyStateChanged();
     }
 
     private void InitializeDefaultStates()

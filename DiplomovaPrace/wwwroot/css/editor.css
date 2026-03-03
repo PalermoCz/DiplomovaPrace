@@ -1,0 +1,209 @@
+/* ── Editor Layout ─────────────────────────────────────────────────────── */
+
+.editor-page {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 56px); /* výška stránky bez nav baru */
+    overflow: hidden;
+}
+
+.editor-toolbar-row {
+    flex: 0 0 auto;
+    padding: 0.5rem 1rem;
+    background: #fff;
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.editor-main {
+    flex: 1 1 0;
+    display: flex;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* ── Tree Navigation ───────────────────────────────────────────────────── */
+
+.editor-tree-nav {
+    flex: 0 0 220px;
+    overflow-y: auto;
+    border-right: 1px solid #dee2e6;
+    background: #f8f9fa;
+    padding: 0.75rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.editor-tree-nav .tree-building {
+    font-weight: 700;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #2c3e50;
+}
+
+.editor-tree-nav .tree-building:hover,
+.editor-tree-nav .tree-building.active {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.editor-tree-nav .tree-floor {
+    padding: 0.2rem 0.5rem 0.2rem 1.25rem;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #374151;
+    margin-top: 1px;
+}
+
+.editor-tree-nav .tree-floor:hover {
+    background: #e5e7eb;
+}
+
+.editor-tree-nav .tree-floor.active-floor {
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-weight: 600;
+}
+
+.editor-tree-nav .tree-actions {
+    padding: 0.5rem 0.5rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+/* ── Canvas Wrapper ────────────────────────────────────────────────────── */
+
+.editor-canvas-wrapper {
+    flex: 1 1 0;
+    overflow: hidden;
+    position: relative;
+    background: #e9ecef;
+    display: flex;
+    align-items: stretch;
+}
+
+.editor-empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    gap: 1rem;
+}
+
+.editor-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* ── Properties Panel ──────────────────────────────────────────────────── */
+
+.editor-properties {
+    flex: 0 0 280px;
+    overflow-y: auto;
+    border-left: 1px solid #dee2e6;
+    background: #fff;
+    padding: 0.75rem;
+    font-size: 0.875rem;
+}
+
+.editor-properties .no-selection {
+    color: #9ca3af;
+    text-align: center;
+    margin-top: 2rem;
+    font-size: 0.82rem;
+}
+
+/* ── Toolbar Buttons ───────────────────────────────────────────────────── */
+
+.editor-toolbar-row .tool-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.82rem;
+    padding: 0.3rem 0.65rem;
+    border-radius: 4px;
+    border: 1px solid #ced4da;
+    background: #fff;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.editor-toolbar-row .tool-btn:hover { background: #f1f3f5; }
+
+.editor-toolbar-row .tool-btn.active {
+    background: #dbeafe;
+    border-color: #2980b9;
+    color: #1d4ed8;
+    font-weight: 600;
+}
+
+.editor-toolbar-row .tool-btn.danger.active {
+    background: #fee2e2;
+    border-color: #dc2626;
+    color: #dc2626;
+}
+
+.editor-toolbar-sep {
+    width: 1px;
+    height: 28px;
+    background: #dee2e6;
+    margin: 0 0.25rem;
+}
+
+/* ── SVG Editor Elements ───────────────────────────────────────────────── */
+
+.editor-room-rect {
+    transition: filter 0.1s;
+}
+
+.editor-room-rect:hover {
+    filter: brightness(0.95);
+}
+
+/* Zvýraznění při výběru — stroke se nastavuje dynamicky z Blazoru */
+
+/* ── Properties Form ───────────────────────────────────────────────────── */
+
+.editor-properties .prop-section-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 0.25rem;
+}
+
+.editor-properties .form-label {
+    font-size: 0.8rem;
+    margin-bottom: 0.2rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.editor-properties .form-control,
+.editor-properties .form-select {
+    font-size: 0.82rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.editor-properties .btn-save {
+    font-size: 0.82rem;
+    padding: 0.3rem 0.75rem;
+}
+
+.editor-properties .delete-section {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #fee2e2;
+}

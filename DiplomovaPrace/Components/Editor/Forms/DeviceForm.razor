@@ -1,0 +1,118 @@
+@* Formulář vlastností zařízení — typ, zobrazení, prahové hodnoty *@
+
+<div class="prop-section-title">Zařízení</div>
+
+<EditForm Model="_model" OnValidSubmit="HandleSubmit">
+    <DataAnnotationsValidator />
+
+    <div class="mb-2">
+        <label class="form-label">Název</label>
+        <InputText class="form-control" @bind-Value="_model.Name" />
+    </div>
+
+    <div class="mb-2">
+        <label class="form-label">Typ</label>
+        <InputSelect class="form-select" @bind-Value="_model.Type">
+            <option value="@DeviceType.TemperatureSensor">Teplotní senzor</option>
+            <option value="@DeviceType.HumiditySensor">Senzor vlhkosti</option>
+            <option value="@DeviceType.Light">Osvětlení</option>
+            <option value="@DeviceType.HVAC">Klimatizace</option>
+            <option value="@DeviceType.MotionSensor">Pohybový senzor</option>
+            <option value="@DeviceType.DoorSensor">Dveřní senzor</option>
+        </InputSelect>
+    </div>
+
+    <div class="prop-section-title mt-3">Zobrazení</div>
+
+    <div class="mb-2">
+        <label class="form-label">Jednotka</label>
+        <InputText class="form-control" @bind-Value="_model.Unit" placeholder="např. °C, %, lux" />
+    </div>
+
+    <div class="mb-2">
+        <label class="form-label">Vlastní popisek</label>
+        <InputText class="form-control" @bind-Value="_model.LabelOverride" placeholder="(prázdné = použít název)" />
+    </div>
+
+    <div class="mb-2 form-check">
+        <InputCheckbox class="form-check-input" id="chk-show-value" @bind-Value="_model.ShowValue" />
+        <label class="form-check-label" for="chk-show-value">Zobrazit hodnotu pod ikonou</label>
+    </div>
+
+    <div class="prop-section-title mt-3">Prahové hodnoty alarmu</div>
+
+    <div class="mb-2">
+        <label class="form-label">Max (alarm nad)</label>
+        <InputNumber class="form-control" @bind-Value="_model.AlarmHigh" placeholder="(prázdné = bez limitu)" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Min (alarm pod)</label>
+        <InputNumber class="form-control" @bind-Value="_model.AlarmLow" placeholder="(prázdné = bez limitu)" />
+    </div>
+
+    <button type="submit" class="btn btn-sm btn-primary btn-save w-100">Uložit</button>
+</EditForm>
+
+<div class="delete-section">
+    <button class="btn btn-sm btn-outline-danger w-100"
+            @onclick="() => OnDelete.InvokeAsync()">
+        Smazat zařízení
+    </button>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public DeviceConfig Device { get; set; } = default!;
+    [Parameter] public EventCallback<DeviceConfig> OnSave { get; set; }
+    [Parameter] public EventCallback OnDelete { get; set; }
+
+    private FormModel _model = new();
+    private string? _prevId;
+
+    protected override void OnParametersSet()
+    {
+        if (Device.Id == _prevId) return;
+        _prevId = Device.Id;
+        _model = new FormModel
+        {
+            Name          = Device.Name,
+            Type          = Device.Type,
+            Unit          = Device.DisplaySettings.Unit,
+            LabelOverride = Device.DisplaySettings.LabelOverride,
+            ShowValue     = Device.DisplaySettings.ShowValue,
+            AlarmHigh     = Device.DisplaySettings.AlarmThresholdHigh,
+            AlarmLow      = Device.DisplaySettings.AlarmThresholdLow
+        };
+    }
+
+    private async Task HandleSubmit()
+    {
+        var settings = new DeviceDisplaySettings(
+            Unit:                  _model.Unit,
+            LabelOverride:         _model.LabelOverride,
+            AlarmThresholdHigh:    _model.AlarmHigh,
+            AlarmThresholdLow:     _model.AlarmLow,
+            ShowValue:             _model.ShowValue
+        );
+        var updated = Device with
+        {
+            Name             = _model.Name,
+            Type             = _model.Type,
+            DisplaySettings  = settings,
+            UpdatedAt        = DateTime.UtcNow
+        };
+        await OnSave.InvokeAsync(updated);
+    }
+
+    private sealed class FormModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Název je povinný")]
+        public string Name { get; set; } = "";
+        public DeviceType Type { get; set; } = DeviceType.TemperatureSensor;
+        public string? Unit { get; set; }
+        public string? LabelOverride { get; set; }
+        public bool ShowValue { get; set; }
+        public double? AlarmHigh { get; set; }
+        public double? AlarmLow { get; set; }
+    }
+}

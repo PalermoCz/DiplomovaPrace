@@ -1,0 +1,62 @@
+@* Stromová navigace budovy: Budova → Patra. Umožňuje přepínání pater a výběr budovy. *@
+
+<div class="editor-tree-nav">
+    @if (Config is null)
+    {
+        <div class="text-muted small px-2">Žádná budova</div>
+    }
+    else
+    {
+        @* Budova *@
+        <div class="tree-building @(SelectedElementType == EditorSelectionType.Building ? "active" : "")"
+             @onclick="() => OnElementSelected.InvokeAsync((Config.Id, EditorSelectionType.Building))">
+            &#127968; @Config.Name
+        </div>
+
+        @* Patra *@
+        @foreach (var floor in Config.Floors.Where(f => !f.IsDeleted).OrderBy(f => f.Level))
+        {
+            <div class="tree-floor @(ActiveFloorId == floor.Id ? "active-floor" : "")"
+                 @onclick="() => SelectFloor(floor)">
+                <span class="me-1 text-muted" style="font-size:0.75rem;">&#9776;</span>
+                @floor.Name
+                <span class="badge bg-secondary ms-1" style="font-size:0.65rem;">@floor.Level</span>
+            </div>
+        }
+
+        @* Akce *@
+        <div class="tree-actions">
+            <button class="btn btn-xs btn-outline-primary w-100"
+                    style="font-size:0.75rem; padding:0.2rem 0.4rem;"
+                    @onclick="() => OnAddFloor.InvokeAsync()">
+                + Přidat patro
+            </button>
+            @if (Config.Floors.Any(f => !f.IsDeleted) && ActiveFloorId is not null)
+            {
+                <button class="btn btn-xs btn-outline-danger w-100"
+                        style="font-size:0.75rem; padding:0.2rem 0.4rem;"
+                        @onclick="() => OnDeleteFloor.InvokeAsync(ActiveFloorId!)">
+                    ✕ Smazat patro
+                </button>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public BuildingConfig? Config { get; set; }
+    [Parameter] public string? ActiveFloorId { get; set; }
+    [Parameter] public string? SelectedElementId { get; set; }
+    [Parameter] public EditorSelectionType SelectedElementType { get; set; }
+
+    [Parameter] public EventCallback<string> OnFloorSelected { get; set; }
+    [Parameter] public EventCallback<(string Id, EditorSelectionType Type)> OnElementSelected { get; set; }
+    [Parameter] public EventCallback OnAddFloor { get; set; }
+    [Parameter] public EventCallback<string> OnDeleteFloor { get; set; }
+
+    private async Task SelectFloor(FloorConfig floor)
+    {
+        await OnFloorSelected.InvokeAsync(floor.Id);
+        await OnElementSelected.InvokeAsync((floor.Id, EditorSelectionType.Floor));
+    }
+}

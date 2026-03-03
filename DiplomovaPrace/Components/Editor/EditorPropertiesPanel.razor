@@ -1,0 +1,87 @@
+@* Properties panel — přepíná formuláře dle vybraného prvku *@
+
+<div class="editor-properties">
+    @switch (SelectedElementType)
+    {
+        case EditorSelectionType.Building when _building is not null:
+            <BuildingPropertiesForm Building="_building"
+                                    OnSave="OnUpdateBuilding" />
+            break;
+
+        case EditorSelectionType.Floor when _floor is not null:
+            <FloorForm Floor="_floor"
+                       OnSave="OnUpdateFloor" />
+            break;
+
+        case EditorSelectionType.Room when _room is not null:
+            <RoomForm Room="_room"
+                      OnSave="OnUpdateRoomName"
+                      OnDelete="() => OnDeleteRoom.InvokeAsync(_room.Id)" />
+            break;
+
+        case EditorSelectionType.Device when _device is not null:
+            <DeviceForm Device="_device"
+                        OnSave="OnUpdateDevice"
+                        OnDelete="() => OnDeleteDevice.InvokeAsync(_device.Id)" />
+            break;
+
+        default:
+            <div class="no-selection">
+                <div style="font-size:2rem; opacity:0.3;">&#9678;</div>
+                <div>Vyberte prvek v canvasu nebo stromu</div>
+            </div>
+            break;
+    }
+</div>
+
+@code {
+    [Parameter] public BuildingConfig? Config { get; set; }
+    [Parameter] public string? SelectedElementId { get; set; }
+    [Parameter] public EditorSelectionType SelectedElementType { get; set; }
+    [Parameter] public FloorConfig? ActiveFloor { get; set; }
+
+    [Parameter] public EventCallback<(string Name, string? Description, string? Address)> OnUpdateBuilding { get; set; }
+    [Parameter] public EventCallback<(string Name, int Level)> OnUpdateFloor { get; set; }
+    [Parameter] public EventCallback<string> OnUpdateRoomName { get; set; }
+    [Parameter] public EventCallback<DeviceConfig> OnUpdateDevice { get; set; }
+    [Parameter] public EventCallback<string> OnDeleteRoom { get; set; }
+    [Parameter] public EventCallback<string> OnDeleteDevice { get; set; }
+
+    private BuildingConfig? _building;
+    private FloorConfig? _floor;
+    private RoomConfig? _room;
+    private DeviceConfig? _device;
+
+    protected override void OnParametersSet()
+    {
+        _building = null; _floor = null; _room = null; _device = null;
+
+        if (Config is null || SelectedElementId is null) return;
+
+        switch (SelectedElementType)
+        {
+            case EditorSelectionType.Building:
+                _building = Config;
+                break;
+
+            case EditorSelectionType.Floor:
+                _floor = Config.Floors.FirstOrDefault(f => f.Id == SelectedElementId && !f.IsDeleted);
+                break;
+
+            case EditorSelectionType.Room:
+                foreach (var floor in Config.Floors)
+                    foreach (var room in floor.Rooms)
+                        if (room.Id == SelectedElementId && !room.IsDeleted)
+                        { _room = room; return; }
+                break;
+
+            case EditorSelectionType.Device:
+                foreach (var floor in Config.Floors)
+                    foreach (var room in floor.Rooms)
+                        foreach (var device in room.Devices)
+                            if (device.Id == SelectedElementId && !device.IsDeleted)
+                            { _device = device; return; }
+                break;
+        }
+    }
+}

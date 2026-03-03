@@ -1,0 +1,426 @@
+@page "/editor"
+@rendermode InteractiveServer
+@inject IBuildingConfigurationService ConfigService
+@inject IEditorSessionService SessionService
+@inject IBuildingStateService StateService
+@implements IDisposable
+
+<PageTitle>Editor budov</PageTitle>
+
+<div class="editor-page">
+
+    @* ── Toolbar ─────────────────────────────────────────────────────────── *@
+    <EditorToolbar ActiveTool="@SessionService.ActiveTool"
+                   HasUnsavedChanges="@SessionService.HasUnsavedChanges"
+                   ShowGrid="@_showGrid"
+                   CanAddFloor="@(SessionService.CurrentConfig is not null)"
+                   CanApply="@(SessionService.CurrentConfig is not null)"
+                   OnToolChanged="HandleToolChanged"
+                   OnNewBuilding="HandleNewBuilding"
+                   OnAddFloor="HandleAddFloor"
+                   OnGridToggled="() => _showGrid = !_showGrid"
+                   OnResetView="HandleResetView"
+                   OnApplyToVisualization="HandleApplyToVisualization" />
+
+    <div class="editor-main">
+
+        @* ── Stromová navigace ────────────────────────────────────────────── *@
+        <EditorTreeNav Config="@SessionService.CurrentConfig"
+                       ActiveFloorId="@SessionService.ActiveFloorId"
+                       SelectedElementId="@SessionService.SelectedElementId"
+                       SelectedElementType="@SessionService.SelectedElementType"
+                       OnFloorSelected="HandleFloorSelected"
+                       OnElementSelected="HandleElementSelected"
+                       OnAddFloor="HandleAddFloor"
+                       OnDeleteFloor="HandleDeleteFloor" />
+
+        @* ── Canvas ──────────────────────────────────────────────────────── *@
+        <div class="editor-canvas-wrapper">
+            @if (SessionService.CurrentConfig is null)
+            {
+                <div class="editor-empty-state">
+                    <div style="font-size:3rem; opacity:0.25;">&#9633;</div>
+                    <p class="mb-0">Žádná konfigurace budovy není načtena.</p>
+                    <button class="btn btn-primary" @onclick="HandleNewBuilding">
+                        Vytvořit novou budovu
+                    </button>
+                </div>
+            }
+            else
+            {
+                <EditorCanvas @ref="_canvas"
+                              Floor="@SessionService.GetActiveFloor()"
+                              ActiveTool="@SessionService.ActiveTool"
+                              SelectedElementId="@SessionService.SelectedElementId"
+                              ShowGrid="@_showGrid"
+                              OnRoomCreated="HandleRoomCreated"
+                              OnDeviceMoved="HandleDeviceMoved"
+                              OnElementSelected="HandleElementSelected"
+                              OnCanvasClicked="HandleCanvasClicked"
+                              OnDeleteRequested="HandleDeleteRequested" />
+            }
+        </div>
+
+        @* ── Properties panel ────────────────────────────────────────────── *@
+        <EditorPropertiesPanel Config="@SessionService.CurrentConfig"
+                               SelectedElementId="@SessionService.SelectedElementId"
+                               SelectedElementType="@SessionService.SelectedElementType"
+                               ActiveFloor="@SessionService.GetActiveFloor()"
+                               OnUpdateBuilding="HandleUpdateBuilding"
+                               OnUpdateFloor="HandleUpdateFloor"
+                               OnUpdateRoomName="HandleUpdateRoomName"
+                               OnUpdateDevice="HandleUpdateDevice"
+                               OnDeleteRoom="HandleDeleteRoom"
+                               OnDeleteDevice="HandleDeleteDevice" />
+    </div>
+</div>
+
+@* Modální dialog pro název nové budovy *@
+@if (_showNewBuildingDialog)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,0.4);">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h6 class="modal-title mb-0">Nová budova</h6>
+                </div>
+                <div class="modal-body py-2">
+                    <input class="form-control form-control-sm"
+                           placeholder="Název budovy"
+                           @bind="_newBuildingName"
+                           @onkeydown="HandleNewBuildingKeyDown" />
+                </div>
+                <div class="modal-footer py-1">
+                    <button class="btn btn-sm btn-secondary" @onclick="() => _showNewBuildingDialog = false">Zrušit</button>
+                    <button class="btn btn-sm btn-primary" @onclick="ConfirmNewBuilding">Vytvořit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Modální dialog pro název nového patra *@
+@if (_showNewFloorDialog)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,0.4);">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h6 class="modal-title mb-0">Nové patro</h6>
+                </div>
+                <div class="modal-body py-2">
+                    <input class="form-control form-control-sm mb-2"
+                           placeholder="Název patra (např. Přízemí)"
+                           @bind="_newFloorName"
+                           @onkeydown="HandleNewFloorKeyDown" />
+                    <input type="number" class="form-control form-control-sm"
+                           placeholder="Číslo patra (0 = přízemí)"
+                           @bind="_newFloorLevel" />
+                </div>
+                <div class="modal-footer py-1">
+                    <button class="btn btn-sm btn-secondary" @onclick="() => _showNewFloorDialog = false">Zrušit</button>
+                    <button class="btn btn-sm btn-primary" @onclick="ConfirmNewFloor">Přidat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Toast notifikace *@
+@if (_toastMessage is not null)
+{
+    <div class="toast show position-fixed bottom-0 end-0 m-3"
+         style="z-index:9999; min-width:220px;"
+         role="alert">
+        <div class="toast-body py-2 px-3 @(_toastIsSuccess ? "bg-success text-white" : "bg-danger text-white")"
+             style="border-radius:6px;">
+            @_toastMessage
+        </div>
+    </div>
+}
+
+@code {
+    private EditorCanvas? _canvas;
+    private bool _showGrid = true;
+
+    // Dialogy
+    private bool _showNewBuildingDialog;
+    private string _newBuildingName = "Nová budova";
+    private bool _showNewFloorDialog;
+    private string _newFloorName = "Přízemí";
+    private int _newFloorLevel;
+
+    // Toast
+    private string? _toastMessage;
+    private bool _toastIsSuccess;
+    private System.Threading.CancellationTokenSource? _toastCts;
+
+    // ── Inicializace ──────────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync()
+    {
+        SessionService.OnSessionChanged += HandleSessionChanged;
+        var buildings = await ConfigService.GetAllBuildingsAsync();
+        if (buildings.Count > 0)
+            SessionService.LoadConfig(buildings[0]);
+    }
+
+    private async void HandleSessionChanged() =>
+        await InvokeAsync(StateHasChanged);
+
+    // ── Toolbar akce ──────────────────────────────────────────────────────
+
+    private void HandleToolChanged(EditorTool tool) =>
+        SessionService.SetActiveTool(tool);
+
+    private void HandleGridToggled() => _showGrid = !_showGrid;
+
+    private async Task HandleResetView()
+    {
+        if (_canvas is not null) await _canvas.ResetViewAsync();
+    }
+
+    // ── Nová budova ───────────────────────────────────────────────────────
+
+    private void HandleNewBuilding()
+    {
+        _newBuildingName = "Nová budova";
+        _showNewBuildingDialog = true;
+    }
+
+    private async Task ConfirmNewBuilding()
+    {
+        _showNewBuildingDialog = false;
+        if (string.IsNullOrWhiteSpace(_newBuildingName)) return;
+        var config = await ConfigService.CreateBuildingAsync(_newBuildingName.Trim(), null, null);
+        SessionService.LoadConfig(config);
+        ShowToast("Budova vytvořena", success: true);
+    }
+
+    private async Task HandleNewBuildingKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await ConfirmNewBuilding();
+        if (e.Key == "Escape") _showNewBuildingDialog = false;
+    }
+
+    // ── Patra ─────────────────────────────────────────────────────────────
+
+    private void HandleAddFloor()
+    {
+        if (SessionService.CurrentConfig is null) return;
+        var existingLevels = SessionService.CurrentConfig.Floors
+            .Where(f => !f.IsDeleted).Select(f => f.Level);
+        _newFloorLevel = existingLevels.Any() ? existingLevels.Max() + 1 : 0;
+        _newFloorName  = _newFloorLevel == 0 ? "Přízemí" : _newFloorLevel + ". patro";
+        _showNewFloorDialog = true;
+    }
+
+    private async Task ConfirmNewFloor()
+    {
+        _showNewFloorDialog = false;
+        if (SessionService.CurrentConfig is null) return;
+        if (string.IsNullOrWhiteSpace(_newFloorName)) return;
+        var floor = await ConfigService.AddFloorAsync(
+            SessionService.CurrentConfig.Id,
+            _newFloorName.Trim(),
+            _newFloorLevel);
+        await RefreshSession();
+        SessionService.SelectFloor(floor.Id);
+        SessionService.SelectElement(floor.Id, EditorSelectionType.Floor);
+        SessionService.MarkDirty();
+        ShowToast("Patro přidáno", success: true);
+    }
+
+    private async Task HandleNewFloorKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await ConfirmNewFloor();
+        if (e.Key == "Escape") _showNewFloorDialog = false;
+    }
+
+    private async Task HandleFloorSelected(string floorId) =>
+        SessionService.SelectFloor(floorId);
+
+    private async Task HandleDeleteFloor(string floorId)
+    {
+        if (SessionService.CurrentConfig is null) return;
+        await ConfigService.DeleteFloorAsync(SessionService.CurrentConfig.Id, floorId);
+        await RefreshSession();
+        SessionService.MarkDirty();
+        ShowToast("Patro smazáno", success: true);
+    }
+
+    // ── Element selection ─────────────────────────────────────────────────
+
+    private void HandleElementSelected((string Id, EditorSelectionType Type) args)
+    {
+        if (string.IsNullOrEmpty(args.Id))
+            SessionService.ClearSelection();
+        else
+            SessionService.SelectElement(args.Id, args.Type);
+    }
+
+    // ── Canvas: přidání místnosti (rubber-band) ───────────────────────────
+
+    private async Task HandleRoomCreated(RoomGeometry geometry)
+    {
+        if (SessionService.ActiveFloorId is null) return;
+        var room = await ConfigService.AddRoomAsync(
+            SessionService.ActiveFloorId, "Nová místnost", geometry);
+        await RefreshSession();
+        SessionService.SelectElement(room.Id, EditorSelectionType.Room);
+        SessionService.SetActiveTool(EditorTool.Select);
+        SessionService.MarkDirty();
+        ShowToast("Místnost přidána — upravte název v panelu vpravo", success: true);
+    }
+
+    // ── Canvas: klik v AddDevice módu ────────────────────────────────────
+
+    private async Task HandleCanvasClicked((double X, double Y) pos)
+    {
+        var floor = SessionService.GetActiveFloor();
+        if (floor is null) return;
+
+        // Najdi místnost v bodě kliknutí
+        var room = floor.Rooms.FirstOrDefault(r =>
+            !r.IsDeleted &&
+            pos.X >= r.Geometry.X && pos.X <= r.Geometry.X + r.Geometry.Width &&
+            pos.Y >= r.Geometry.Y && pos.Y <= r.Geometry.Y + r.Geometry.Height);
+
+        if (room is null)
+        {
+            ShowToast("Klikněte uvnitř místnosti pro přidání zařízení", success: false);
+            return;
+        }
+
+        var device = await ConfigService.AddDeviceAsync(
+            room.Id, "Nové zařízení", DeviceType.TemperatureSensor,
+            new DevicePosition(pos.X, pos.Y));
+        await RefreshSession();
+        SessionService.SelectElement(device.Id, EditorSelectionType.Device);
+        SessionService.SetActiveTool(EditorTool.Select);
+        SessionService.MarkDirty();
+        ShowToast("Zařízení přidáno — nastavte vlastnosti v panelu vpravo", success: true);
+    }
+
+    // ── Drag & Drop zařízení ──────────────────────────────────────────────
+
+    private async Task HandleDeviceMoved((string DeviceId, DevicePosition Pos) args)
+    {
+        await ConfigService.UpdateDevicePositionAsync(args.DeviceId, args.Pos);
+        await RefreshSession();
+        SessionService.MarkDirty();
+    }
+
+    // ── Delete (z canvasu nebo properties) ───────────────────────────────
+
+    private async Task HandleDeleteRequested((string Id, EditorSelectionType Type) args)
+    {
+        switch (args.Type)
+        {
+            case EditorSelectionType.Room:   await HandleDeleteRoom(args.Id); break;
+            case EditorSelectionType.Device: await HandleDeleteDevice(args.Id); break;
+        }
+    }
+
+    private async Task HandleDeleteRoom(string roomId)
+    {
+        await ConfigService.DeleteRoomAsync(roomId);
+        await RefreshSession();
+        SessionService.ClearSelection();
+        SessionService.MarkDirty();
+        ShowToast("Místnost smazána", success: true);
+    }
+
+    private async Task HandleDeleteDevice(string deviceId)
+    {
+        await ConfigService.DeleteDeviceAsync(deviceId);
+        await RefreshSession();
+        SessionService.ClearSelection();
+        SessionService.MarkDirty();
+        ShowToast("Zařízení smazáno", success: true);
+    }
+
+    // ── Properties panel — uložení změn ──────────────────────────────────
+
+    private async Task HandleUpdateBuilding((string Name, string? Description, string? Address) args)
+    {
+        if (SessionService.CurrentConfig is null) return;
+        await ConfigService.UpdateBuildingMetadataAsync(
+            SessionService.CurrentConfig.Id, args.Name, args.Description, args.Address);
+        await RefreshSession();
+        SessionService.MarkDirty();
+        ShowToast("Budova uložena", success: true);
+    }
+
+    private async Task HandleUpdateFloor((string Name, int Level) args)
+    {
+        if (SessionService.CurrentConfig is null || SessionService.ActiveFloorId is null) return;
+        await ConfigService.UpdateFloorAsync(
+            SessionService.CurrentConfig.Id, SessionService.ActiveFloorId, args.Name, args.Level);
+        await RefreshSession();
+        SessionService.MarkDirty();
+        ShowToast("Patro uloženo", success: true);
+    }
+
+    private async Task HandleUpdateRoomName(string name)
+    {
+        if (SessionService.SelectedElementId is null) return;
+        await ConfigService.UpdateRoomNameAsync(SessionService.SelectedElementId, name);
+        await RefreshSession();
+        SessionService.MarkDirty();
+        ShowToast("Místnost uložena", success: true);
+    }
+
+    private async Task HandleUpdateDevice(DeviceConfig updated)
+    {
+        await ConfigService.UpdateDevicePropertiesAsync(
+            updated.Id, updated.Name, updated.Type, updated.DisplaySettings);
+        await RefreshSession();
+        SessionService.MarkDirty();
+        ShowToast("Zařízení uloženo", success: true);
+    }
+
+    // ── Publikace do runtime ──────────────────────────────────────────────
+
+    private async Task HandleApplyToVisualization()
+    {
+        if (SessionService.CurrentConfig is null) return;
+        var domainBuilding = ConfigService.ToBuildingDomainModel(SessionService.CurrentConfig);
+        StateService.ReplaceBuilding(domainBuilding);
+        SessionService.MarkClean();
+        ShowToast("Konfigurace aplikována do vizualizace (/building)", success: true);
+    }
+
+    // ── Session refresh ───────────────────────────────────────────────────
+
+    private async Task RefreshSession()
+    {
+        if (SessionService.CurrentConfig is null) return;
+        var config = await ConfigService.GetBuildingAsync(SessionService.CurrentConfig.Id);
+        if (config is not null)
+            SessionService.RefreshConfig(config);
+    }
+
+    // ── Toast helper ──────────────────────────────────────────────────────
+
+    private void ShowToast(string message, bool success)
+    {
+        _toastCts?.Cancel();
+        _toastMessage   = message;
+        _toastIsSuccess = success;
+        _toastCts = new System.Threading.CancellationTokenSource();
+        var token = _toastCts.Token;
+        _ = Task.Delay(3000, token).ContinueWith(_ =>
+        {
+            if (token.IsCancellationRequested) return;
+            _toastMessage = null;
+            InvokeAsync(StateHasChanged);
+        }, TaskScheduler.Default);
+    }
+
+    public void Dispose()
+    {
+        SessionService.OnSessionChanged -= HandleSessionChanged;
+        _toastCts?.Cancel();
+    }
+}

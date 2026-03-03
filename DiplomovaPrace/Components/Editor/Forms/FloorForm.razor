@@ -1,0 +1,43 @@
+@* Formulář vlastností patra *@
+
+<div class="prop-section-title">Patro</div>
+
+<EditForm Model="_model" OnValidSubmit="HandleSubmit">
+    <DataAnnotationsValidator />
+
+    <div class="mb-2">
+        <label class="form-label">Název</label>
+        <InputText class="form-control" @bind-Value="_model.Name" />
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Číslo patra</label>
+        <InputNumber class="form-control" @bind-Value="_model.Level" />
+    </div>
+
+    <button type="submit" class="btn btn-sm btn-primary btn-save w-100">Uložit</button>
+</EditForm>
+
+@code {
+    [Parameter, EditorRequired] public FloorConfig Floor { get; set; } = default!;
+    [Parameter] public EventCallback<(string Name, int Level)> OnSave { get; set; }
+
+    private FormModel _model = new();
+    private string? _prevId;
+
+    protected override void OnParametersSet()
+    {
+        if (Floor.Id == _prevId) return;
+        _prevId = Floor.Id;
+        _model = new FormModel { Name = Floor.Name, Level = Floor.Level };
+    }
+
+    private async Task HandleSubmit() =>
+        await OnSave.InvokeAsync((_model.Name, _model.Level));
+
+    private sealed class FormModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Název je povinný")]
+        public string Name { get; set; } = "";
+        public int Level { get; set; }
+    }
+}

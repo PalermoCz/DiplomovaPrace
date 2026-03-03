@@ -1,0 +1,86 @@
+@* Nástrojová lišta editoru — přepínač nástrojů, akce, indikátor neuložených změn. *@
+
+<div class="editor-toolbar-row">
+
+    @* ── Nástroje ───────────────────────────────────────────────────────── *@
+    <button class="tool-btn @(ActiveTool == EditorTool.Select ? "active" : "")"
+            title="Vybrat prvek (S)"
+            @onclick="() => OnToolChanged.InvokeAsync(EditorTool.Select)">
+        &#9654; Vybrat
+    </button>
+    <button class="tool-btn @(ActiveTool == EditorTool.AddRoom ? "active" : "")"
+            title="Nakreslit místnost tažením (R)"
+            @onclick="() => OnToolChanged.InvokeAsync(EditorTool.AddRoom)">
+        &#9633; Místnost
+    </button>
+    <button class="tool-btn @(ActiveTool == EditorTool.AddDevice ? "active" : "")"
+            title="Přidat zařízení kliknutím do místnosti (D)"
+            @onclick="() => OnToolChanged.InvokeAsync(EditorTool.AddDevice)">
+        &#11044; Zařízení
+    </button>
+    <button class="tool-btn danger @(ActiveTool == EditorTool.Delete ? "active" : "")"
+            title="Smazat kliknutím (Del)"
+            @onclick="() => OnToolChanged.InvokeAsync(EditorTool.Delete)">
+        &#10005; Smazat
+    </button>
+
+    <div class="editor-toolbar-sep"></div>
+
+    @* ── Pohled ─────────────────────────────────────────────────────────── *@
+    <button class="tool-btn @(ShowGrid ? "active" : "")"
+            title="Zobrazit/skrýt mřížku"
+            @onclick="() => OnGridToggled.InvokeAsync()">
+        &#9638; Mřížka
+    </button>
+    <button class="tool-btn"
+            title="Obnovit pohled (reset zoom/pan)"
+            @onclick="() => OnResetView.InvokeAsync()">
+        &#8635; Reset
+    </button>
+
+    <div class="editor-toolbar-sep"></div>
+
+    @* ── Budova / Patra ─────────────────────────────────────────────────── *@
+    <button class="btn btn-sm btn-outline-secondary"
+            title="Vytvořit novou budovu"
+            @onclick="() => OnNewBuilding.InvokeAsync()">
+        + Nová budova
+    </button>
+    <button class="btn btn-sm btn-outline-secondary"
+            disabled="@(!CanAddFloor)"
+            title="Přidat patro do aktuální budovy"
+            @onclick="() => OnAddFloor.InvokeAsync()">
+        + Patro
+    </button>
+
+    <div class="editor-toolbar-sep"></div>
+
+    @* ── Publikace ──────────────────────────────────────────────────────── *@
+    <button class="btn btn-sm btn-success"
+            disabled="@(!CanApply)"
+            title="Aplikovat konfiguraci do runtime vizualizace na /building"
+            @onclick="() => OnApplyToVisualization.InvokeAsync()">
+        &#9654; Použít ve vizualizaci
+    </button>
+
+    @* ── Dirty indicator ────────────────────────────────────────────────── *@
+    @if (HasUnsavedChanges)
+    {
+        <span class="badge bg-warning text-dark ms-1" title="Máte neuložené změny">&#9679; změněno</span>
+    }
+</div>
+
+@code {
+    [Parameter] public EditorTool ActiveTool { get; set; }
+    [Parameter] public bool HasUnsavedChanges { get; set; }
+    [Parameter] public bool ShowGrid { get; set; }
+    [Parameter] public bool CanAddFloor { get; set; }
+    [Parameter] public bool CanApply { get; set; }
+
+    [Parameter] public EventCallback<EditorTool> OnToolChanged { get; set; }
+    [Parameter] public EventCallback OnNewBuilding { get; set; }
+    [Parameter] public EventCallback OnAddFloor { get; set; }
+    [Parameter] public EventCallback OnGridToggled { get; set; }
+    [Parameter] public EventCallback OnResetView { get; set; }
+    [Parameter] public EventCallback OnApplyToVisualization { get; set; }
+}

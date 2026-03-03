@@ -1,0 +1,50 @@
+@* Formulář vlastností místnosti *@
+
+<div class="prop-section-title">Místnost</div>
+
+<EditForm Model="_model" OnValidSubmit="HandleSubmit">
+    <DataAnnotationsValidator />
+
+    <div class="mb-2">
+        <label class="form-label">Název</label>
+        <InputText class="form-control" @bind-Value="_model.Name" />
+    </div>
+    <div class="mb-3 text-muted" style="font-size:0.77rem;">
+        Rozměry: @Room.Geometry.Width.ToString("F0") × @Room.Geometry.Height.ToString("F0") px
+        (pozice @Room.Geometry.X.ToString("F0"), @Room.Geometry.Y.ToString("F0"))
+    </div>
+
+    <button type="submit" class="btn btn-sm btn-primary btn-save w-100">Uložit</button>
+</EditForm>
+
+<div class="delete-section">
+    <button class="btn btn-sm btn-outline-danger w-100"
+            @onclick="() => OnDelete.InvokeAsync()">
+        Smazat místnost
+    </button>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public RoomConfig Room { get; set; } = default!;
+    [Parameter] public EventCallback<string> OnSave { get; set; }
+    [Parameter] public EventCallback OnDelete { get; set; }
+
+    private FormModel _model = new();
+    private string? _prevId;
+
+    protected override void OnParametersSet()
+    {
+        if (Room.Id == _prevId) return;
+        _prevId = Room.Id;
+        _model = new FormModel { Name = Room.Name };
+    }
+
+    private async Task HandleSubmit() =>
+        await OnSave.InvokeAsync(_model.Name);
+
+    private sealed class FormModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Název je povinný")]
+        public string Name { get; set; } = "";
+    }
+}
