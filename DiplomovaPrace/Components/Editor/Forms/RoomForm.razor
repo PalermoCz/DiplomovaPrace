@@ -9,9 +9,21 @@
         <label class="form-label">Název</label>
         <InputText class="form-control" @bind-Value="_model.Name" />
     </div>
+
+    <div class="prop-section-title mt-3">Rozměry místnosti</div>
+
+    <div class="row g-2 mb-2">
+        <div class="col">
+            <label class="form-label">Šířka (px)</label>
+            <InputNumber class="form-control" @bind-Value="_model.Width" min="20" />
+        </div>
+        <div class="col">
+            <label class="form-label">Výška (px)</label>
+            <InputNumber class="form-control" @bind-Value="_model.Height" min="20" />
+        </div>
+    </div>
     <div class="mb-3 text-muted" style="font-size:0.77rem;">
-        Rozměry: @Room.Geometry.Width.ToString("F0") × @Room.Geometry.Height.ToString("F0") px
-        (pozice @Room.Geometry.X.ToString("F0"), @Room.Geometry.Y.ToString("F0"))
+        Pozice: @Room.Geometry.X.ToString("F0"), @Room.Geometry.Y.ToString("F0") px
     </div>
 
     <button type="submit" class="btn btn-sm btn-primary btn-save w-100">Uložit</button>
@@ -26,7 +38,7 @@
 
 @code {
     [Parameter, EditorRequired] public RoomConfig Room { get; set; } = default!;
-    [Parameter] public EventCallback<string> OnSave { get; set; }
+    [Parameter] public EventCallback<(string Name, RoomGeometry Geometry)> OnSave { get; set; }
     [Parameter] public EventCallback OnDelete { get; set; }
 
     private FormModel _model = new();
@@ -36,15 +48,27 @@
     {
         if (Room.Id == _prevId) return;
         _prevId = Room.Id;
-        _model = new FormModel { Name = Room.Name };
+        _model = new FormModel
+        {
+            Name   = Room.Name,
+            Width  = Room.Geometry.Width,
+            Height = Room.Geometry.Height
+        };
     }
 
-    private async Task HandleSubmit() =>
-        await OnSave.InvokeAsync(_model.Name);
+    private async Task HandleSubmit()
+    {
+        var newGeometry = new RoomGeometry(Room.Geometry.X, Room.Geometry.Y, _model.Width, _model.Height);
+        await OnSave.InvokeAsync((_model.Name, newGeometry));
+    }
 
     private sealed class FormModel
     {
         [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Název je povinný")]
         public string Name { get; set; } = "";
+        [System.ComponentModel.DataAnnotations.Range(20, 5000, ErrorMessage = "Šířka musí být 20–5000 px")]
+        public double Width { get; set; } = 100;
+        [System.ComponentModel.DataAnnotations.Range(20, 5000, ErrorMessage = "Výška musí být 20–5000 px")]
+        public double Height { get; set; } = 100;
     }
 }

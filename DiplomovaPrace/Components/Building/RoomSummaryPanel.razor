@@ -1,4 +1,6 @@
-@* Souhrnný panel pro vybranou místnost — zařízení, spotřeba, živé hodnoty *@
+@* Souhrnný panel pro vybranou místnost — zařízení, příkon, živé hodnoty.
+   Patří do Runtime vizualizace. Používá VÝHRADNĚ doménové modely (Room, Device)
+   a IBuildingStateService. Žádné Config typy. *@
 
 @inject IBuildingStateService StateService
 @implements IDisposable
@@ -12,7 +14,7 @@
             <span class="summary-stat-value">@_deviceCount</span>
         </div>
         <div class="summary-stat">
-            <span class="summary-stat-label">Spotřeba</span>
+            <span class="summary-stat-label">Příkon</span>
             <span class="summary-stat-value">@_totalConsumption.ToString("F0") W</span>
         </div>
         @if (_avgTemp.HasValue)
@@ -24,19 +26,19 @@
         }
     </div>
 
-    @if (_devices.Count > 0)
+    @if (Room.Devices.Count > 0)
     {
         <table class="table table-sm table-borderless summary-table mb-0">
             <thead>
                 <tr>
                     <th>Zařízení</th>
                     <th>Typ</th>
-                    <th class="text-end">Spotřeba</th>
+                    <th class="text-end">Příkon</th>
                     <th class="text-end">Hodnota</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var d in _devices)
+                @foreach (var d in Room.Devices)
                 {
                     <tr>
                         <td>@d.Name</td>
@@ -51,12 +53,11 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired] public RoomConfig Room { get; set; } = default!;
+    [Parameter, EditorRequired] public Room Room { get; set; } = default!;
 
-    private int _deviceCount;
+    private int    _deviceCount;
     private double _totalConsumption;
     private double? _avgTemp;
-    private List<DeviceConfig> _devices = [];
 
     protected override void OnInitialized()
     {
@@ -68,33 +69,41 @@
 
     private void Refresh()
     {
-        _devices = Room.Devices.Where(d => !d.IsDeleted).OrderBy(d => d.Name).ToList();
-        _deviceCount      = _devices.Count;
-        _totalConsumption = _devices.Sum(d => d.Consumption);
+        _deviceCount      = Room.Devices.Count;
+        _totalConsumption = Room.Devices.Sum(d => d.Consumption);
 
-        var tempValues = _devices
+        var temps = Room.Devices
             .Where(d => d.Type == DeviceType.TemperatureSensor)
             .Select(d => StateService.GetDeviceState(d.Id)?.NumericValue)
             .Where(v => v.HasValue)
             .Select(v => v!.Value)
             .ToList();
 
-        _avgTemp = tempValues.Count > 0 ? tempValues.Average() : null;
+        _avgTemp = temps.Count > 0 ? temps.Average() : null;
     }
 
-    private string FormatValue(DeviceConfig d)
+    private string FormatValue(Device d)
     {
         var state = StateService.GetDeviceState(d.Id);
         if (state is null) return "–";
         if (state.NumericValue.HasValue)
         {
-            var unit = d.DisplaySettings.Unit ?? "";
-            return $"{state.NumericValue.Value:F1} {unit}".Trim();
+            var unit = UnitForType(d.Type);
+            return string.IsNullOrEmpty(unit)
+                ? state.NumericValue.Value.ToString("F1")
+                : $"{state.NumericValue.Value:F1} {unit}";
         }
         if (state.IsActive.HasValue)
             return state.IsActive.Value ? "Aktivní" : "Neaktivní";
         return "–";
     }
+
+    private static string UnitForType(DeviceType t) => t switch
+    {
+        DeviceType.TemperatureSensor => "°C",
+        DeviceType.HumiditySensor    => "%",
+        _                            => ""
+    };
 
     private static string DeviceTypeLabel(DeviceType t) => t switch
     {

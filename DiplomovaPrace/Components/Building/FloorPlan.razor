@@ -1,10 +1,10 @@
 @inject IBuildingStateService StateService
 
-<svg viewBox="0 0 800 300" class="floor-plan" xmlns="http://www.w3.org/2000/svg">
-    <rect x="30" y="30" width="740" height="240"
-          fill="none" stroke="#2c3e50" stroke-width="3" rx="5" />
+<svg viewBox="0 0 @Fmt(Floor.Width) @Fmt(Floor.Height)" class="floor-plan" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="@Fmt(Floor.Width)" height="@Fmt(Floor.Height)"
+          fill="#f8f9fa" stroke="#2c3e50" stroke-width="2" rx="5" />
 
-    @((MarkupString)$"<text x=\"400\" y=\"22\" text-anchor=\"middle\" class=\"floor-label\">{Floor.Name}</text>")
+    @((MarkupString)$"<text x=\"{Fmt(Floor.Width / 2)}\" y=\"18\" text-anchor=\"middle\" class=\"floor-label\">{Floor.Name}</text>")
 
     @foreach (var room in Floor.Rooms)
     {
@@ -26,10 +26,26 @@
     [Parameter]
     public EventCallback<string> OnDeviceSelected { get; set; }
 
+    /// <summary>Volán po kliknutí na místnost — předá ID (výběr) nebo null (zrušení výběru).</summary>
+    [Parameter]
+    public EventCallback<string?> OnRoomSelected { get; set; }
+
     private string? _selectedRoomId;
 
     private void HandleRoomClicked(string roomId)
     {
-        _selectedRoomId = _selectedRoomId == roomId ? null : roomId;
+        if (_selectedRoomId == roomId)
+        {
+            _selectedRoomId = null;
+            OnRoomSelected.InvokeAsync(null);
+        }
+        else
+        {
+            _selectedRoomId = roomId;
+            OnRoomSelected.InvokeAsync(roomId);
+        }
     }
+
+    private static string Fmt(double v) =>
+        v.ToString(System.Globalization.CultureInfo.InvariantCulture);
 }

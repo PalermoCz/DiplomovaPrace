@@ -38,12 +38,24 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9CdWlsZGluZy9EZXZpY2VJY29uLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
+[/workspaces/DiplomovaPrace/DiplomovaPrace/Components/Building/ExpressionPanel.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9CdWlsZGluZy9FeHByZXNzaW9uUGFuZWwucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
 [/workspaces/DiplomovaPrace/DiplomovaPrace/Components/Building/FloorPlan.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9CdWlsZGluZy9GbG9vclBsYW4ucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
+[/workspaces/DiplomovaPrace/DiplomovaPrace/Components/Building/FloorSummaryPanel.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9CdWlsZGluZy9GbG9vclN1bW1hcnlQYW5lbC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
 [/workspaces/DiplomovaPrace/DiplomovaPrace/Components/Building/RoomShape.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9CdWlsZGluZy9Sb29tU2hhcGUucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/workspaces/DiplomovaPrace/DiplomovaPrace/Components/Building/RoomSummaryPanel.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9CdWlsZGluZy9Sb29tU3VtbWFyeVBhbmVsLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
 [/workspaces/DiplomovaPrace/DiplomovaPrace/Components/Editor/EditorCanvas.razor]
@@ -62,14 +74,6 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9FZGl0b3IvRWRpdG9yVHJlZU5hdi5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[/workspaces/DiplomovaPrace/DiplomovaPrace/Components/Editor/ExpressionPanel.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9FZGl0b3IvRXhwcmVzc2lvblBhbmVsLnJhem9y
-build_metadata.AdditionalFiles.CssScope = 
-
-[/workspaces/DiplomovaPrace/DiplomovaPrace/Components/Editor/FloorSummaryPanel.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9FZGl0b3IvRmxvb3JTdW1tYXJ5UGFuZWwucmF6b3I=
-build_metadata.AdditionalFiles.CssScope = 
-
 [/workspaces/DiplomovaPrace/DiplomovaPrace/Components/Editor/Forms/BuildingPropertiesForm.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9FZGl0b3IvRm9ybXMvQnVpbGRpbmdQcm9wZXJ0aWVzRm9ybS5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
@@ -84,10 +88,6 @@ build_metadata.AdditionalFiles.CssScope =
 
 [/workspaces/DiplomovaPrace/DiplomovaPrace/Components/Editor/Forms/RoomForm.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9FZGl0b3IvRm9ybXMvUm9vbUZvcm0ucmF6b3I=
-build_metadata.AdditionalFiles.CssScope = 
-
-[/workspaces/DiplomovaPrace/DiplomovaPrace/Components/Editor/RoomSummaryPanel.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9FZGl0b3IvUm9vbVN1bW1hcnlQYW5lbC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
 [/workspaces/DiplomovaPrace/DiplomovaPrace/Components/Pages/BuildingView.razor]

@@ -1,7 +1,8 @@
 @* Root komponenta vizualizace budovy.
    Implementuje Observer pattern: subscribe v OnInitialized, dispose v Dispose.
    HandleStateChanged marshalluje na UI vlákno přes InvokeAsync.
-   Multi-building: reaguje na IActiveBuildingService.OnActiveBuildingChanged. *@
+   Multi-building: reaguje na IActiveBuildingService.OnActiveBuildingChanged.
+   Postranní panel zobrazuje FloorSummaryPanel nebo RoomSummaryPanel dle výběru. *@
 
 @inject IBuildingStateService StateService
 @inject IBuildingConfigurationService ConfigService
@@ -9,8 +10,10 @@
 @implements IDisposable
 
 <div class="building-viewer">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>@StateService.Building.Name</h4>
+
+    @* ── Hlavička: Název budovy + přepínač pater ──────────────────────────── *@
+    <div class="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
+        <h4 class="mb-0">@StateService.Building.Name</h4>
         <div class="btn-group" role="group">
             @foreach (var floor in StateService.Building.Floors)
             {
@@ -22,28 +25,71 @@
         </div>
     </div>
 
-    @if (_selectedFloor is not null)
-    {
-        <FloorPlan Floor="_selectedFloor"
-                   SelectedDeviceId="@_selectedDeviceId"
-                   OnDeviceSelected="HandleDeviceSelected" />
-    }
+    @* ── Hlavní oblast: půdorys + postranní panel ─────────────────────────── *@
+    <div class="building-main-area">
 
-    @if (_selectedDeviceId is not null)
-    {
-        <DeviceDetailPanel DeviceId="@_selectedDeviceId"
-                           OnClose="() => _selectedDeviceId = null" />
-    }
+        @* Levá část: SVG půdorys + detail zařízení *@
+        <div class="building-plan-area">
+            @if (_selectedFloor is not null)
+            {
+                <FloorPlan Floor="_selectedFloor"
+                           SelectedDeviceId="@_selectedDeviceId"
+                           OnDeviceSelected="HandleDeviceSelected"
+                           OnRoomSelected="HandleRoomSelected" />
+            }
+
+            @if (_selectedDeviceId is not null)
+            {
+                <DeviceDetailPanel DeviceId="@_selectedDeviceId"
+                                   OnClose="() => _selectedDeviceId = null" />
+            }
+        </div>
+
+        @* Pravá část: souhrnný panel *@
+        <div class="building-side-panel">
+            @if (_selectedRoom is not null)
+            {
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-semibold" style="font-size:0.85rem; color:#64748b;">
+                        Místnost: @_selectedRoom.Name
+                    </span>
+                    <button class="btn btn-sm btn-link p-0 text-secondary"
+                            @onclick="() => HandleRoomSelected(null)"
+                            title="Zpět na přehled patra">
+                        ✕
+                    </button>
+                </div>
+                <RoomSummaryPanel Room="_selectedRoom" />
+            }
+            else if (_selectedFloor is not null)
+            {
+                <FloorSummaryPanel Floor="_selectedFloor" />
+            }
+
+            @* ── Výpočtový panel ───────────────────────────────────────────── *@
+            <div class="expression-panel-wrapper mt-2">
+                <button class="btn btn-sm btn-outline-secondary w-100 mb-2"
+                        @onclick="() => _showExpressionPanel = !_showExpressionPanel">
+                    @(_showExpressionPanel ? "▲ Skrýt výpočty" : "▼ Výpočtový panel")
+                </button>
+                @if (_showExpressionPanel)
+                {
+                    <ExpressionPanel />
+                }
+            </div>
+        </div>
+    </div>
 </div>
 
 @code {
-    private string _selectedFloorId = "";
-    private Floor? _selectedFloor;
+    private string  _selectedFloorId      = "";
+    private Floor?  _selectedFloor;
     private string? _selectedDeviceId;
+    private Room?   _selectedRoom;
+    private bool    _showExpressionPanel;
 
     protected override async Task OnInitializedAsync()
     {
-        // Pokud je aktivní budova nastavena, načteme ji do runtime domény
         if (ActiveBuildingService.ActiveBuildingId is not null)
             await ApplyActiveBuildingAsync(ActiveBuildingService.ActiveBuildingId);
 
@@ -66,13 +112,16 @@
             _selectedFloorId = "";
             _selectedFloor   = null;
         }
+        _selectedRoom     = null;
         _selectedDeviceId = null;
     }
 
     private void SelectFloor(string floorId)
     {
-        _selectedFloorId = floorId;
-        _selectedFloor   = StateService.Building.Floors.FirstOrDefault(f => f.Id == floorId);
+        _selectedFloorId  = floorId;
+        _selectedFloor    = StateService.Building.Floors.FirstOrDefault(f => f.Id == floorId);
+        _selectedRoom     = null;
+        _selectedDeviceId = null;
     }
 
     private void HandleDeviceSelected(string deviceId)
@@ -80,10 +129,22 @@
         _selectedDeviceId = deviceId;
     }
 
+    private void HandleRoomSelected(string? roomId)
+    {
+        if (roomId is null)
+        {
+            _selectedRoom = null;
+            return;
+        }
+        _selectedRoom = _selectedFloor?.Rooms.FirstOrDefault(r => r.Id == roomId);
+    }
+
     private async void HandleStateChanged()
     {
-        // Refresh selected floor reference (building may have been replaced)
         _selectedFloor = StateService.Building.Floors.FirstOrDefault(f => f.Id == _selectedFloorId);
+        // Refresh selected room reference (building may have been replaced)
+        if (_selectedRoom is not null)
+            _selectedRoom = _selectedFloor?.Rooms.FirstOrDefault(r => r.Id == _selectedRoom.Id);
         await InvokeAsync(StateHasChanged);
     }
 

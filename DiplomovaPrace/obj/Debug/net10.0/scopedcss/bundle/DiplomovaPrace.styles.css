@@ -124,6 +124,8 @@ main[b-3as61j0bb9] {
     font-size: 1.1rem;
 }
 
+/* ── Bootstrap Icons ────────────────────────────────────────────────────── */
+
 .bi[b-woxx57ct7f] {
     display: inline-block;
     position: relative;
@@ -142,30 +144,40 @@ main[b-3as61j0bb9] {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M4 16V0h8v16H4zm1-1h2v-2H5v2zm0-3h2V9H5v3zm0-4h2V5H5v3zm4 7h2v-2H9v2zm0-3h2V9H9v3zm0-4h2V5H9v3z'/%3E%3C/svg%3E");
 }
 
+.bi-pencil-square[b-woxx57ct7f] {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z'/%3E%3Cpath fill-rule='evenodd' d='M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z'/%3E%3C%2Fsvg%3E");
+}
+
+.bi-diagram-3[b-woxx57ct7f] {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='rgba(255,255,255,0.7)' viewBox='0 0 16 16'%3E%3Cpath d='M6 3.5A1.5 1.5 0 0 1 7.5 2h1A1.5 1.5 0 0 1 10 3.5v1A1.5 1.5 0 0 1 8.5 6v1H11a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0v-1A.5.5 0 0 1 5 7h2.5V6A1.5 1.5 0 0 1 6 4.5v-1zM8.5 5a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1zM3 11.5A1.5 1.5 0 0 1 4.5 10h1A1.5 1.5 0 0 1 7 11.5v1A1.5 1.5 0 0 1 5.5 14h-1A1.5 1.5 0 0 1 3 12.5v-1zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1zm4.5.5A1.5 1.5 0 0 1 10.5 10h1a1.5 1.5 0 0 1 1.5 1.5v1A1.5 1.5 0 0 1 11.5 14h-1A1.5 1.5 0 0 1 9 12.5v-1zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1z'/%3E%3C%2Fsvg%3E");
+}
+
+/* ── Navigation Items ───────────────────────────────────────────────────── */
+
 .nav-item[b-woxx57ct7f] {
     font-size: 0.9rem;
     padding-bottom: 0.5rem;
 }
 
-    .nav-item:first-of-type[b-woxx57ct7f] {
-        padding-top: 1rem;
-    }
+.nav-item:first-of-type[b-woxx57ct7f] {
+    padding-top: 1rem;
+}
 
-    .nav-item:last-of-type[b-woxx57ct7f] {
-        padding-bottom: 1rem;
-    }
+.nav-item:last-of-type[b-woxx57ct7f] {
+    padding-bottom: 1rem;
+}
 
-    .nav-item[b-woxx57ct7f]  .nav-link {
-        color: #d7d7d7;
-        background: none;
-        border: none;
-        border-radius: 4px;
-        height: 3rem;
-        display: flex;
-        align-items: center;
-        line-height: 3rem;
-        width: 100%;
-    }
+.nav-item[b-woxx57ct7f]  .nav-link {
+    color: #d7d7d7;
+    background: none;
+    border: none;
+    border-radius: 4px;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    line-height: 3rem;
+    width: 100%;
+}
 
 .nav-item[b-woxx57ct7f]  a.active {
     background-color: rgba(255,255,255,0.37);
@@ -177,6 +189,63 @@ main[b-3as61j0bb9] {
     color: white;
 }
 
+/* ── Building Sub-buttons (odsazené pod Vizualizací) ────────────────────── */
+
+.nav-building-btn[b-woxx57ct7f] {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 0 0.75rem 0 2.5rem;
+    height: 2.25rem;
+    font-size: 0.82rem;
+    color: rgba(215, 215, 215, 0.85);
+    background: none;
+    border: none;
+    border-radius: 4px;
+    text-align: left;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.nav-building-btn:hover[b-woxx57ct7f] {
+    background-color: rgba(255,255,255,0.1);
+    color: white;
+}
+
+.nav-building-btn.active[b-woxx57ct7f] {
+    background-color: rgba(255,255,255,0.25);
+    color: white;
+    font-weight: 600;
+}
+
+.nav-building-new[b-woxx57ct7f] {
+    color: rgba(134, 239, 172, 0.85); /* zelená pro "Nová budova" */
+    font-size: 0.78rem;
+    margin-bottom: 0.25rem;
+}
+
+.nav-building-new:hover[b-woxx57ct7f] {
+    color: #86efac;
+}
+
+/* ── Flex Spacer (vytlačí Editor dolů) ─────────────────────────────────── */
+
+.flex-spacer[b-woxx57ct7f] {
+    flex: 1 1 auto;
+    min-height: 0.5rem;
+}
+
+/* ── Full-height nav (umožní flex push na desktopu) ────────────────────── */
+
+.nav-full[b-woxx57ct7f] {
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Mobile ─────────────────────────────────────────────────────────────── */
+
 .nav-scrollable[b-woxx57ct7f] {
     display: none;
 }
@@ -185,18 +254,21 @@ main[b-3as61j0bb9] {
     display: block;
 }
 
+/* ── Desktop ────────────────────────────────────────────────────────────── */
+
 @media (min-width: 641px) {
     .navbar-toggler[b-woxx57ct7f] {
         display: none;
     }
 
     .nav-scrollable[b-woxx57ct7f] {
-        /* Never collapse the sidebar for wide screens */
         display: block;
-
-        /* Allow sidebar to scroll for tall menus */
         height: calc(100vh - 3.5rem);
         overflow-y: auto;
+    }
+
+    .nav-scrollable .nav-full[b-woxx57ct7f] {
+        height: 100%;
     }
 }
 /* /Components/Layout/ReconnectModal.razor.rz.scp.css */

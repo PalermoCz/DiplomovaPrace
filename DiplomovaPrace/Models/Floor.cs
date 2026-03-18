@@ -8,5 +8,7 @@ public record Floor(
     string Name,
     int Level,
     string BuildingId,
-    IReadOnlyList<Room> Rooms
+    IReadOnlyList<Room> Rooms,
+    double Width = 800,
+    double Height = 300
 );

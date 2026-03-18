@@ -25,7 +25,6 @@
 /workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/scopedcss/bundle/DiplomovaPrace.styles.css
 /workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/scopedcss/projectbundle/DiplomovaPrace.bundle.scp.css
 /workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/compressed/wb34hdfdov-{0}-w7mf952350-w7mf952350.gz
-/workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/compressed/wqp8zzzo8b-{0}-faukr03t8g-faukr03t8g.gz
 /workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/compressed/us1v9g6brm-{0}-bqjiyaj88i-bqjiyaj88i.gz
 /workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/compressed/05doesu5t9-{0}-c2jlpeoesf-c2jlpeoesf.gz
 /workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/compressed/z8m5ajzah9-{0}-erw9l3u2r3-erw9l3u2r3.gz
@@ -73,8 +72,6 @@
 /workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/compressed/ldqrp649fb-{0}-w97mql0d9w-w97mql0d9w.gz
 /workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/compressed/ysq0vhtj19-{0}-j8lzlu28q6-j8lzlu28q6.gz
 /workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/compressed/73p5e3p5wk-{0}-u1n4jc5v46-u1n4jc5v46.gz
-/workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/compressed/1d0o8djc4b-{0}-ya6vtkwmo8-ya6vtkwmo8.gz
-/workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/compressed/gz9cqb74kc-{0}-ya6vtkwmo8-ya6vtkwmo8.gz
 /workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/staticwebassets.build.json
 /workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/staticwebassets.build.json.cache
 /workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/staticwebassets.development.json
@@ -86,4 +83,7 @@
 /workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/DiplomovaPrace.genruntimeconfig.cache
 /workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/ref/DiplomovaPrace.dll
 /workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/compressed/4rxuglimrs-{0}-ywbxfsh2q5-ywbxfsh2q5.gz
-/workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/compressed/qcxho35633-{0}-ghurh8vap6-ghurh8vap6.gz
+/workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/compressed/wqp8zzzo8b-{0}-g02euxfez8-g02euxfez8.gz
+/workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/compressed/1d0o8djc4b-{0}-3w8ljjlai0-3w8ljjlai0.gz
+/workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/compressed/gz9cqb74kc-{0}-3w8ljjlai0-3w8ljjlai0.gz
+/workspaces/DiplomovaPrace/DiplomovaPrace/obj/Debug/net10.0/compressed/qcxho35633-{0}-l2h9wbgcd0-l2h9wbgcd0.gz

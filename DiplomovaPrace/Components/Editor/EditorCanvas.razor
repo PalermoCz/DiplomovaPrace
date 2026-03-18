@@ -13,39 +13,43 @@
 <svg id="@_svgId" class="editor-svg"
      viewBox="0 0 @Fmt(ViewBoxWidth) @Fmt(ViewBoxHeight)">
 
-    @* Definice: mřížkový vzor *@
-    @if (ShowGrid)
-    {
-        <defs>
-            <pattern id="smallGrid-@_svgId" width="20" height="20" patternUnits="userSpaceOnUse">
-                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e2e8f0" stroke-width="0.5" />
-            </pattern>
-            <pattern id="grid-@_svgId" width="100" height="100" patternUnits="userSpaceOnUse">
-                <rect width="100" height="100" fill="url(#smallGrid-@_svgId)" />
-                <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#cbd5e0" stroke-width="1" />
-            </pattern>
-        </defs>
-    }
-
-    @* Pozadí — zachytává mouseeventy přes JS *@
+    @* Backdrop — zachytává mouseeventy přes JS, jednoduchá barva (NEzoumuje) *@
     <rect class="editor-bg"
           x="0" y="0"
           width="@Fmt(ViewBoxWidth)" height="@Fmt(ViewBoxHeight)"
-          fill="@(ShowGrid ? "url(#grid-" + _svgId + ")" : "#f8f9fa")"
-          stroke="none" />
+          fill="#e9ecef" stroke="none" />
 
     @* Content group — JS sem zapisuje pan/zoom transform *@
     <g id="@(_svgId + "-content")">
 
         @if (Floor is not null)
         {
-            @* Vnější rámeček podlaží *@
-            <rect x="20" y="20"
-                  width="@Fmt(ViewBoxWidth - 40)"
-                  height="@Fmt(ViewBoxHeight - 40)"
-                  fill="none" stroke="#b0bec5" stroke-width="1" rx="4"
-                  stroke-dasharray="6,3"
-                  pointer-events="none" />
+            @* Definice grid patternu UVNITŘ content group → škáluje se zoomem *@
+            @if (ShowGrid)
+            {
+                <defs>
+                    <pattern id="smallGrid-@_svgId" width="20" height="20" patternUnits="userSpaceOnUse">
+                        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e2e8f0" stroke-width="0.5" />
+                    </pattern>
+                    <pattern id="grid-@_svgId" width="100" height="100" patternUnits="userSpaceOnUse">
+                        <rect width="100" height="100" fill="url(#smallGrid-@_svgId)" />
+                        <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#cbd5e0" stroke-width="1" />
+                    </pattern>
+                </defs>
+            }
+
+            @* Bílé pozadí patra — v prostoru patra, zoumuje spolu s obsahem *@
+            <rect x="0" y="0"
+                  width="@Fmt(ViewBoxWidth)" height="@Fmt(ViewBoxHeight)"
+                  fill="white" class="floor-background" pointer-events="none" />
+
+            @* Grid overlay — podmíněně, uvnitř content group → zoumuje *@
+            @if (ShowGrid)
+            {
+                <rect x="0" y="0"
+                      width="@Fmt(ViewBoxWidth)" height="@Fmt(ViewBoxHeight)"
+                      fill="url(#grid-@_svgId)" pointer-events="none" />
+            }
 
             @foreach (var room in Floor.Rooms.Where(r => !r.IsDeleted))
             {
@@ -153,6 +157,7 @@
     private string? _prevFloorId;
     private double _prevWidth;
     private double _prevHeight;
+    private bool _prevShowGrid;
 
     private double ViewBoxWidth  => Floor?.ViewBoxWidth  ?? 800;
     private double ViewBoxHeight => Floor?.ViewBoxHeight ?? 300;
@@ -165,10 +170,12 @@
             await JSRuntime.InvokeVoidAsync("editorCanvas.init", _svgId, _dotNetRef);
             await JSRuntime.InvokeVoidAsync("editorCanvas.setTool", ActiveTool.ToString());
             await JSRuntime.InvokeVoidAsync("editorCanvas.setFloorBounds", ViewBoxWidth, ViewBoxHeight);
-            _prevTool    = ActiveTool;
-            _prevFloorId = Floor?.Id;
-            _prevWidth   = ViewBoxWidth;
-            _prevHeight  = ViewBoxHeight;
+            await JSRuntime.InvokeVoidAsync("editorCanvas.setGrid", ShowGrid, 20);
+            _prevTool     = ActiveTool;
+            _prevFloorId  = Floor?.Id;
+            _prevWidth    = ViewBoxWidth;
+            _prevHeight   = ViewBoxHeight;
+            _prevShowGrid = ShowGrid;
             _jsInitialized = true;
             return;
         }
@@ -193,6 +200,13 @@
             _prevWidth  = ViewBoxWidth;
             _prevHeight = ViewBoxHeight;
             await JSRuntime.InvokeVoidAsync("editorCanvas.setFloorBounds", ViewBoxWidth, ViewBoxHeight);
+        }
+
+        // Synchronizuj stav mřížky do JS (snap-to-grid)
+        if (ShowGrid != _prevShowGrid)
+        {
+            _prevShowGrid = ShowGrid;
+            await JSRuntime.InvokeVoidAsync("editorCanvas.setGrid", ShowGrid, 20);
         }
 
         await JSRuntime.InvokeVoidAsync("editorCanvas.reapplyTransform");

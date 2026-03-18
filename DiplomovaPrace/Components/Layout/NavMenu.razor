@@ -12,38 +12,36 @@
 <input type="checkbox" title="Navigation menu" class="navbar-toggler" />
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
+    <nav class="nav flex-column nav-full">
 
+        @* ── Vizualizace ──────────────────────────────────────────────────── *@
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
                 <span class="bi bi-building-nav-menu" aria-hidden="true"></span> Vizualizace
             </NavLink>
         </div>
 
+        @* ── Budovy (odsazené sub-položky pod Vizualizací) ─────────────────── *@
+        @foreach (var b in _buildings)
+        {
+            <button class="nav-building-btn @(b.Id == ActiveBuildingService.ActiveBuildingId ? "active" : "")"
+                    @onclick="() => SelectBuilding(b.Id)">
+                <span class="bi bi-diagram-3" aria-hidden="true"></span>@b.Name
+            </button>
+        }
+        <button class="nav-building-btn nav-building-new" @onclick="CreateBuilding">
+            + Nová budova
+        </button>
+
+        @* ── Flex spacer: vytlačí Editor na dno sidebaru ──────────────────── *@
+        <div class="flex-spacer" aria-hidden="true"></div>
+
+        @* ── Editor (přisunutý na dno) ────────────────────────────────────── *@
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="editor">
                 <span class="bi bi-pencil-square" aria-hidden="true"></span> Editor
             </NavLink>
         </div>
-
-        @if (_buildings.Count > 0)
-        {
-            <div class="nav-item px-3 mt-2">
-                <div class="nav-section-label text-uppercase text-muted small px-1 mb-1">Budovy</div>
-                @foreach (var b in _buildings)
-                {
-                    <button class="nav-link btn btn-link w-100 text-start px-1 @(b.Id == ActiveBuildingService.ActiveBuildingId ? "active" : "")"
-                            @onclick="() => SelectBuilding(b.Id)">
-                        <span class="bi bi-diagram-3" aria-hidden="true"></span>
-                        @b.Name
-                    </button>
-                }
-                <button class="nav-link btn btn-link w-100 text-start px-1 text-success"
-                        @onclick="CreateBuilding">
-                    <span aria-hidden="true">+</span> Nová budova
-                </button>
-            </div>
-        }
 
     </nav>
 </div>
@@ -59,7 +57,7 @@
         if (ActiveBuildingService.ActiveBuildingId is null && _buildings.Count > 0)
             ActiveBuildingService.SetActiveBuilding(_buildings[0].Id);
 
-        ConfigService.OnConfigurationChanged   += OnDataChanged;
+        ConfigService.OnConfigurationChanged         += OnDataChanged;
         ActiveBuildingService.OnActiveBuildingChanged += OnDataChanged;
     }
 

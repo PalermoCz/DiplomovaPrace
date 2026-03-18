@@ -298,6 +298,8 @@ public class InMemoryBuildingConfigurationService : IBuildingConfigurationServic
                 Name: f.Name,
                 Level: f.Level,
                 BuildingId: f.BuildingId,
+                Width: f.ViewBoxWidth,
+                Height: f.ViewBoxHeight,
                 Rooms: f.Rooms
                     .Where(r => !r.IsDeleted)
                     .Select(r => new Room(
@@ -312,7 +314,8 @@ public class InMemoryBuildingConfigurationService : IBuildingConfigurationServic
                                 Name: d.Name,
                                 Type: d.Type,
                                 RoomId: d.RoomId,
-                                Position: d.Position))
+                                Position: d.Position,
+                                Consumption: d.Consumption))
                             .ToList()))
                     .ToList()))
             .ToList();

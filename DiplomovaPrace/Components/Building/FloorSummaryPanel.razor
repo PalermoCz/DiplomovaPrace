@@ -1,4 +1,6 @@
-@* Souhrnný panel pro vybrané patro — počty, spotřeba, teplotní průměr *@
+@* Souhrnný panel pro vybrané patro — počty, příkon, teplotní průměr.
+   Patří do Runtime vizualizace. Používá VÝHRADNĚ doménové modely (Floor, Room)
+   a IBuildingStateService. Žádné Config typy. *@
 
 @inject IBuildingStateService StateService
 @implements IDisposable
@@ -9,14 +11,14 @@
     <div class="summary-stats d-flex gap-3 mb-2 flex-wrap">
         <div class="summary-stat">
             <span class="summary-stat-label">Místnosti</span>
-            <span class="summary-stat-value">@_roomCount</span>
+            <span class="summary-stat-value">@Floor.Rooms.Count</span>
         </div>
         <div class="summary-stat">
             <span class="summary-stat-label">Zařízení</span>
             <span class="summary-stat-value">@_deviceCount</span>
         </div>
         <div class="summary-stat">
-            <span class="summary-stat-label">Spotřeba</span>
+            <span class="summary-stat-label">Příkon</span>
             <span class="summary-stat-value">@_totalConsumption.ToString("F0") W</span>
         </div>
         @if (_avgTemp.HasValue)
@@ -35,16 +37,16 @@
                 <tr>
                     <th>Místnost</th>
                     <th class="text-end">Zařízení</th>
-                    <th class="text-end">Spotřeba</th>
+                    <th class="text-end">Příkon</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var r in _rooms)
+                @foreach (var row in _rooms)
                 {
                     <tr>
-                        <td>@r.Name</td>
-                        <td class="text-end">@r.DeviceCount</td>
-                        <td class="text-end">@r.Consumption.ToString("F0") W</td>
+                        <td>@row.Name</td>
+                        <td class="text-end">@row.DeviceCount</td>
+                        <td class="text-end">@row.Consumption.ToString("F0") W</td>
                     </tr>
                 }
             </tbody>
@@ -53,10 +55,9 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired] public FloorConfig Floor { get; set; } = default!;
+    [Parameter, EditorRequired] public Floor Floor { get; set; } = default!;
 
-    private int _roomCount;
-    private int _deviceCount;
+    private int    _deviceCount;
     private double _totalConsumption;
     private double? _avgTemp;
     private List<RoomRow> _rooms = [];
@@ -73,28 +74,21 @@
 
     private void Refresh()
     {
-        var activeRooms = Floor.Rooms.Where(r => !r.IsDeleted).ToList();
-        _roomCount = activeRooms.Count;
+        _rooms = Floor.Rooms
+            .Select(r => new RoomRow(r.Name, r.Devices.Count, r.Devices.Sum(d => d.Consumption)))
+            .ToList();
 
-        _rooms = activeRooms.Select(r =>
-        {
-            var activeDevices = r.Devices.Where(d => !d.IsDeleted).ToList();
-            var consumption = activeDevices.Sum(d => d.Consumption);
-            return new RoomRow(r.Name, activeDevices.Count, consumption);
-        }).ToList();
+        _deviceCount      = _rooms.Sum(r => r.DeviceCount);
+        _totalConsumption = _rooms.Sum(r => r.Consumption);
 
-        _deviceCount       = _rooms.Sum(r => r.DeviceCount);
-        _totalConsumption  = _rooms.Sum(r => r.Consumption);
-
-        var tempValues = Floor.Rooms
-            .Where(r => !r.IsDeleted)
-            .SelectMany(r => r.Devices.Where(d => !d.IsDeleted && d.Type == DeviceType.TemperatureSensor))
+        var temps = Floor.Rooms
+            .SelectMany(r => r.Devices.Where(d => d.Type == DeviceType.TemperatureSensor))
             .Select(d => StateService.GetDeviceState(d.Id)?.NumericValue)
             .Where(v => v.HasValue)
             .Select(v => v!.Value)
             .ToList();
 
-        _avgTemp = tempValues.Count > 0 ? tempValues.Average() : null;
+        _avgTemp = temps.Count > 0 ? temps.Average() : null;
     }
 
     private async void HandleStateChanged()

@@ -95,13 +95,6 @@
                                OnDeleteRoom="HandleDeleteRoom"
                                OnDeleteDevice="HandleDeleteDevice" />
 
-        @* ── Expression panel ───────────────────────────────────────── *@
-        @if (SessionService.CurrentConfig is not null)
-        {
-            <div class="editor-expression-wrapper">
-                <ExpressionPanel BuildingId="@SessionService.CurrentConfig.Id" />
-            </div>
-        }
     </div>
 </div>
 
@@ -511,13 +504,17 @@
         ShowToast("Patro uloženo", success: true);
     }
 
-    private async Task HandleUpdateRoomName(string name)
+    private async Task HandleUpdateRoomName((string Name, RoomGeometry Geometry) args)
     {
         if (SessionService.SelectedElementId is null) return;
         var roomId = SessionService.SelectedElementId;
         await SessionService.ExecuteCommandAsync(
-            new UpdateRoomCommand(name),
-            () => ConfigService.UpdateRoomNameAsync(roomId, name),
+            new UpdateRoomCommand(args.Name),
+            async () =>
+            {
+                await ConfigService.UpdateRoomNameAsync(roomId, args.Name);
+                await ConfigService.UpdateRoomGeometryAsync(roomId, args.Geometry);
+            },
             ConfigService);
         ShowToast("Místnost uložena", success: true);
     }

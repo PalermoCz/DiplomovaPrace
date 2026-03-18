@@ -22,6 +22,8 @@ window.editorCanvas = (function () {
     var _spaceDown = false;
     var _handlers = {};
     var _floorBounds = { w: 8000, h: 3000 }; // velké výchozí — neomezuje dokud nenastaven
+    var _gridEnabled = false;
+    var _gridSize    = 20;
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -68,6 +70,11 @@ window.editorCanvas = (function () {
         if (el) el.remove();
     }
 
+    /** Přichytí hodnotu k mřížce (pokud je mřížka aktivní). */
+    function snapToGrid(val) {
+        return _gridEnabled ? Math.round(val / _gridSize) * _gridSize : val;
+    }
+
     // ── Event Handlers ───────────────────────────────────────────────────────
 
     function onMouseDown(e) {
@@ -91,11 +98,13 @@ window.editorCanvas = (function () {
 
         if (_tool === 'AddRoom') {
             e.preventDefault();
+            var startX = snapToGrid(pos.x);
+            var startY = snapToGrid(pos.y);
             // Vytvoř preview rect jako SVG element přidaný přímo do content group
             var g = getContent();
             var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
             rect.setAttribute('id', _svgId + '-preview');
-            rect.setAttribute('x', pos.x); rect.setAttribute('y', pos.y);
+            rect.setAttribute('x', startX); rect.setAttribute('y', startY);
             rect.setAttribute('width', '0'); rect.setAttribute('height', '0');
             rect.setAttribute('fill', 'rgba(41,128,185,0.12)');
             rect.setAttribute('stroke', '#2980b9');
@@ -103,7 +112,7 @@ window.editorCanvas = (function () {
             rect.setAttribute('stroke-dasharray', String(6 / _transform.scale) + ',' + String(3 / _transform.scale));
             rect.setAttribute('pointer-events', 'none');
             if (g) g.appendChild(rect);
-            _state = { type: 'draw', startX: pos.x, startY: pos.y, currX: pos.x, currY: pos.y };
+            _state = { type: 'draw', startX: startX, startY: startY, currX: startX, currY: startY };
             return;
         }
 
@@ -140,13 +149,15 @@ window.editorCanvas = (function () {
         }
 
         if (_state.type === 'draw') {
-            _state.currX = pos.x; _state.currY = pos.y;
+            var sx = snapToGrid(pos.x);
+            var sy = snapToGrid(pos.y);
+            _state.currX = sx; _state.currY = sy;
             var preview = document.getElementById(_svgId + '-preview');
             if (preview) {
-                var rx = Math.min(_state.startX, pos.x);
-                var ry = Math.min(_state.startY, pos.y);
-                var rw = Math.abs(pos.x - _state.startX);
-                var rh = Math.abs(pos.y - _state.startY);
+                var rx = Math.min(_state.startX, sx);
+                var ry = Math.min(_state.startY, sy);
+                var rw = Math.abs(sx - _state.startX);
+                var rh = Math.abs(sy - _state.startY);
                 preview.setAttribute('x', rx); preview.setAttribute('y', ry);
                 preview.setAttribute('width', rw); preview.setAttribute('height', rh);
             }
@@ -345,6 +356,12 @@ window.editorCanvas = (function () {
         setFloorBounds: function (w, h) {
             _floorBounds.w = w;
             _floorBounds.h = h;
+        },
+
+        /** Zapne/vypne přichytávání k mřížce a nastaví velikost buňky. */
+        setGrid: function (enabled, size) {
+            _gridEnabled = !!enabled;
+            _gridSize = size || 20;
         },
 
         dispose: function (svgId) {
