@@ -183,6 +183,7 @@ public class InMemoryBuildingConfigurationService : IBuildingConfigurationServic
             Name: name,
             Geometry: geometry,
             FillColorOverride: null,
+            DisplayRules: Array.Empty<DisplayRule>(),
             Devices: [],
             CreatedAt: Now(),
             UpdatedAt: Now(),
@@ -218,6 +219,17 @@ public class InMemoryBuildingConfigurationService : IBuildingConfigurationServic
         return Task.FromResult(result!);
     }
 
+    public Task<RoomConfig> UpdateRoomDisplayRulesAsync(string roomId, IReadOnlyList<DisplayRule> displayRules)
+    {
+        RoomConfig? result = null;
+        MutateRoom(roomId, r =>
+        {
+            result = r with { DisplayRules = displayRules, UpdatedAt = Now() };
+            return result;
+        });
+        return Task.FromResult(result!);
+    }
+
     public Task DeleteRoomAsync(string roomId)
     {
         MutateRoom(roomId, r => r with { IsDeleted = true, UpdatedAt = Now() });
@@ -237,6 +249,7 @@ public class InMemoryBuildingConfigurationService : IBuildingConfigurationServic
             Position: position,
             DisplaySettings: DeviceDisplaySettings.CreateDefault(type),
             Consumption: DefaultConsumption(type),
+            DisplayRules: Array.Empty<DisplayRule>(),
             CreatedAt: Now(),
             UpdatedAt: Now(),
             IsDeleted: false
@@ -262,7 +275,7 @@ public class InMemoryBuildingConfigurationService : IBuildingConfigurationServic
 
     public Task<DeviceConfig> UpdateDevicePropertiesAsync(
         string deviceId, string name, DeviceType type, DeviceDisplaySettings displaySettings,
-        double consumption)
+        double consumption, IReadOnlyList<DisplayRule> displayRules)
     {
         DeviceConfig? result = null;
         MutateDevice(deviceId, d =>
@@ -273,6 +286,7 @@ public class InMemoryBuildingConfigurationService : IBuildingConfigurationServic
                 Type = type,
                 DisplaySettings = displaySettings,
                 Consumption = consumption,
+                DisplayRules = displayRules,
                 UpdatedAt = Now()
             };
             return result;
@@ -315,8 +329,10 @@ public class InMemoryBuildingConfigurationService : IBuildingConfigurationServic
                                 Type: d.Type,
                                 RoomId: d.RoomId,
                                 Position: d.Position,
-                                Consumption: d.Consumption))
-                            .ToList()))
+                                Consumption: d.Consumption,
+                                DisplayRules: d.DisplayRules))
+                            .ToList(),
+                        DisplayRules: r.DisplayRules))
                     .ToList()))
             .ToList();
 
@@ -479,6 +495,7 @@ public class InMemoryBuildingConfigurationService : IBuildingConfigurationServic
                 Name: r.Name,
                 Geometry: r.Geometry,
                 FillColorOverride: null,
+                DisplayRules: r.DisplayRules ?? Array.Empty<DisplayRule>(),
                 Devices: r.Devices.Select(d => new DeviceConfig(
                     Id: d.Id,
                     RoomId: d.RoomId,
@@ -487,6 +504,7 @@ public class InMemoryBuildingConfigurationService : IBuildingConfigurationServic
                     Position: d.Position,
                     DisplaySettings: DeviceDisplaySettings.CreateDefault(d.Type),
                     Consumption: DefaultConsumption(d.Type),
+                    DisplayRules: d.DisplayRules ?? Array.Empty<DisplayRule>(),
                     CreatedAt: now,
                     UpdatedAt: now,
                     IsDeleted: false)).ToList(),

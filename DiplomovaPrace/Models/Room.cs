@@ -1,5 +1,7 @@
 namespace DiplomovaPrace.Models;
 
+using DiplomovaPrace.Models.Configuration;
+
 /// <summary>
 /// Geometrie místnosti pro vykreslení jako SVG obdélník.
 /// Pro složitější tvary lze rozšířit o SvgPathData string.
@@ -19,5 +21,6 @@ public record Room(
     string Name,
     string FloorId,
     RoomGeometry Geometry,
-    IReadOnlyList<Device> Devices
+    IReadOnlyList<Device> Devices,
+    IReadOnlyList<DisplayRule>? DisplayRules = null
 );

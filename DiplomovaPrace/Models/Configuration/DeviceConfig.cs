@@ -15,6 +15,7 @@ public record DeviceConfig(
     DeviceDisplaySettings DisplaySettings,
     /// <summary>Spotřeba zařízení v Wattech. Používá se v agregacích (souhrnné panely, ExpressionEvaluator).</summary>
     double Consumption,
+    IReadOnlyList<DisplayRule> DisplayRules,
     DateTime CreatedAt,
     DateTime UpdatedAt,
     bool IsDeleted

@@ -49,6 +49,41 @@
             </dl>
         </div>
     </div>
+
+    @if (_device.Type == DeviceType.TemperatureSensor || _device.Type == DeviceType.HumiditySensor)
+    {
+        <div class="card mt-3">
+            <div class="card-header">
+                <strong>Historie hodnot</strong>
+            </div>
+            <div class="card-body">
+                @if (_chartData != null && _chartData.Any())
+                {
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Čas</th>
+                                <th>@GetUnitLabel()</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var point in _chartData)
+                            {
+                                <tr>
+                                    <td>@point.FormattedTime</td>
+                                    <td>@point.Value.ToString("F2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <div class="text-muted">Nejsou dostupná historická data</div>
+                }
+            </div>
+        </div>
+    }
 }
 
 @code {
@@ -59,11 +94,57 @@
     public EventCallback OnClose { get; set; }
 
     private Device? _device;
-    private DeviceState? _state => StateService.GetDeviceState(DeviceId);
+    private DeviceState? _state;
+    private List<ChartDataPoint> _chartData = new();
+    private string? _prevDeviceId;
+
+    private sealed class ChartDataPoint
+    {
+        public string FormattedTime { get; set; } = "";
+        public double Value { get; set; }
+    }
 
     protected override void OnParametersSet()
     {
         _device = FindDevice(DeviceId);
+        _state = StateService.GetDeviceState(DeviceId);
+
+        // Aktualizuj chart data pokud Device změnil
+        if (DeviceId != _prevDeviceId)
+        {
+            _prevDeviceId = DeviceId;
+            UpdateChartData();
+            StateHasChanged();
+        }
+    }
+
+    private void UpdateChartData()
+    {
+        try
+        {
+            var newData = new List<ChartDataPoint>();
+
+            if (_device?.Type == DeviceType.TemperatureSensor || _device?.Type == DeviceType.HumiditySensor)
+            {
+                var history = StateService.GetDeviceHistory(DeviceId).ToList();
+
+                foreach (var record in history)
+                {
+                    newData.Add(new ChartDataPoint
+                    {
+                        FormattedTime = record.Timestamp.ToString("HH:mm"),
+                        Value = record.Value
+                    });
+                }
+            }
+
+            _chartData = newData;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Chart data error: {ex.Message}");
+            _chartData = new List<ChartDataPoint>();
+        }
     }
 
     private Device? FindDevice(string deviceId)
@@ -76,6 +157,13 @@
         }
         return null;
     }
+
+    private string GetUnitLabel() => _device?.Type switch
+    {
+        DeviceType.TemperatureSensor => "Teplota (°C)",
+        DeviceType.HumiditySensor    => "Vlhkost (%)",
+        _                            => "Hodnota"
+    };
 
     private static string GetTypeName(DeviceType type) => type switch
     {

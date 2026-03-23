@@ -38,6 +38,17 @@ public interface IBuildingStateService
     event Action? OnStateChanged;
 
     /// <summary>
+    /// Získá historii stavů zařízení pro vykreslení grafu.
+    /// Vrací až posledních 100 záznamů (ring buffer).
+    /// </summary>
+    IReadOnlyList<StateRecord> GetDeviceHistory(string deviceId);
+
+    /// <summary>
+    /// Vymaže historii všech zařízení (např. při resetu simulace).
+    /// </summary>
+    void ClearHistory();
+
+    /// <summary>
     /// Nahradí strukturu budovy novou konfigurací z editoru.
     /// Vymaže existující stavy zařízení a inicializuje výchozí stavy pro nová zařízení.
     /// Vyvolá OnStateChanged po dokončení výměny.

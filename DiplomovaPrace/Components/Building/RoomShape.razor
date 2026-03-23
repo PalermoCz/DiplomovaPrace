@@ -1,4 +1,5 @@
 @inject IBuildingStateService StateService
+@inject IDisplayRuleEvaluator DisplayRuleEvaluator
 
 <g class="room-group" @onclick="() => OnRoomClicked.InvokeAsync(Room.Id)" style="cursor: pointer;">
     <rect x="@Fmt(Room.Geometry.X)"
@@ -36,9 +37,48 @@
     [Parameter]
     public EventCallback<string> OnDeviceSelected { get; set; }
 
-    private string RoomFillColor => StateColorMapper.GetRoomFillColor(
-        Room.Devices,
-        deviceId => StateService.GetDeviceState(deviceId));
+    private string _evaluatedColor = "";
+    private string? _prevRoomId;
+
+    private string RoomFillColor => _evaluatedColor;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Jen aktualizuj barvu pokud Room změnil
+        if (Room.Id != _prevRoomId)
+        {
+            _prevRoomId = Room.Id;
+            await UpdateRoomColor();
+        }
+    }
+
+    private async Task UpdateRoomColor()
+    {
+        var building = StateService.Building;
+        if (building is null)
+        {
+            _evaluatedColor = StateColorMapper.GetRoomFillColor(
+                Room.Devices,
+                deviceId => StateService.GetDeviceState(deviceId));
+            return;
+        }
+
+        // Pokud Room má DisplayRules, vyhodnoť je
+        if (Room.DisplayRules != null && Room.DisplayRules.Count > 0)
+        {
+            var ruleColor = await DisplayRuleEvaluator.EvaluateAsync(Room.DisplayRules, building.Id);
+            if (ruleColor != null)
+            {
+                _evaluatedColor = ruleColor;
+                return;
+            }
+        }
+
+        // Jinak použij výchozí barvu (průměrná barva zařízení v místnosti)
+        _evaluatedColor = StateColorMapper.GetRoomFillColor(
+            Room.Devices,
+            deviceId => StateService.GetDeviceState(deviceId));
+    }
 
     private static string Fmt(double value) =>
         value.ToString(System.Globalization.CultureInfo.InvariantCulture);

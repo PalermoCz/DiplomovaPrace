@@ -26,6 +26,41 @@
         Pozice: @Room.Geometry.X.ToString("F0"), @Room.Geometry.Y.ToString("F0") px
     </div>
 
+    <div class="prop-section-title mt-3">Podmíněné formátování</div>
+
+    <div class="mb-3">
+        <label class="form-label">Pravidla zobrazení</label>
+        <div class="form-text mb-2">Barva se aplikuje pokud je podmínka splněna. První splněné pravidlo vyhrává.</div>
+        @foreach (var (rule, index) in _model.DisplayRules.Select((r, i) => (r, i)))
+        {
+            <div class="card mb-2 p-2">
+                <div class="row g-2">
+                    <div class="col-7">
+                        <InputText class="form-control form-control-sm"
+                                   @bind-Value="rule.Condition"
+                                   placeholder='Room["Lab"].Value > 30' />
+                    </div>
+                    <div class="col-3">
+                        <input type="color"
+                               class="form-control form-control-sm form-control-color"
+                               @bind="rule.Color"
+                               @bind:event="oninput" />
+                    </div>
+                    <div class="col-2">
+                        <button type="button" class="btn btn-sm btn-outline-danger w-100"
+                                @onclick="() => RemoveRule(index)">×</button>
+                    </div>
+                </div>
+            </div>
+        }
+        @if (_model.DisplayRules.Count == 0)
+        {
+            <div class="text-muted small">Žádná pravidla. Použije se výchozí barva.</div>
+        }
+        <button type="button" class="btn btn-sm btn-outline-primary w-100 mt-2"
+                @onclick="AddRule">+ Přidat pravidlo</button>
+    </div>
+
     <button type="submit" class="btn btn-sm btn-primary btn-save w-100">Uložit</button>
 </EditForm>
 
@@ -38,11 +73,26 @@
 
 @code {
     [Parameter, EditorRequired] public RoomConfig Room { get; set; } = default!;
-    [Parameter] public EventCallback<(string Name, RoomGeometry Geometry)> OnSave { get; set; }
+    [Parameter] public EventCallback<RoomConfig> OnSave { get; set; }
     [Parameter] public EventCallback OnDelete { get; set; }
 
     private FormModel _model = new();
     private string? _prevId;
+
+    private void AddRule()
+    {
+        _model.DisplayRules.Add(new DisplayRuleModel
+        {
+            Condition = "",
+            Color = "#3498db"
+        });
+    }
+
+    private void RemoveRule(int index)
+    {
+        if (index >= 0 && index < _model.DisplayRules.Count)
+            _model.DisplayRules.RemoveAt(index);
+    }
 
     protected override void OnParametersSet()
     {
@@ -52,14 +102,31 @@
         {
             Name   = Room.Name,
             Width  = Room.Geometry.Width,
-            Height = Room.Geometry.Height
+            Height = Room.Geometry.Height,
+            DisplayRules = Room.DisplayRules
+                .Select(r => new DisplayRuleModel
+                {
+                    Condition = r.Condition,
+                    Color = r.Color
+                })
+                .ToList()
         };
     }
 
     private async Task HandleSubmit()
     {
         var newGeometry = new RoomGeometry(Room.Geometry.X, Room.Geometry.Y, _model.Width, _model.Height);
-        await OnSave.InvokeAsync((_model.Name, newGeometry));
+        var displayRules = _model.DisplayRules
+            .Select(r => new DisplayRule(r.Condition, r.Color))
+            .ToList();
+        var updated = Room with
+        {
+            Name = _model.Name,
+            Geometry = newGeometry,
+            DisplayRules = displayRules,
+            UpdatedAt = DateTime.UtcNow
+        };
+        await OnSave.InvokeAsync(updated);
     }
 
     private sealed class FormModel
@@ -70,5 +137,12 @@
         public double Width { get; set; } = 100;
         [System.ComponentModel.DataAnnotations.Range(20, 5000, ErrorMessage = "Výška musí být 20–5000 px")]
         public double Height { get; set; } = 100;
+        public List<DisplayRuleModel> DisplayRules { get; set; } = new();
+    }
+
+    private sealed class DisplayRuleModel
+    {
+        public string Condition { get; set; } = "";
+        public string Color { get; set; } = "#3498db";
     }
 }

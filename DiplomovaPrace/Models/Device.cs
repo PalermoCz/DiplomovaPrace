@@ -1,5 +1,7 @@
 namespace DiplomovaPrace.Models;
 
+using DiplomovaPrace.Models.Configuration;
+
 /// <summary>
 /// Pozice ikony zařízení v SVG souřadnicovém systému půdorysu.
 /// </summary>
@@ -17,7 +19,8 @@ public record Device(
     DeviceType Type,
     string RoomId,
     DevicePosition Position,
-    double Consumption = 0.0
+    double Consumption = 0.0,
+    IReadOnlyList<DisplayRule>? DisplayRules = null
 )
 {
     /// <summary>Výchozí příkon v Wattech dle typu zařízení.</summary>

@@ -1,11 +1,15 @@
 using DiplomovaPrace.Components;
 using DiplomovaPrace.Services;
+using Radzen;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// Registrace Radzen komponent
+builder.Services.AddRadzenComponents();
 
 // Registrace aplikačních služeb
 builder.Services.AddSingleton<IBuildingStateService, BuildingStateService>();
@@ -18,6 +22,7 @@ builder.Services.AddSingleton<IBuildingConfigurationService, InMemoryBuildingCon
 builder.Services.AddScoped<IEditorSessionService, EditorSessionService>();
 builder.Services.AddSingleton<IActiveBuildingService, ActiveBuildingService>();
 builder.Services.AddSingleton<ExpressionEvaluator>();
+builder.Services.AddSingleton<IDisplayRuleEvaluator, DisplayRuleEvaluator>();
 
 var app = builder.Build();
 

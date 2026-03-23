@@ -12,6 +12,7 @@ public record RoomConfig(
     string Name,
     RoomGeometry Geometry,
     string? FillColorOverride,
+    IReadOnlyList<DisplayRule> DisplayRules,
     IReadOnlyList<DeviceConfig> Devices,
     DateTime CreatedAt,
     DateTime UpdatedAt,

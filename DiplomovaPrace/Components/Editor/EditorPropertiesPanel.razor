@@ -59,7 +59,7 @@
 
     [Parameter] public EventCallback<(string Name, string? Description, string? Address)> OnUpdateBuilding { get; set; }
     [Parameter] public EventCallback<(string Name, int Level, double Width, double Height)> OnUpdateFloor { get; set; }
-    [Parameter] public EventCallback<(string Name, RoomGeometry Geometry)> OnUpdateRoomName { get; set; }
+    [Parameter] public EventCallback<RoomConfig> OnUpdateRoomName { get; set; }
     [Parameter] public EventCallback<DeviceConfig> OnUpdateDevice { get; set; }
     [Parameter] public EventCallback<string> OnDeleteRoom { get; set; }
     [Parameter] public EventCallback<string> OnDeleteDevice { get; set; }

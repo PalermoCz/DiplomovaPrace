@@ -504,16 +504,17 @@
         ShowToast("Patro uloženo", success: true);
     }
 
-    private async Task HandleUpdateRoomName((string Name, RoomGeometry Geometry) args)
+    private async Task HandleUpdateRoomName(RoomConfig updated)
     {
         if (SessionService.SelectedElementId is null) return;
         var roomId = SessionService.SelectedElementId;
         await SessionService.ExecuteCommandAsync(
-            new UpdateRoomCommand(args.Name),
+            new UpdateRoomCommand(updated.Name),
             async () =>
             {
-                await ConfigService.UpdateRoomNameAsync(roomId, args.Name);
-                await ConfigService.UpdateRoomGeometryAsync(roomId, args.Geometry);
+                await ConfigService.UpdateRoomNameAsync(roomId, updated.Name);
+                await ConfigService.UpdateRoomGeometryAsync(roomId, updated.Geometry);
+                await ConfigService.UpdateRoomDisplayRulesAsync(roomId, updated.DisplayRules);
             },
             ConfigService);
         ShowToast("Místnost uložena", success: true);
@@ -524,7 +525,7 @@
         await SessionService.ExecuteCommandAsync(
             new UpdateDeviceCommand(updated.Name),
             () => ConfigService.UpdateDevicePropertiesAsync(
-                updated.Id, updated.Name, updated.Type, updated.DisplaySettings, updated.Consumption),
+                updated.Id, updated.Name, updated.Type, updated.DisplaySettings, updated.Consumption, updated.DisplayRules),
             ConfigService);
         ShowToast("Zařízení uloženo", success: true);
     }

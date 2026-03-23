@@ -41,6 +41,7 @@ public interface IBuildingConfigurationService
     Task<RoomConfig> AddRoomAsync(string floorId, string name, RoomGeometry geometry);
     Task<RoomConfig> UpdateRoomNameAsync(string roomId, string name);
     Task<RoomConfig> UpdateRoomGeometryAsync(string roomId, RoomGeometry geometry);
+    Task<RoomConfig> UpdateRoomDisplayRulesAsync(string roomId, IReadOnlyList<DisplayRule> displayRules);
     Task DeleteRoomAsync(string roomId);
 
     // ── Device CRUD ──────────────────────────────────────────────────────────
@@ -50,7 +51,7 @@ public interface IBuildingConfigurationService
 
     /// <summary>Aktualizuje vlastnosti zařízení včetně spotřeby (Consumption v Wattech).</summary>
     Task<DeviceConfig> UpdateDevicePropertiesAsync(string deviceId, string name, DeviceType type,
-        DeviceDisplaySettings displaySettings, double consumption);
+        DeviceDisplaySettings displaySettings, double consumption, IReadOnlyList<DisplayRule> displayRules);
     Task DeleteDeviceAsync(string deviceId);
 
     // ── Bulk replace ─────────────────────────────────────────────────────────

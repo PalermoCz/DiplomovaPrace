@@ -1,4 +1,5 @@
 @inject IBuildingStateService StateService
+@inject IDisplayRuleEvaluator DisplayRuleEvaluator
 
 <g class="device-icon" @onclick="HandleClick" @onclick:stopPropagation="true"
    style="cursor: pointer;">
@@ -28,8 +29,44 @@
     public EventCallback<string> OnClicked { get; set; }
 
     private DeviceState? State => StateService.GetDeviceState(Device.Id);
+    private string _evaluatedColor = "";
+    private string? _prevDeviceId;
 
-    private string DeviceColor => StateColorMapper.GetDeviceColor(Device.Type, State);
+    private string DeviceColor => _evaluatedColor;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Jen aktualizuj barvu pokud Device změnil
+        if (Device.Id != _prevDeviceId)
+        {
+            _prevDeviceId = Device.Id;
+            await UpdateDeviceColor();
+        }
+    }
+
+    private async Task UpdateDeviceColor()
+    {
+        var building = StateService.Building;
+        if (building is null)
+        {
+            _evaluatedColor = StateColorMapper.GetDeviceColor(Device.Type, State);
+            return;
+        }
+
+        // Pokud Device má DisplayRules, vyhodnoť je
+        if (Device.DisplayRules != null && Device.DisplayRules.Count > 0)
+        {
+            var ruleColor = await DisplayRuleEvaluator.EvaluateAsync(Device.DisplayRules, building.Id);
+            if (ruleColor != null)
+            {
+                _evaluatedColor = ruleColor;
+                return;
+            }
+        }
+
+        // Jinak použij výchozí barvu
+        _evaluatedColor = StateColorMapper.GetDeviceColor(Device.Type, State);
+    }
 
     private async Task HandleClick()
     {
@@ -52,7 +89,7 @@
 
     private static string FormatValue(DeviceType type, DeviceState state) => type switch
     {
-        DeviceType.TemperatureSensor => $"{state.NumericValue:F1} \u00b0C",
+        DeviceType.TemperatureSensor => $"{state.NumericValue:F1} °C",
         DeviceType.HumiditySensor   => $"{state.NumericValue:F0} %",
         _                           => state.NumericValue?.ToString("F1") ?? ""
     };

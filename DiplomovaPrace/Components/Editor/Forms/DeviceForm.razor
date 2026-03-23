@@ -57,6 +57,41 @@
         <InputNumber class="form-control" @bind-Value="_model.AlarmLow" placeholder="(prázdné = bez limitu)" />
     </div>
 
+    <div class="prop-section-title mt-3">Podmíněné formátování</div>
+
+    <div class="mb-3">
+        <label class="form-label">Pravidla zobrazení</label>
+        <div class="form-text mb-2">Barva se aplikuje pokud je podmínka splněna. První splněné pravidlo vyhrává.</div>
+        @foreach (var (rule, index) in _model.DisplayRules.Select((r, i) => (r, i)))
+        {
+            <div class="card mb-2 p-2">
+                <div class="row g-2">
+                    <div class="col-7">
+                        <InputText class="form-control form-control-sm"
+                                   @bind-Value="rule.Condition"
+                                   placeholder='Room["Lab"].Value > 30' />
+                    </div>
+                    <div class="col-3">
+                        <input type="color"
+                               class="form-control form-control-sm form-control-color"
+                               @bind="rule.Color"
+                               @bind:event="oninput" />
+                    </div>
+                    <div class="col-2">
+                        <button type="button" class="btn btn-sm btn-outline-danger w-100"
+                                @onclick="() => RemoveRule(index)">×</button>
+                    </div>
+                </div>
+            </div>
+        }
+        @if (_model.DisplayRules.Count == 0)
+        {
+            <div class="text-muted small">Žádná pravidla. Použije se výchozí barva.</div>
+        }
+        <button type="button" class="btn btn-sm btn-outline-primary w-100 mt-2"
+                @onclick="AddRule">+ Přidat pravidlo</button>
+    </div>
+
     <button type="submit" class="btn btn-sm btn-primary btn-save w-100">Uložit</button>
 </EditForm>
 
@@ -75,6 +110,21 @@
     private FormModel _model = new();
     private string? _prevId;
 
+    private void AddRule()
+    {
+        _model.DisplayRules.Add(new DisplayRuleModel
+        {
+            Condition = "",
+            Color = "#e74c3c"
+        });
+    }
+
+    private void RemoveRule(int index)
+    {
+        if (index >= 0 && index < _model.DisplayRules.Count)
+            _model.DisplayRules.RemoveAt(index);
+    }
+
     protected override void OnParametersSet()
     {
         if (Device.Id == _prevId) return;
@@ -88,7 +138,14 @@
             LabelOverride = Device.DisplaySettings.LabelOverride,
             ShowValue     = Device.DisplaySettings.ShowValue,
             AlarmHigh     = Device.DisplaySettings.AlarmThresholdHigh,
-            AlarmLow      = Device.DisplaySettings.AlarmThresholdLow
+            AlarmLow      = Device.DisplaySettings.AlarmThresholdLow,
+            DisplayRules  = Device.DisplayRules
+                .Select(r => new DisplayRuleModel
+                {
+                    Condition = r.Condition,
+                    Color = r.Color
+                })
+                .ToList()
         };
     }
 
@@ -101,12 +158,16 @@
             AlarmThresholdLow:     _model.AlarmLow,
             ShowValue:             _model.ShowValue
         );
+        var displayRules = _model.DisplayRules
+            .Select(r => new DisplayRule(r.Condition, r.Color))
+            .ToList();
         var updated = Device with
         {
             Name             = _model.Name,
             Type             = _model.Type,
             Consumption      = _model.Consumption,
             DisplaySettings  = settings,
+            DisplayRules     = displayRules,
             UpdatedAt        = DateTime.UtcNow
         };
         await OnSave.InvokeAsync(updated);
@@ -124,5 +185,12 @@
         public bool ShowValue { get; set; }
         public double? AlarmHigh { get; set; }
         public double? AlarmLow { get; set; }
+        public List<DisplayRuleModel> DisplayRules { get; set; } = new();
+    }
+
+    private sealed class DisplayRuleModel
+    {
+        public string Condition { get; set; } = "";
+        public string Color { get; set; } = "#e74c3c";
     }
 }
