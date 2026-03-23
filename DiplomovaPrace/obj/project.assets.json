@@ -2,7 +2,7 @@
   "version": 3,
   "targets": {
     "net10.0": {
-      "Microsoft.AspNetCore.App.Internal.Assets/10.0.0": {
+      "Microsoft.AspNetCore.App.Internal.Assets/10.0.3": {
         "type": "package",
         "build": {
           "build/Microsoft.AspNetCore.App.Internal.Assets.props": {},
@@ -15,10 +15,14 @@
       "Radzen.Blazor/10.0.6": {
         "type": "package",
         "compile": {
-          "lib/net10.0/Radzen.Blazor.dll": {}
+          "lib/net10.0/Radzen.Blazor.dll": {
+            "related": ".xml"
+          }
         },
         "runtime": {
-          "lib/net10.0/Radzen.Blazor.dll": {}
+          "lib/net10.0/Radzen.Blazor.dll": {
+            "related": ".xml"
+          }
         },
         "build": {
           "buildTransitive/Radzen.Blazor.props": {}
@@ -30,10 +34,10 @@
     }
   },
   "libraries": {
-    "Microsoft.AspNetCore.App.Internal.Assets/10.0.0": {
-      "sha512": "0gZrESKwnlmbE8Br8XIy3kk7Pj0++9T2Ly+A8BFYYgo5EgfqWEln26cho+l92KOaHUzclhvz314RiwE910s24g==",
+    "Microsoft.AspNetCore.App.Internal.Assets/10.0.3": {
+      "sha512": "mr3Zn+ht8lijYvlMIasftw9opU9hsLKDdnOgQMmYI3RjWPJLOF9l8+YHDseRkTs97wOrULmJgo/NDCmzL/EGDg==",
       "type": "package",
-      "path": "microsoft.aspnetcore.app.internal.assets/10.0.0",
+      "path": "microsoft.aspnetcore.app.internal.assets/10.0.3",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
@@ -49,7 +53,7 @@
         "build/Microsoft.AspNetCore.App.Internal.Assets.targets",
         "buildMultiTargeting/Microsoft.AspNetCore.App.Internal.Assets.targets",
         "buildTransitive/Microsoft.AspNetCore.App.Internal.Assets.targets",
-        "microsoft.aspnetcore.app.internal.assets.10.0.0.nupkg.sha512",
+        "microsoft.aspnetcore.app.internal.assets.10.0.3.nupkg.sha512",
         "microsoft.aspnetcore.app.internal.assets.nuspec"
       ]
     },
@@ -69,9 +73,13 @@
         "buildTransitive/Radzen.Blazor.props",
         "icon.png",
         "lib/net10.0/Radzen.Blazor.dll",
+        "lib/net10.0/Radzen.Blazor.xml",
         "lib/net7.0/Radzen.Blazor.dll",
+        "lib/net7.0/Radzen.Blazor.xml",
         "lib/net8.0/Radzen.Blazor.dll",
+        "lib/net8.0/Radzen.Blazor.xml",
         "lib/net9.0/Radzen.Blazor.dll",
+        "lib/net9.0/Radzen.Blazor.xml",
         "radzen.blazor.10.0.6.nupkg.sha512",
         "radzen.blazor.nuspec",
         "staticwebassets/Radzen.Blazor.js",
@@ -115,24 +123,24 @@
   },
   "projectFileDependencyGroups": {
     "net10.0": [
-      "Microsoft.AspNetCore.App.Internal.Assets >= 10.0.0",
+      "Microsoft.AspNetCore.App.Internal.Assets >= 10.0.3",
       "Radzen.Blazor >= 10.0.6"
     ]
   },
   "packageFolders": {
-    "/home/codespace/.nuget/packages/": {}
+    "C:\\Users\\Matthew\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/workspaces/DiplomovaPrace/DiplomovaPrace/DiplomovaPrace.csproj",
+      "projectUniqueName": "C:\\Users\\Matthew\\Desktop\\Diplomova_Prace\\Code\\DiplomovaPrace\\DiplomovaPrace\\DiplomovaPrace.csproj",
       "projectName": "DiplomovaPrace",
-      "projectPath": "/workspaces/DiplomovaPrace/DiplomovaPrace/DiplomovaPrace.csproj",
-      "packagesPath": "/home/codespace/.nuget/packages/",
-      "outputPath": "/workspaces/DiplomovaPrace/DiplomovaPrace/obj/",
+      "projectPath": "C:\\Users\\Matthew\\Desktop\\Diplomova_Prace\\Code\\DiplomovaPrace\\DiplomovaPrace\\DiplomovaPrace.csproj",
+      "packagesPath": "C:\\Users\\Matthew\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\Matthew\\Desktop\\Diplomova_Prace\\Code\\DiplomovaPrace\\DiplomovaPrace\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "/home/codespace/.nuget/NuGet/NuGet.Config"
+        "C:\\Users\\Matthew\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net10.0"
@@ -165,7 +173,7 @@
           "Microsoft.AspNetCore.App.Internal.Assets": {
             "suppressParent": "All",
             "target": "Package",
-            "version": "[10.0.0, )",
+            "version": "[10.0.3, )",
             "autoReferenced": true
           },
           "Radzen.Blazor": {
@@ -192,7 +200,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/10.0.100/PortableRuntimeIdentifierGraph.json",
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.103/PortableRuntimeIdentifierGraph.json",
         "packagesToPrune": {
           "Microsoft.AspNetCore": "(,10.0.32767]",
           "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",

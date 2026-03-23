@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "/workspaces/DiplomovaPrace/DiplomovaPrace/DiplomovaPrace.csproj": {}
+    "C:\\Users\\Matthew\\Desktop\\Diplomova_Prace\\Code\\DiplomovaPrace\\DiplomovaPrace\\DiplomovaPrace.csproj": {}
   },
   "projects": {
-    "/workspaces/DiplomovaPrace/DiplomovaPrace/DiplomovaPrace.csproj": {
+    "C:\\Users\\Matthew\\Desktop\\Diplomova_Prace\\Code\\DiplomovaPrace\\DiplomovaPrace\\DiplomovaPrace.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/workspaces/DiplomovaPrace/DiplomovaPrace/DiplomovaPrace.csproj",
+        "projectUniqueName": "C:\\Users\\Matthew\\Desktop\\Diplomova_Prace\\Code\\DiplomovaPrace\\DiplomovaPrace\\DiplomovaPrace.csproj",
         "projectName": "DiplomovaPrace",
-        "projectPath": "/workspaces/DiplomovaPrace/DiplomovaPrace/DiplomovaPrace.csproj",
-        "packagesPath": "/home/codespace/.nuget/packages/",
-        "outputPath": "/workspaces/DiplomovaPrace/DiplomovaPrace/obj/",
+        "projectPath": "C:\\Users\\Matthew\\Desktop\\Diplomova_Prace\\Code\\DiplomovaPrace\\DiplomovaPrace\\DiplomovaPrace.csproj",
+        "packagesPath": "C:\\Users\\Matthew\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Matthew\\Desktop\\Diplomova_Prace\\Code\\DiplomovaPrace\\DiplomovaPrace\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/home/codespace/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\Matthew\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
@@ -47,7 +47,7 @@
             "Microsoft.AspNetCore.App.Internal.Assets": {
               "suppressParent": "All",
               "target": "Package",
-              "version": "[10.0.0, )",
+              "version": "[10.0.3, )",
               "autoReferenced": true
             },
             "Radzen.Blazor": {
@@ -74,7 +74,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/10.0.100/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.103/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.AspNetCore": "(,10.0.32767]",
             "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",
