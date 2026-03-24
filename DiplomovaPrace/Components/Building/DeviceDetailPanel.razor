@@ -1,3 +1,4 @@
+@implements IDisposable
 @inject IBuildingStateService StateService
 
 @if (_device is not null)
@@ -59,23 +60,15 @@
             <div class="card-body">
                 @if (_chartData != null && _chartData.Any())
                 {
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Čas</th>
-                                <th>@GetUnitLabel()</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var point in _chartData)
-                            {
-                                <tr>
-                                    <td>@point.FormattedTime</td>
-                                    <td>@point.Value.ToString("F2")</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+                    <RadzenChart>
+                        <RadzenLineSeries Data="@_chartData" CategoryProperty="Timestamp" Title="@GetUnitLabel()" ValueProperty="Value">
+                            <RadzenMarkers MarkerType="MarkerType.Circle" />
+                        </RadzenLineSeries>
+                        <RadzenCategoryAxis Padding="20" FormatString="{0:HH:mm:ss}" />
+                        <RadzenValueAxis>
+                            <RadzenGridLines Visible="true" />
+                        </RadzenValueAxis>
+                    </RadzenChart>
                 }
                 else
                 {
@@ -95,13 +88,27 @@
 
     private Device? _device;
     private DeviceState? _state;
-    private List<ChartDataPoint> _chartData = new();
+    private List<StateRecord> _chartData = new();
     private string? _prevDeviceId;
 
-    private sealed class ChartDataPoint
+    protected override void OnInitialized()
     {
-        public string FormattedTime { get; set; } = "";
-        public double Value { get; set; }
+        StateService.OnStateChanged += HandleStateChanged;
+    }
+
+    public void Dispose()
+    {
+        StateService.OnStateChanged -= HandleStateChanged;
+    }
+
+    private void HandleStateChanged()
+    {
+        InvokeAsync(() =>
+        {
+            _state = StateService.GetDeviceState(DeviceId);
+            UpdateChartData();
+            StateHasChanged();
+        });
     }
 
     protected override void OnParametersSet()
@@ -114,36 +121,21 @@
         {
             _prevDeviceId = DeviceId;
             UpdateChartData();
-            StateHasChanged();
         }
     }
 
     private void UpdateChartData()
     {
-        try
+        if (_device?.Type == DeviceType.TemperatureSensor || _device?.Type == DeviceType.HumiditySensor)
         {
-            var newData = new List<ChartDataPoint>();
-
-            if (_device?.Type == DeviceType.TemperatureSensor || _device?.Type == DeviceType.HumiditySensor)
-            {
-                var history = StateService.GetDeviceHistory(DeviceId).ToList();
-
-                foreach (var record in history)
-                {
-                    newData.Add(new ChartDataPoint
-                    {
-                        FormattedTime = record.Timestamp.ToString("HH:mm"),
-                        Value = record.Value
-                    });
-                }
-            }
-
-            _chartData = newData;
+            // Data are already defensively copied under a lock inside GetDeviceHistory() 
+            // returning a snapshot ToList(). By keeping a separate local reference _chartData,
+            // the UI renders safely.
+            _chartData = StateService.GetDeviceHistory(DeviceId).ToList();
         }
-        catch (Exception ex)
+        else
         {
-            Console.WriteLine($"Chart data error: {ex.Message}");
-            _chartData = new List<ChartDataPoint>();
+            _chartData = new List<StateRecord>();
         }
     }
 

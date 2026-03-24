@@ -1,3 +1,4 @@
+@implements IDisposable
 @inject IBuildingStateService StateService
 @inject IDisplayRuleEvaluator DisplayRuleEvaluator
 
@@ -44,12 +45,31 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        // Jen aktualizuj barvu pokud Room změnil
+        // Jen aktualizuj barvu pokud Room změnil napoprvé, nebo z eventu
         if (Room.Id != _prevRoomId)
         {
             _prevRoomId = Room.Id;
             await UpdateRoomColor();
         }
+    }
+
+    protected override void OnInitialized()
+    {
+        StateService.OnStateChanged += HandleStateChanged;
+    }
+
+    public void Dispose()
+    {
+        StateService.OnStateChanged -= HandleStateChanged;
+    }
+
+    private void HandleStateChanged()
+    {
+        InvokeAsync(async () =>
+        {
+            await UpdateRoomColor();
+            StateHasChanged();
+        });
     }
 
     private async Task UpdateRoomColor()

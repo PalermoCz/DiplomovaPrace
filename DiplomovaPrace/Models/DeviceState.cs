@@ -19,12 +19,12 @@ public record DeviceState(
     /// </summary>
     public static DeviceState CreateDefault(DeviceType type) => type switch
     {
-        DeviceType.TemperatureSensor => new(20.0, true, false, DateTime.UtcNow),
-        DeviceType.HumiditySensor   => new(45.0, true, false, DateTime.UtcNow),
-        DeviceType.Light            => new(null, false, false, DateTime.UtcNow),
-        DeviceType.HVAC             => new(null, false, false, DateTime.UtcNow),
-        DeviceType.MotionSensor     => new(null, false, false, DateTime.UtcNow),
-        DeviceType.DoorSensor       => new(null, false, false, DateTime.UtcNow),
-        _                           => new(null, false, false, DateTime.UtcNow)
+        DeviceType.TemperatureSensor => new(20.0, true, false, DateTime.Now),
+        DeviceType.HumiditySensor   => new(45.0, true, false, DateTime.Now),
+        DeviceType.Light            => new(null, false, false, DateTime.Now),
+        DeviceType.HVAC             => new(null, false, false, DateTime.Now),
+        DeviceType.MotionSensor     => new(null, false, false, DateTime.Now),
+        DeviceType.DoorSensor       => new(null, false, false, DateTime.Now),
+        _                           => new(null, false, false, DateTime.Now)
     };
 }

@@ -11,13 +11,10 @@
  *@
 
 <svg id="@_svgId" class="editor-svg"
-     viewBox="0 0 @Fmt(ViewBoxWidth) @Fmt(ViewBoxHeight)">
+     viewBox="0 0 @Fmt(ViewBoxWidth) @Fmt(ViewBoxHeight)"
+     style="background-color: #e9ecef;">
 
-    @* Backdrop — zachytává mouseeventy přes JS, jednoduchá barva (NEzoumuje) *@
-    <rect class="editor-bg"
-          x="0" y="0"
-          width="@Fmt(ViewBoxWidth)" height="@Fmt(ViewBoxHeight)"
-          fill="#e9ecef" stroke="none" />
+    @* Doplněn styl pozadí na 100% plochy místo manuálního Backdropu *@
 
     @* Content group — JS sem zapisuje pan/zoom transform *@
     <g id="@(_svgId + "-content")">

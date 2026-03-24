@@ -13,7 +13,7 @@ public static class BuildingConfiguration
     {
         return new Building(
             Id: "building-main",
-            Name: "Fakulta informatiky",
+            Name: "Budova Mechatroniky",
             Floors:
             [
                 CreateGroundFloor(),

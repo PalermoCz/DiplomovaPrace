@@ -105,7 +105,7 @@ public class SimulationService : IHostedService, ISimulationService, IDisposable
     /// </summary>
     private DeviceState GenerateDeviceState(Device device, DeviceState? current)
     {
-        var now = DateTime.UtcNow;
+        var now = DateTime.Now;
 
         return device.Type switch
         {

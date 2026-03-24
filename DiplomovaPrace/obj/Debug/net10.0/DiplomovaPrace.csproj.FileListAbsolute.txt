@@ -60,7 +60,6 @@ C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\t2tvocn0z4-{0}-puw71i7fe2-puw71i7fe2.gz
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\wb34hdfdov-{0}-khy4lop6wu-khy4lop6wu.gz
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\wqp8zzzo8b-{0}-n4rvgmhl10-n4rvgmhl10.gz
-C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\4rxuglimrs-{0}-2f2at8wja0-2f2at8wja0.gz
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\qcxho35633-{0}-ucpuymnt2e-ucpuymnt2e.gz
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\us1v9g6brm-{0}-t1cqhe9u97-t1cqhe9u97.gz
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\05doesu5t9-{0}-c2jlpeoesf-c2jlpeoesf.gz
@@ -109,8 +108,6 @@ C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\ldqrp649fb-{0}-13ja33weya-13ja33weya.gz
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\ysq0vhtj19-{0}-ax6tuj8tun-ax6tuj8tun.gz
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\73p5e3p5wk-{0}-zr4b1gdhaw-zr4b1gdhaw.gz
-C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\1d0o8djc4b-{0}-qzqxazyhos-qzqxazyhos.gz
-C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\gz9cqb74kc-{0}-qzqxazyhos-qzqxazyhos.gz
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\staticwebassets.build.json
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\staticwebassets.build.json.cache
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\staticwebassets.development.json
@@ -122,3 +119,6 @@ C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\DiplomovaPrace.pdb
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\DiplomovaPrace.genruntimeconfig.cache
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\ref\DiplomovaPrace.dll
+C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\4rxuglimrs-{0}-dnjtu2x5jt-dnjtu2x5jt.gz
+C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\1d0o8djc4b-{0}-nn0qpt4q73-nn0qpt4q73.gz
+C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\gz9cqb74kc-{0}-nn0qpt4q73-nn0qpt4q73.gz
