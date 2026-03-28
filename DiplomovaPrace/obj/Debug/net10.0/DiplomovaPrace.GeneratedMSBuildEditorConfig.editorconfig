@@ -11,117 +11,117 @@ build_property.EnforceExtendedAnalyzerRules =
 build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property.RootNamespace = DiplomovaPrace
 build_property.RootNamespace = DiplomovaPrace
-build_property.ProjectDir = C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\
+build_property.ProjectDir = c:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 
 build_property.RazorLangVersion = 9.0
 build_property.SupportLocalizedComponentNames = 
 build_property.GenerateRazorMetadataSourceChecksumAttributes = 
-build_property.MSBuildProjectDirectory = C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace
+build_property.MSBuildProjectDirectory = c:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace
 build_property._RazorSourceGeneratorDebug = 
 build_property.EffectiveAnalysisLevelStyle = 10.0
 build_property.EnableCodeStyleSeverity = 
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/App.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/App.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xBcHAucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Building/BuildingViewer.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Building/BuildingViewer.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xCdWlsZGluZ1xCdWlsZGluZ1ZpZXdlci5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Building/DeviceDetailPanel.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Building/DeviceDetailPanel.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xCdWlsZGluZ1xEZXZpY2VEZXRhaWxQYW5lbC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Building/DeviceIcon.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Building/DeviceIcon.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xCdWlsZGluZ1xEZXZpY2VJY29uLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Building/ExpressionPanel.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Building/ExpressionPanel.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xCdWlsZGluZ1xFeHByZXNzaW9uUGFuZWwucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Building/FloorPlan.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Building/FloorPlan.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xCdWlsZGluZ1xGbG9vclBsYW4ucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Building/FloorSummaryPanel.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Building/FloorSummaryPanel.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xCdWlsZGluZ1xGbG9vclN1bW1hcnlQYW5lbC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Building/RoomShape.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Building/RoomShape.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xCdWlsZGluZ1xSb29tU2hhcGUucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Building/RoomSummaryPanel.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Building/RoomSummaryPanel.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xCdWlsZGluZ1xSb29tU3VtbWFyeVBhbmVsLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Editor/EditorCanvas.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Editor/EditorCanvas.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFZGl0b3JcRWRpdG9yQ2FudmFzLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Editor/EditorPropertiesPanel.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Editor/EditorPropertiesPanel.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFZGl0b3JcRWRpdG9yUHJvcGVydGllc1BhbmVsLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Editor/EditorToolbar.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Editor/EditorToolbar.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFZGl0b3JcRWRpdG9yVG9vbGJhci5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Editor/EditorTreeNav.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Editor/EditorTreeNav.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFZGl0b3JcRWRpdG9yVHJlZU5hdi5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Editor/Forms/BuildingPropertiesForm.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Editor/Forms/BuildingPropertiesForm.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFZGl0b3JcRm9ybXNcQnVpbGRpbmdQcm9wZXJ0aWVzRm9ybS5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Editor/Forms/DeviceForm.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Editor/Forms/DeviceForm.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFZGl0b3JcRm9ybXNcRGV2aWNlRm9ybS5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Editor/Forms/FloorForm.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Editor/Forms/FloorForm.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFZGl0b3JcRm9ybXNcRmxvb3JGb3JtLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Editor/Forms/RoomForm.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Editor/Forms/RoomForm.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xFZGl0b3JcRm9ybXNcUm9vbUZvcm0ucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Pages/BuildingView.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Pages/BuildingView.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xCdWlsZGluZ1ZpZXcucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Pages/EditorView.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Pages/EditorView.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFZGl0b3JWaWV3LnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Pages/Error.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Pages/Error.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFcnJvci5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Pages/NotFound.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Pages/NotFound.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xOb3RGb3VuZC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Routes.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Routes.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xSb3V0ZXMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/_Imports.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/_Imports.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xfSW1wb3J0cy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Layout/MainLayout.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Layout/MainLayout.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcTWFpbkxheW91dC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = b-ui66ra2w9w
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Layout/NavMenu.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Layout/NavMenu.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcTmF2TWVudS5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = b-kx5x0ci9z7
 
-[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Layout/ReconnectModal.razor]
+[c:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Layout/ReconnectModal.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcUmVjb25uZWN0TW9kYWwucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = b-6x2yq35enc

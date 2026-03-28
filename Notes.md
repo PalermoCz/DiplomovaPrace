@@ -13,4 +13,8 @@ Zobrazení pokročilé funkce - bar graph, koláčový bar atd atd, možnost to 
 
 Rešerše, co chci zobrazovat, hodně hodnot, norma, 
 
+Schneider:
+https://demo.ecostruxure-power-monitoring-expert.se.app/web/#WhatsNew_EN
+user: demo
+password: demo
 
