@@ -252,7 +252,8 @@ public class InMemoryBuildingConfigurationService : IBuildingConfigurationServic
             DisplayRules: Array.Empty<DisplayRule>(),
             CreatedAt: Now(),
             UpdatedAt: Now(),
-            IsDeleted: false
+            IsDeleted: false,
+            MeteringMetadata: type.IsMeteringDevice() ? MeteringMetadata.CreateDefault(type) : null
         );
         MutateRoom(roomId, r => r with
         {
@@ -330,7 +331,8 @@ public class InMemoryBuildingConfigurationService : IBuildingConfigurationServic
                                 RoomId: d.RoomId,
                                 Position: d.Position,
                                 Consumption: d.Consumption,
-                                DisplayRules: d.DisplayRules))
+                                DisplayRules: d.DisplayRules,
+                                MeteringMetadata: d.MeteringMetadata))
                             .ToList(),
                         DisplayRules: r.DisplayRules))
                     .ToList()))
@@ -354,6 +356,9 @@ public class InMemoryBuildingConfigurationService : IBuildingConfigurationServic
         DeviceType.HumiditySensor    => 5.0,
         DeviceType.MotionSensor      => 5.0,
         DeviceType.DoorSensor        => 3.0,
+        DeviceType.EnergyMeter       => 2.0,
+        DeviceType.PowerMeter        => 5.0,
+        DeviceType.CurrentTransformer => 0.5,
         _                            => 0.0
     };
 
@@ -507,7 +512,8 @@ public class InMemoryBuildingConfigurationService : IBuildingConfigurationServic
                     DisplayRules: d.DisplayRules ?? Array.Empty<DisplayRule>(),
                     CreatedAt: now,
                     UpdatedAt: now,
-                    IsDeleted: false)).ToList(),
+                    IsDeleted: false,
+                    MeteringMetadata: d.MeteringMetadata)).ToList(),
                 CreatedAt: now,
                 UpdatedAt: now,
                 IsDeleted: false)).ToList(),

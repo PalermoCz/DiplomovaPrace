@@ -5,6 +5,7 @@ namespace DiplomovaPrace.Models.Configuration;
 /// <summary>
 /// Konfigurační model zařízení. Součást konfigurační domény, oddělené od vizualizační domény.
 /// Id je primární klíč pro budoucí EF Core persistenci.
+/// MeteringMetadata jsou volitelná metadata pro smart metering zařízení.
 /// </summary>
 public record DeviceConfig(
     string Id,
@@ -18,5 +19,6 @@ public record DeviceConfig(
     IReadOnlyList<DisplayRule> DisplayRules,
     DateTime CreatedAt,
     DateTime UpdatedAt,
-    bool IsDeleted
+    bool IsDeleted,
+    MeteringMetadata? MeteringMetadata = null
 );

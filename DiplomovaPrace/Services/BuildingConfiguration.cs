@@ -37,6 +37,8 @@ public static class BuildingConfiguration
                         D("dev-001-temp",   "Teploměr",        DeviceType.TemperatureSensor, "room-001", new DevicePosition(100, 100)),
                         D("dev-001-light",  "Stropní světlo",  DeviceType.Light,             "room-001", new DevicePosition(180, 100)),
                         D("dev-001-motion", "Pohybový senzor", DeviceType.MotionSensor,      "room-001", new DevicePosition(140, 170)),
+                        D_Meter("dev-001-em1", "Elektroměr hl.", DeviceType.EnergyMeter,    "room-001", new DevicePosition(100, 170),
+                            serialNumber: "EM-001-2024", nominalVoltage: 400.0, nominalCurrent: 100.0, category: "Hlavní přívod"),
                     ]),
                 new Room("room-002", "Serverovna", "floor-0",
                     new RoomGeometry(290, 50, 220, 180),
@@ -44,6 +46,8 @@ public static class BuildingConfiguration
                         D("dev-002-temp",  "Teploměr",      DeviceType.TemperatureSensor, "room-002", new DevicePosition(340, 100)),
                         D("dev-002-humid", "Vlhkoměr",      DeviceType.HumiditySensor,    "room-002", new DevicePosition(420, 100)),
                         D("dev-002-door",  "Dveřní senzor", DeviceType.DoorSensor,        "room-002", new DevicePosition(380, 170)),
+                        D_Meter("dev-002-pm1", "Analyzátor serverů", DeviceType.PowerMeter, "room-002", new DevicePosition(470, 170),
+                            serialNumber: "PM-002-2024", nominalVoltage: 230.0, nominalCurrent: 63.0, category: "IT"),
                     ]),
                 new Room("room-003", "Kancelář", "floor-0",
                     new RoomGeometry(530, 50, 220, 180),
@@ -94,4 +98,20 @@ public static class BuildingConfiguration
     /// <summary>Vytvoří Device s výchozím příkonem odvozeným z typu.</summary>
     private static Device D(string id, string name, DeviceType type, string roomId, DevicePosition pos) =>
         new(id, name, type, roomId, pos, Device.DefaultConsumption(type));
+
+    /// <summary>Vytvoří metering Device s přednastavenou MeteringMetadata.</summary>
+    private static Device D_Meter(
+        string id, string name, DeviceType type, string roomId, DevicePosition pos,
+        string? serialNumber = null, double? nominalVoltage = null, double? nominalCurrent = null,
+        string? category = null) =>
+        new(id, name, type, roomId, pos, Device.DefaultConsumption(type),
+            MeteringMetadata: new MeteringMetadata(
+                SerialNumber:              serialNumber,
+                NominalVoltageV:           nominalVoltage,
+                NominalCurrentA:           nominalCurrent,
+                TransformationRatio:       null,
+                LoadCategory:              category,
+                Tags:                      null,
+                InstallationDate:          DateTime.Today,
+                MeasurementIntervalSeconds: 2));
 }

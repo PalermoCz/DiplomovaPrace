@@ -1,0 +1,119 @@
+@page "/import"
+@rendermode InteractiveServer
+@inject DiplomovaPrace.Services.ICsvMeasurementImportService ImportService
+@using DiplomovaPrace.Services
+@using Radzen.Blazor
+
+<PageTitle>Import Měření</PageTitle>
+
+<div class="container-fluid py-4">
+    <h2>CSV Import</h2>
+    <p class="text-muted">Podporovaný formát: <code>DeviceId,Timestamp,ActiveEnergyKWh,ActivePowerKW,VoltageV,CurrentA,PowerFactor</code></p>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <InputFile class="form-control mb-3" OnChange="HandleFileSelected" accept=".csv" />
+            <button class="btn btn-primary" @onclick="RunImport" disabled="@(_selectedFile == null || _isImporting)">
+                @if (_isImporting)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <span> Importuji...</span>
+                }
+                else
+                {
+                    <span>Spustit Import</span>
+                }
+            </button>
+        </div>
+    </div>
+
+    @if (_result != null)
+    {
+        <div class="card">
+            <div class="card-header bg-@(_result.ErrorCount > 0 ? "warning" : "success") text-dark">
+                <strong>Výsledek Importu</strong>
+            </div>
+            <div class="card-body">
+                <ul class="list-group mb-3">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Celkový počet řádků (včetně hlavičky)
+                        <span class="badge bg-primary rounded-pill">@_result.TotalLines</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Úspěšně importováno
+                        <span class="badge bg-success rounded-pill">@_result.ImportedCount</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Přeskočeno (kvůli neshodě zařízení nebo chybějícím datům)
+                        <span class="badge bg-secondary rounded-pill">@_result.SkippedCount</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Chyby formátu
+                        <span class="badge bg-danger rounded-pill">@_result.ErrorCount</span>
+                    </li>
+                </ul>
+
+                @if (_result.UnknownDevices.Any())
+                {
+                    <h5 class="text-warning">Neznámá zařízení:</h5>
+                    <ul>
+                        @foreach (var dev in _result.UnknownDevices)
+                        {
+                            <li><code>@dev</code></li>
+                        }
+                    </ul>
+                }
+
+                @if (_result.Errors.Any())
+                {
+                    <h5 class="text-danger">Seznam chyb:</h5>
+                    <ul class="text-danger">
+                        @foreach (var err in _result.Errors.Take(50))
+                        {
+                            <li>Řádek @err.LineNumber: @err.Reason</li>
+                        }
+                        @if (_result.Errors.Count > 50)
+                        {
+                            <li><em>... a @(_result.Errors.Count - 50) dalších chyb</em></li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private Microsoft.AspNetCore.Components.Forms.IBrowserFile? _selectedFile;
+    private bool _isImporting;
+    private CsvImportResult? _result;
+
+    private void HandleFileSelected(Microsoft.AspNetCore.Components.Forms.InputFileChangeEventArgs e)
+    {
+        _selectedFile = e.File;
+        _result = null;
+    }
+
+    private async Task RunImport()
+    {
+        if (_selectedFile == null) return;
+
+        _isImporting = true;
+        _result = null;
+        StateHasChanged();
+
+        try
+        {
+            using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024); // max 50MB
+            _result = await ImportService.ImportAsync(stream);
+        }
+        catch (Exception ex)
+        {
+            _result = new CsvImportResult(0, 0, 0, 1, new[] { new CsvImportError(0, $"Neočekávaná chyba: {ex.Message}") }, Array.Empty<string>());
+        }
+        finally
+        {
+            _isImporting = false;
+        }
+    }
+}

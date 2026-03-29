@@ -1,0 +1,211 @@
+@page "/kpi"
+@rendermode InteractiveServer
+@inject DiplomovaPrace.Services.IKpiService KpiService
+@inject DiplomovaPrace.Services.IBuildingStateService BuildingState
+@using DiplomovaPrace.Models.Kpi
+@using Radzen.Blazor
+
+<PageTitle>Analytika - KPI</PageTitle>
+
+<div class="container-fluid py-4">
+    <h2>Analytika (KPI)</h2>
+    <p class="text-muted">Vyberte zařízení a časové období pro výpočet klíčových metrik (bez grafického dashboardu).</p>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <label class="form-label">Zařízení (Měřicí bod)</label>
+            <select class="form-select" @bind="_selectedDeviceId">
+                <option value="">-- Vyberte zařízení --</option>
+                @foreach (var dev in _availableDevices)
+                {
+                    <option value="@dev">@dev</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Od (UTC)</label>
+            <input type="date" class="form-control" @bind="_from" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Do (UTC)</label>
+            <input type="date" class="form-control" @bind="_to" />
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+            <button class="btn btn-primary w-100" @onclick="Calculate" disabled="@(string.IsNullOrEmpty(_selectedDeviceId) || _isCalculating)">
+                @if (_isCalculating)
+                {
+                    <span class="spinner-border spinner-border-sm"></span>
+                }
+                else
+                {
+                    <span>Vypočítat KPI</span>
+                }
+            </button>
+        </div>
+    </div>
+
+    @if (_result != null && !_result.IsSuccess)
+    {
+        <div class="alert alert-danger">@_result.ErrorMessage</div>
+    }
+    else if (_result != null && _result.RecordCount == 0)
+    {
+        <div class="alert alert-warning">Žádná data v tomto období pro toto zařízení.</div>
+    }
+    else if (_result != null)
+    {
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <div class="card bg-light border-primary mb-3 h-100">
+                    <div class="card-header border-primary"><b>Energie & Datový rozsah</b></div>
+                    <div class="card-body">
+                        <ul class="list-unstyled">
+                            <li><strong>Spotřeba celkem:</strong> @Format(_result.TotalConsumptionKWh) kWh
+                                @if (_result.IsEstimatedConsumption) 
+                                { <span class="badge bg-warning ms-1" title="Odhad z výkonu (integrál)">Odhad</span> }
+                            </li>
+                            <li><strong>Pracovní hodiny (8-18):</strong> @Format(_result.WorkingHoursConsumptionKWh) kWh</li>
+                            <li><strong>Mimo prac. dobu:</strong> @Format(_result.OffHoursConsumptionKWh) kWh</li>
+                            <hr/>
+                            <li><strong>Záznamů:</strong> @_result.RecordCount</li>
+                            <li><strong>První:</strong> @_result.FirstTimestamp?.ToString("g")</li>
+                            <li><strong>Poslední:</strong> @_result.LastTimestamp?.ToString("g")</li>
+                            <li><strong>Délka sledování:</strong> @_result.Duration?.TotalHours.ToString("F1") h</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <div class="card border-success mb-3 h-100">
+                    <div class="card-header border-success"><b>Výkon</b></div>
+                    <div class="card-body">
+                        <ul class="list-unstyled">
+                            <li><strong>Max Výkon (Peak):</strong> @Format(_result.PeakPowerKW) kW</li>
+                            <li><strong>Průměrný Výkon:</strong> @Format(_result.AveragePowerKW) kW</li>
+                            <hr/>
+                            <li><strong>Průměrné Napětí:</strong> @Format(_result.AverageVoltageV) V</li>
+                            <li><strong>Průměrný Proud:</strong> @Format(_result.AverageCurrentA) A</li>
+                            <li><strong>Prům. Účiník (PF):</strong> @Format(_result.AveragePowerFactor)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4 mb-3">
+                <div class="card border-info mb-3 h-100">
+                    <div class="card-header border-info"><b>Porovnání k min. období</b></div>
+                    <div class="card-body">
+                        @if (_isComparing)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span> 
+                        }
+                        else if (_compResult != null)
+                        {
+                            <p class="text-muted small">Délka aktuálního intervalu přibližně zkopírována těsně před něj.</p>
+                            <ul class="list-unstyled">
+                                <li><strong>Rozdíl Spotřeby:</strong> @FormatDiff(_compResult.DiffConsumptionKWh, "kWh")</li>
+                                <li><strong>Rozdíl Max Výkonu:</strong> @FormatDiff(_compResult.DiffPeakPowerKW, "kW")</li>
+                                <li><strong>Rozdíl Průměrného Výkonu:</strong> @FormatDiff(_compResult.DiffAveragePowerKW, "kW")</li>
+                            </ul>
+                        }
+                        else
+                        {
+                            <button class="btn btn-outline-info w-100" @onclick="CalculateComparison" disabled="@_isComparing">
+                                Vypočítat porovnání
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<string> _availableDevices = new();
+    private string _selectedDeviceId = "";
+    private DateTime _from = DateTime.UtcNow.AddMonths(-1).Date;
+    private DateTime _to = DateTime.UtcNow.Date.AddDays(1);
+    
+    private bool _isCalculating;
+    private MeterKpiResult? _result;
+
+    private bool _isComparing;
+    private KpiComparisonResult? _compResult;
+
+    protected override void OnInitialized()
+    {
+        var validDevices = new HashSet<string>();
+        var building = BuildingState.Building;
+        if (building != null)
+        {
+            foreach (var floor in building.Floors)
+            {
+                foreach (var room in floor.Rooms)
+                {
+                    foreach (var device in room.Devices)
+                    {
+                        if (device.Type.IsMeteringDevice())
+                        {
+                            validDevices.Add(device.Id);
+                        }
+                    }
+                }
+            }
+        }
+        _availableDevices = validDevices.OrderBy(x => x).ToList();
+        if (_availableDevices.Any())
+            _selectedDeviceId = _availableDevices.First();
+    }
+
+    private async Task Calculate()
+    {
+        _isCalculating = true;
+        _result = null;
+        _compResult = null;
+        StateHasChanged();
+
+        try
+        {
+            _result = await KpiService.CalculateBasicKpiAsync(new KpiQuery(_selectedDeviceId, _from, _to));
+        }
+        finally
+        {
+            _isCalculating = false;
+        }
+    }
+
+    private async Task CalculateComparison()
+    {
+        if (_result == null || _result.Duration == null) return;
+        
+        _isComparing = true;
+        StateHasChanged();
+
+        try
+        {
+            var span = _result.Duration.Value;
+            if (span.TotalSeconds < 1) span = TimeSpan.FromDays(1);
+
+            DateTime prevA = _from.Add(-span);
+            DateTime prevB = _to.Add(-span);
+
+            _compResult = await KpiService.ComparePeriodsAsync(_selectedDeviceId, _from, _to, prevA, prevB);
+        }
+        finally
+        {
+            _isComparing = false;
+        }
+    }
+
+    private string Format(double? val) => val?.ToString("0.##") ?? "N/A";
+    
+    private Microsoft.AspNetCore.Components.MarkupString FormatDiff(double? val, string unit)
+    {
+        if (!val.HasValue) return new Microsoft.AspNetCore.Components.MarkupString("N/A");
+        if (val.Value > 0) return new Microsoft.AspNetCore.Components.MarkupString($"<span class='text-danger'>+{val.Value:0.##} {unit}</span>");
+        if (val.Value < 0) return new Microsoft.AspNetCore.Components.MarkupString($"<span class='text-success'>{val.Value:0.##} {unit}</span>");
+        return new Microsoft.AspNetCore.Components.MarkupString($"<span>0 {unit}</span>");
+    }
+}

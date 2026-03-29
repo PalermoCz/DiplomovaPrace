@@ -22,6 +22,10 @@ public record DeviceDisplaySettings(
         DeviceType.HVAC              => new(null,  null, null, null, false),
         DeviceType.MotionSensor      => new(null,  null, null, null, false),
         DeviceType.DoorSensor        => new(null,  null, null, null, false),
+        // Smart metering — vždy zobrazovat hodnotu, jednotky dle typu
+        DeviceType.EnergyMeter       => new("kWh", null, null, null, true),
+        DeviceType.PowerMeter        => new("kW",  null, null, null, true),
+        DeviceType.CurrentTransformer => new("A",  null, null, null, true),
         _                            => new(null,  null, null, null, false)
     };
 }

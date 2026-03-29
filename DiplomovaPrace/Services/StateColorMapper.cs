@@ -37,6 +37,10 @@ public static class StateColorMapper
             DeviceType.HVAC              => state.IsActive == true ? "#2ecc71" : "#7f8c8d",
             DeviceType.MotionSensor      => state.IsActive == true ? "#9b59b6" : "#7f8c8d",
             DeviceType.DoorSensor        => state.IsActive == true ? "#e67e22" : "#2ecc71",
+            // Smart metering — specifické barvy dle stavu měření
+            DeviceType.EnergyMeter       => state.IsActive == true ? "#27ae60" : "#7f8c8d",
+            DeviceType.PowerMeter        => state.IsActive == true ? "#2980b9" : "#7f8c8d",
+            DeviceType.CurrentTransformer => state.IsActive == true ? "#16a085" : "#7f8c8d",
             _                            => "#95a5a6"
         };
     }

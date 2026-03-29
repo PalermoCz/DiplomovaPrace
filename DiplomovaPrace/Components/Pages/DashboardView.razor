@@ -1,0 +1,400 @@
+@page "/dashboard"
+@rendermode InteractiveServer
+@inject DiplomovaPrace.Services.IKpiService KpiService
+@inject DiplomovaPrace.Services.IMeasurementRepository MeasurementRepository
+@inject DiplomovaPrace.Services.IBuildingStateService BuildingState
+@using DiplomovaPrace.Models.Kpi
+@using DiplomovaPrace.Models
+@using Radzen.Blazor
+@using Radzen
+
+<PageTitle>Dashboard</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Dashboard</h2>
+    </div>
+
+    @* Filtry *@
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label text-muted small mb-1">Měřicí bod</label>
+                    <select class="form-select form-select-sm" @bind="_selectedDeviceId">
+                        <option value="">-- Vyberte zařízení --</option>
+                        @foreach (var dev in _availableDevices)
+                        {
+                            <option value="@dev">@dev</option>
+                        }
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <label class="form-label text-muted small mb-1">Rychlá volba</label>
+                    <select class="form-select form-select-sm" @bind="PresetSelection">
+                        <option value="24h">Posledních 24 hodin</option>
+                        <option value="7d">Posledních 7 dní</option>
+                        <option value="30d">Posledních 30 dní</option>
+                        <option value="custom">Vlastní výběr</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label text-muted small mb-1">Od (UTC)</label>
+                    <input type="datetime-local" class="form-control form-control-sm" @bind="_from" disabled="@(_preset != "custom")" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label text-muted small mb-1">Do (UTC)</label>
+                    <input type="datetime-local" class="form-control form-control-sm" @bind="_to" disabled="@(_preset != "custom")" />
+                </div>
+
+                <div class="col-md-2">
+                    <button class="btn btn-primary btn-sm w-100" @onclick="LoadDataAsync" disabled="@(string.IsNullOrEmpty(_selectedDeviceId) || _isLoading)">
+                        @if (_isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        <i class="bi bi-arrow-repeat me-1"></i> Načíst
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* Obsah *@
+    @if (_error != null)
+    {
+        <div class="alert alert-danger">@_error</div>
+    }
+    else if (_result != null && _result.RecordCount == 0)
+    {
+        <div class="alert alert-info d-flex align-items-center">
+            <i class="bi bi-info-circle-fill me-2 fs-4"></i>
+            <div>
+                <strong>Žádná data</strong><br/>
+                V tomto období (od @_from.ToString("g") do @_to.ToString("g")) nebyly nalezeny žádné záznamy pro vybrané zařízení.
+            </div>
+        </div>
+    }
+    else if (_result != null)
+    {
+        @* První řada: Hlavní KPI karty *@
+        <div class="row g-3 mb-4">
+            
+            <div class="col-md-3">
+                <div class="card shadow-sm h-100 border-start border-primary border-4">
+                    <div class="card-body">
+                        <div class="text-muted small fw-bold text-uppercase mb-1">Celková Spotřeba</div>
+                        <div class="d-flex align-items-center">
+                            <h3 class="mb-0 me-2">@Format(_result.TotalConsumptionKWh) <small class="text-muted fs-6">kWh</small></h3>
+                            @if (_result.IsEstimatedConsumption)
+                            {
+                                <span class="badge bg-warning text-dark" title="Odhadnuto integrací výkonu v čase">Odhad</span>
+                            }
+                        </div>
+                        @if (_compResult?.PeriodB?.RecordCount > 0)
+                        {
+                            <div class="mt-2 small">
+                                @FormatDiff(_compResult.DiffConsumptionKWh, "kWh") <span class="text-muted ms-1">vs předchozí obd.</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card shadow-sm h-100 border-start border-danger border-4">
+                    <div class="card-body">
+                        <div class="text-muted small fw-bold text-uppercase mb-1">Max Výkon (Peak)</div>
+                        <h3 class="mb-0">@Format(_result.PeakPowerKW) <small class="text-muted fs-6">kW</small></h3>
+                        @if (_compResult?.PeriodB?.RecordCount > 0)
+                        {
+                            <div class="mt-2 small">
+                                @FormatDiff(_compResult.DiffPeakPowerKW, "kW") <span class="text-muted ms-1">vs předchozí obd.</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card shadow-sm h-100 border-start border-info border-4">
+                    <div class="card-body">
+                        <div class="text-muted small fw-bold text-uppercase mb-1">Průměrný Výkon</div>
+                        <h3 class="mb-0">@Format(_result.AveragePowerKW) <small class="text-muted fs-6">kW</small></h3>
+                        @if (_compResult?.PeriodB?.RecordCount > 0)
+                        {
+                            <div class="mt-2 small">
+                                @FormatDiff(_compResult.DiffAveragePowerKW, "kW") <span class="text-muted ms-1">vs předchozí obd.</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card shadow-sm h-100 bg-light">
+                    <div class="card-body">
+                        <div class="text-muted small fw-bold text-uppercase mb-1">Kvalita sítě (Průměr)</div>
+                        <div class="row text-center mt-3">
+                            <div class="col-4">
+                                <div class="fs-5 fw-bold">@Format(_result.AverageVoltageV)</div>
+                                <div class="small text-muted">V</div>
+                            </div>
+                            <div class="col-4 border-start border-end">
+                                <div class="fs-5 fw-bold">@Format(_result.AverageCurrentA)</div>
+                                <div class="small text-muted">A</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="fs-5 fw-bold">@Format(_result.AveragePowerFactor)</div>
+                                <div class="small text-muted">PF</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* Druhá řada: Grafy a doplnující metriky *@
+        <div class="row g-3 mb-4">
+            <div class="col-lg-8">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white">
+                        <h6 class="mb-0 fw-bold">Výkon v čase (Active Power)</h6>
+                    </div>
+                    <div class="card-body" style="height: 350px;">
+                        @if (_chartData != null && _chartData.Any())
+                        {
+                            <RadzenChart>
+                                <RadzenLineSeries Data="@_chartData" CategoryProperty="Timestamp" Title="Kw" LineType="LineType.Solid" ValueProperty="ActivePowerKW" />
+                                <RadzenCategoryAxis FormatString="{0:HH:mm d.M.}" />
+                                <RadzenValueAxis Formatter="@Formatter">
+                                    <RadzenGridLines Visible="true" />
+                                    <RadzenAxisTitle Text="Výkon (kW)" />
+                                </RadzenValueAxis>
+                                <RadzenLegend Position="LegendPosition.Bottom" />
+                            </RadzenChart>
+                        }
+                        else
+                        {
+                            <div class="d-flex justify-content-center align-items-center h-100 text-muted">
+                                Žádná data pro vykreslení grafu.
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white">
+                        <h6 class="mb-0 fw-bold">Rozdělení spotřeby</h6>
+                    </div>
+                    <div class="card-body d-flex flex-column justify-content-center">
+                        @if (_result.TotalConsumptionKWh > 0)
+                        {
+                            <RadzenChart>
+                                <RadzenDonutSeries Data="@ConsumptionPieData" CategoryProperty="Category" ValueProperty="Value" Title="Spotřeba" TotalAngle="360" StartAngle="0">
+                                    <TitleTemplate>
+                                        <div class="rz-donut-content">
+                                            <div style="font-size: 1rem;">@Format(_result.TotalConsumptionKWh) kWh</div>
+                                        </div>
+                                    </TitleTemplate>
+                                </RadzenDonutSeries>
+                                <RadzenLegend Position="LegendPosition.Bottom" />
+                            </RadzenChart>
+                        }
+                        else
+                        {
+                            <div class="d-flex justify-content-center align-items-center h-100 text-muted">
+                                Nulová spotřeba
+                            </div>
+                        }
+                    </div>
+                    <div class="card-footer bg-white border-top text-muted small">
+                        Záznamů: @_result.RecordCount | Data od: @_result.FirstTimestamp?.ToString("g")
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<string> _availableDevices = new();
+    private string _selectedDeviceId = "";
+    
+    private string _preset = "24h";
+    private DateTime _from;
+    private DateTime _to;
+
+    private bool _isLoading;
+    private string? _error;
+    
+    private MeterKpiResult? _result;
+    private KpiComparisonResult? _compResult;
+    private List<MeasurementRecord> _chartData = new();
+
+    private string PresetSelection
+    {
+        get => _preset;
+        set
+        {
+            _preset = value;
+            ApplyPreset();
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        var validDevices = new HashSet<string>();
+        var building = BuildingState.Building;
+        if (building != null)
+        {
+            foreach (var floor in building.Floors)
+            {
+                foreach (var room in floor.Rooms)
+                {
+                    foreach (var device in room.Devices)
+                    {
+                        if (device.Type.IsMeteringDevice())
+                        {
+                            validDevices.Add(device.Id);
+                        }
+                    }
+                }
+            }
+        }
+        _availableDevices = validDevices.OrderBy(x => x).ToList();
+        if (_availableDevices.Any())
+        {
+            _selectedDeviceId = _availableDevices.First();
+        }
+        
+        ApplyPreset();
+    }
+
+    private void ApplyPreset()
+    {
+        var now = DateTime.UtcNow;
+        if (_preset == "24h")
+        {
+            _to = now;
+            _from = now.AddHours(-24);
+        }
+        else if (_preset == "7d")
+        {
+            _to = now;
+            _from = now.AddDays(-7);
+        }
+        else if (_preset == "30d")
+        {
+            _to = now;
+            _from = now.AddDays(-30);
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        if (string.IsNullOrEmpty(_selectedDeviceId)) return;
+
+        _isLoading = true;
+        _error = null;
+        _result = null;
+        _compResult = null;
+        _chartData = new List<MeasurementRecord>();
+        StateHasChanged();
+
+        try
+        {
+            // 1. Base KPI
+            var query = new KpiQuery(_selectedDeviceId, _from, _to);
+            _result = await KpiService.CalculateBasicKpiAsync(query);
+
+            if (!_result.IsSuccess)
+            {
+                _error = _result.ErrorMessage;
+                return;
+            }
+
+            if (_result.RecordCount > 0)
+            {
+                // 2. Comparison KPI
+                var span = _to - _from;
+                if (span.TotalSeconds < 1) span = TimeSpan.FromDays(1);
+                var prevFrom = _from.Add(-span);
+                var prevTo = _to.Add(-span);
+                
+                _compResult = await KpiService.ComparePeriodsAsync(_selectedDeviceId, _from, _to, prevFrom, prevTo);
+
+                // 3. Chart Data
+                // Bereme data přes repozitář, pro vykreslení trendu
+                var records = await MeasurementRepository.GetRangeAsync(_selectedDeviceId, _from, _to);
+                
+                // Omezíme počet bodů pro graf, pokud jich je moc (downsampling pro rychlost blazoru)
+                if (records.Count > 1000)
+                {
+                    var step = records.Count / 500.0;
+                    var downsampled = new List<MeasurementRecord>();
+                    for (double i = 0; i < records.Count; i += step)
+                    {
+                        var idx = (int)Math.Floor(i);
+                        if (idx < records.Count) downsampled.Add(records[idx]);
+                    }
+                    _chartData = downsampled;
+                }
+                else
+                {
+                    _chartData = records.ToList();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = "Nastala chyba při načítání dat: " + ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private string Format(double? val) => val?.ToString("0.##") ?? "0";
+    
+    private Microsoft.AspNetCore.Components.MarkupString FormatDiff(double? val, string unit)
+    {
+        if (!val.HasValue) return new Microsoft.AspNetCore.Components.MarkupString("<span class='text-muted fs-6'>N/A</span>");
+        if (val.Value > 0) return new Microsoft.AspNetCore.Components.MarkupString($"<span class='text-danger fw-bold'><i class='bi bi-arrow-up'></i> {val.Value:0.##} {unit}</span>");
+        if (val.Value < 0) return new Microsoft.AspNetCore.Components.MarkupString($"<span class='text-success fw-bold'><i class='bi bi-arrow-down'></i> {Math.Abs(val.Value):0.##} {unit}</span>");
+        return new Microsoft.AspNetCore.Components.MarkupString($"<span class='text-muted'>0 {unit}</span>");
+    }
+
+    string Formatter(object value)
+    {
+        return ((double)value).ToString("0.##");
+    }
+
+    private class PieDataItem
+    {
+        public string Category { get; set; } = "";
+        public double Value { get; set; }
+    }
+
+    private List<PieDataItem> ConsumptionPieData
+    {
+        get
+        {
+            var data = new List<PieDataItem>();
+            if (_result != null)
+            {
+                var work = _result.WorkingHoursConsumptionKWh ?? 0;
+                var off = _result.OffHoursConsumptionKWh ?? 0;
+                
+                if (work > 0) data.Add(new PieDataItem { Category = "Pracovní doba", Value = work });
+                if (off > 0) data.Add(new PieDataItem { Category = "Mimo prac. dobu", Value = off });
+            }
+            return data;
+        }
+    }
+}

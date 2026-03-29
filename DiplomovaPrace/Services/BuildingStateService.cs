@@ -16,6 +16,7 @@ public class BuildingStateService : IBuildingStateService
 {
     private readonly ConcurrentDictionary<string, DeviceState> _deviceStates = new();
     private readonly ConcurrentDictionary<string, Queue<StateRecord>> _deviceHistory = new();
+    private readonly ConcurrentDictionary<string, Queue<MeasurementRecord>> _measurementHistory = new();
     private const int MAX_HISTORY_SIZE = 100;
 
     private Building _building;
@@ -79,16 +80,58 @@ public class BuildingStateService : IBuildingStateService
     public void ClearHistory()
     {
         _deviceHistory.Clear();
+        _measurementHistory.Clear();
     }
 
     public void ReplaceBuilding(Building newBuilding)
     {
         _building = newBuilding;
         _deviceStates.Clear();
-        _deviceHistory.Clear();  // Vymazat historii při výměně budovy
+        _deviceHistory.Clear();
+        _measurementHistory.Clear();
         InitializeDefaultStates();
         NotifyStateChanged();
     }
+
+    // ── Smart metering: MeasurementRecord store ──────────────────────────────
+
+    public void AddMeasurement(string deviceId, MeasurementRecord measurement)
+    {
+        var queue = _measurementHistory.GetOrAdd(deviceId, _ => new Queue<MeasurementRecord>());
+
+        lock (queue)
+        {
+            queue.Enqueue(measurement);
+            while (queue.Count > MAX_HISTORY_SIZE)
+                queue.Dequeue();
+        }
+    }
+
+    public IReadOnlyList<MeasurementRecord> GetMeasurements(string deviceId)
+    {
+        if (_measurementHistory.TryGetValue(deviceId, out var queue))
+        {
+            lock (queue)
+            {
+                return queue.ToList();
+            }
+        }
+        return Array.Empty<MeasurementRecord>();
+    }
+
+    public MeasurementRecord? GetLatestMeasurement(string deviceId)
+    {
+        if (_measurementHistory.TryGetValue(deviceId, out var queue))
+        {
+            lock (queue)
+            {
+                return queue.Count > 0 ? queue.Last() : null;
+            }
+        }
+        return null;
+    }
+
+    // ── Privátní helpers ─────────────────────────────────────────────────────
 
     private void InitializeDefaultStates()
     {
@@ -97,8 +140,9 @@ public class BuildingStateService : IBuildingStateService
         foreach (var device in room.Devices)
         {
             _deviceStates[device.Id] = DeviceState.CreateDefault(device.Type);
-            // Inicializace prázdné history pro každé zařízení
             _deviceHistory.TryAdd(device.Id, new Queue<StateRecord>());
+            if (device.Type.IsMeteringDevice())
+                _measurementHistory.TryAdd(device.Id, new Queue<MeasurementRecord>());
         }
     }
 }

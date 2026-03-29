@@ -1,0 +1,8 @@
+DeviceId,Timestamp,ActiveEnergyKWh,ActivePowerKW,VoltageV,CurrentA,PowerFactor
+dev-001-em1,2024-02-01T12:00:00Z,1050.2,2.5,230.1,10.8,0.98
+dev-001-em1,2024-02-01T13:00:00Z,1053.0,2.8,229.8,12.1,0.97
+dev-002-pm1,2024-02-01T12:00:00Z,,1.1,231.2,4.8,0.95
+dev-invalid-device,2024-02-01T12:00:00Z,100,2,230,1,1
+dev-001-em1,invalid-date,100,2,230,1,1
+dev-001-em1,2024-02-01T14:00:00Z,1055.5,,,
+dev-001-em1,2024-02-01T15:00:00Z,ab100,,,

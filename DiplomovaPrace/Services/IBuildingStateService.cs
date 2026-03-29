@@ -2,6 +2,7 @@ namespace DiplomovaPrace.Services;
 
 using DiplomovaPrace.Models;
 
+
 /// <summary>
 /// Centrální kontejner stavu budovy (Observer pattern).
 /// Singleton služba: simulace zapisuje, UI komponenty čtou a odebírají události.
@@ -54,4 +55,22 @@ public interface IBuildingStateService
     /// Vyvolá OnStateChanged po dokončení výměny.
     /// </summary>
     void ReplaceBuilding(Building newBuilding);
+
+    // ── Smart metering: detailní měření ──────────────────────────────────────
+
+    /// <summary>
+    /// Přidá detailní MeasurementRecord pro metering zařízení.
+    /// Ring buffer: uchovává max 100 posledních záznamů per device.
+    /// </summary>
+    void AddMeasurement(string deviceId, MeasurementRecord measurement);
+
+    /// <summary>
+    /// Vrací posledních N detailních měření pro daný měřicí bod.
+    /// </summary>
+    IReadOnlyList<MeasurementRecord> GetMeasurements(string deviceId);
+
+    /// <summary>
+    /// Vrací poslední detailní měření pro daný měřicí bod. Null pokud neexistuje.
+    /// </summary>
+    MeasurementRecord? GetLatestMeasurement(string deviceId);
 }

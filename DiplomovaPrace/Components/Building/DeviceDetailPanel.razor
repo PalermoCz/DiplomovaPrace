@@ -51,7 +51,7 @@
         </div>
     </div>
 
-    @if (_device.Type == DeviceType.TemperatureSensor || _device.Type == DeviceType.HumiditySensor)
+    @if (_device.Type.HasNumericValue())
     {
         <div class="card mt-3">
             <div class="card-header">
@@ -126,7 +126,7 @@
 
     private void UpdateChartData()
     {
-        if (_device?.Type == DeviceType.TemperatureSensor || _device?.Type == DeviceType.HumiditySensor)
+        if (_device != null && _device.Type.HasNumericValue())
         {
             // Data are already defensively copied under a lock inside GetDeviceHistory() 
             // returning a snapshot ToList(). By keeping a separate local reference _chartData,
@@ -152,19 +152,25 @@
 
     private string GetUnitLabel() => _device?.Type switch
     {
-        DeviceType.TemperatureSensor => "Teplota (°C)",
+        DeviceType.TemperatureSensor  => "Teplota (°C)",
         DeviceType.HumiditySensor    => "Vlhkost (%)",
+        DeviceType.EnergyMeter       => "Energie (kWh)",
+        DeviceType.PowerMeter        => "Výkon (kW)",
+        DeviceType.CurrentTransformer => "Proud (A)",
         _                            => "Hodnota"
     };
 
     private static string GetTypeName(DeviceType type) => type switch
     {
-        DeviceType.TemperatureSensor => "Teplotní senzor",
-        DeviceType.HumiditySensor   => "Senzor vlhkosti",
-        DeviceType.Light            => "Osvětlení",
-        DeviceType.HVAC             => "Klimatizace",
-        DeviceType.MotionSensor     => "Pohybový senzor",
-        DeviceType.DoorSensor       => "Dveřní senzor",
-        _                           => type.ToString()
+        DeviceType.TemperatureSensor  => "Teplotní senzor",
+        DeviceType.HumiditySensor    => "Senzor vlhkosti",
+        DeviceType.Light             => "Osvětlení",
+        DeviceType.HVAC              => "Klimatizace",
+        DeviceType.MotionSensor      => "Pohybový senzor",
+        DeviceType.DoorSensor        => "Dveřní senzor",
+        DeviceType.EnergyMeter       => "Elektroměr",
+        DeviceType.PowerMeter        => "Analyzátor výkonu",
+        DeviceType.CurrentTransformer => "Proudový transformátor",
+        _                            => type.ToString()
     };
 }

@@ -100,19 +100,25 @@
 
     private static string UnitForType(DeviceType t) => t switch
     {
-        DeviceType.TemperatureSensor => "°C",
+        DeviceType.TemperatureSensor  => "°C",
         DeviceType.HumiditySensor    => "%",
+        DeviceType.EnergyMeter       => "kWh",
+        DeviceType.PowerMeter        => "kW",
+        DeviceType.CurrentTransformer => "A",
         _                            => ""
     };
 
     private static string DeviceTypeLabel(DeviceType t) => t switch
     {
-        DeviceType.TemperatureSensor => "Teplota",
+        DeviceType.TemperatureSensor  => "Teplota",
         DeviceType.HumiditySensor    => "Vlhkost",
         DeviceType.Light             => "Světlo",
         DeviceType.HVAC              => "Klimatizace",
         DeviceType.MotionSensor      => "Pohyb",
         DeviceType.DoorSensor        => "Dveře",
+        DeviceType.EnergyMeter       => "Elektroměr",
+        DeviceType.PowerMeter        => "Analyzátor",
+        DeviceType.CurrentTransformer => "CT",
         _                            => t.ToString()
     };
 

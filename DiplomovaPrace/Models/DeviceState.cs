@@ -25,6 +25,10 @@ public record DeviceState(
         DeviceType.HVAC             => new(null, false, false, DateTime.Now),
         DeviceType.MotionSensor     => new(null, false, false, DateTime.Now),
         DeviceType.DoorSensor       => new(null, false, false, DateTime.Now),
+        // Smart metering — NumericValue = primární zobrazovaná hodnota
+        DeviceType.EnergyMeter       => new(0.0, true, false, DateTime.Now),    // kWh kumulativní
+        DeviceType.PowerMeter        => new(0.0, true, false, DateTime.Now),    // kW okamžitý
+        DeviceType.CurrentTransformer => new(0.0, true, false, DateTime.Now),   // A okamžitý
         _                           => new(null, false, false, DateTime.Now)
     };
 }

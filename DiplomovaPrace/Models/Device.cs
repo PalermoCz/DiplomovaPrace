@@ -12,6 +12,7 @@ public record DevicePosition(double X, double Y);
 /// Stav zařízení je uložen odděleně v BuildingStateService — oddělení
 /// statické konfigurace od dynamických dat zjednodušuje správu konkurence.
 /// Consumption je statická vlastnost zařízení (příkon v Wattech).
+/// MeteringMetadata jsou volitelná metadata pro smart metering zařízení.
 /// </summary>
 public record Device(
     string Id,
@@ -20,7 +21,8 @@ public record Device(
     string RoomId,
     DevicePosition Position,
     double Consumption = 0.0,
-    IReadOnlyList<DisplayRule>? DisplayRules = null
+    IReadOnlyList<DisplayRule>? DisplayRules = null,
+    MeteringMetadata? MeteringMetadata = null
 )
 {
     /// <summary>Výchozí příkon v Wattech dle typu zařízení.</summary>
@@ -32,6 +34,11 @@ public record Device(
         DeviceType.HumiditySensor    => 5.0,
         DeviceType.MotionSensor      => 5.0,
         DeviceType.DoorSensor        => 3.0,
+        // Smart metering — vlastní spotřeba měřidla (ne měřené zátěže)
+        DeviceType.EnergyMeter       => 2.0,
+        DeviceType.PowerMeter        => 5.0,
+        DeviceType.CurrentTransformer => 0.5,
         _                            => 0.0
     };
 }
+

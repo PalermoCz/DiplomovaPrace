@@ -1,5 +1,7 @@
 using DiplomovaPrace.Components;
+using DiplomovaPrace.Persistence;
 using DiplomovaPrace.Services;
+using Microsoft.EntityFrameworkCore;
 using Radzen;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,13 +13,32 @@ builder.Services.AddRazorComponents()
 // Registrace Radzen komponent
 builder.Services.AddRadzenComponents();
 
-// Registrace aplikačních služeb
+// ── Databáze: EF Core + SQLite ─────────────────────────────────────────────
+// IDbContextFactory<AppDbContext> (Singleton) — bezpečné pro use ze Singleton služeb.
+// Každá operace si vytvoří vlastní krátkožijící DbContext přes factory.CreateDbContext().
+var dbPath = Path.Combine(builder.Environment.ContentRootPath, "metering.db");
+builder.Services.AddDbContextFactory<AppDbContext>(options =>
+    options.UseSqlite($"Data Source={dbPath}"));
+
+// ── Persistence vrstva ─────────────────────────────────────────────────────
+builder.Services.AddSingleton<IMeasurementRepository, EfMeasurementRepository>();
+
+// MeasurementPersistenceService: Singleton BackgroundService s Channel<T>
+// Registrujeme jako Singleton i jako IHostedService aby byl dostupný pro DI inject
+// (SimulationService ho potřebuje přímo — IHostedService interface nestačí).
+builder.Services.AddSingleton<MeasurementPersistenceService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<MeasurementPersistenceService>());
+
+builder.Services.AddScoped<ICsvMeasurementImportService, CsvMeasurementImportService>();
+builder.Services.AddScoped<IKpiService, KpiService>();
+
+// ── Aplikační služby ───────────────────────────────────────────────────────
 builder.Services.AddSingleton<IBuildingStateService, BuildingStateService>();
 builder.Services.AddSingleton<SimulationService>();
 builder.Services.AddSingleton<ISimulationService>(sp => sp.GetRequiredService<SimulationService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<SimulationService>());
 
-// Editor služby
+// Editor služby (zůstávají in-memory — Fáze 2 DB migrace editoru přijde later)
 builder.Services.AddSingleton<IBuildingConfigurationService, InMemoryBuildingConfigurationService>();
 builder.Services.AddScoped<IEditorSessionService, EditorSessionService>();
 builder.Services.AddSingleton<IActiveBuildingService, ActiveBuildingService>();
@@ -25,6 +46,19 @@ builder.Services.AddSingleton<ExpressionEvaluator>();
 builder.Services.AddSingleton<IDisplayRuleEvaluator, DisplayRuleEvaluator>();
 
 var app = builder.Build();
+
+// ── Inicializace databáze ──────────────────────────────────────────────────
+// EnsureCreated: bezpečné pro vývoj — vytvoří DB a tabulky pokud neexistují.
+// POZOR: EnsureCreated je nekompatibilní s Migrate() — nepoužívat oboje zároveň.
+// Pro produkci (Fáze 3+) nahradit za: dbContextFactory.CreateDbContext().Database.Migrate()
+// a přidat migraci pomocí: dotnet ef migrations add InitialMeasurements
+{
+    using var scope = app.Services.CreateScope();
+    var factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+    await using var db = await factory.CreateDbContextAsync();
+    await db.Database.EnsureCreatedAsync();
+    app.Logger.LogInformation("Databáze inicializována: {Path}", dbPath);
+}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -45,3 +79,6 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.Run();
+
+
+
