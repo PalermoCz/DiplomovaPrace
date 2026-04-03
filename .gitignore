@@ -6,6 +6,9 @@
 # dotenv files
 .env
 
+# Ignore Dataset
+DataSet/
+
 # User-specific files
 *.rsuser
 *.suo

@@ -6,47 +6,55 @@ using DiplomovaPrace.Models.Kpi;
 public class KpiService : IKpiService
 {
     private readonly IMeasurementRepository _repository;
-    private readonly IBuildingStateService _buildingState;
+    private readonly IActiveBuildingService _activeBuildingService;
+    private readonly IBuildingConfigurationService _configService;
 
-    public KpiService(IMeasurementRepository repository, IBuildingStateService buildingState)
+    public KpiService(
+        IMeasurementRepository repository, 
+        IActiveBuildingService activeBuildingService, 
+        IBuildingConfigurationService configService)
     {
         _repository = repository;
-        _buildingState = buildingState;
+        _activeBuildingService = activeBuildingService;
+        _configService = configService;
     }
 
-    private Device? GetDevice(string deviceId)
+    private async Task<(DiplomovaPrace.Models.Configuration.DeviceConfig?, DiplomovaPrace.Models.Configuration.BuildingConfig?)> GetDeviceAndBuildingAsync(string deviceId)
     {
-        var building = _buildingState.Building;
-        if (building == null) return null;
+        var activeId = _activeBuildingService.ActiveBuildingId;
+        if (string.IsNullOrEmpty(activeId)) return (null, null);
+
+        var building = await _configService.GetBuildingAsync(activeId);
+        if (building == null) return (null, null);
 
         foreach (var floor in building.Floors)
         {
             foreach (var room in floor.Rooms)
             {
                 var device = room.Devices.FirstOrDefault(d => d.Id == deviceId);
-                if (device != null) return device;
+                if (device != null) return (device, building);
             }
         }
-        return null;
+        return (null, building);
     }
 
     public async Task<MeterKpiResult> CalculateBasicKpiAsync(KpiQuery query, CancellationToken ct = default)
     {
-        var device = GetDevice(query.DeviceId);
+        var (device, buildingConfig) = await GetDeviceAndBuildingAsync(query.DeviceId);
         if (device == null)
         {
-            return new MeterKpiResult(query.DeviceId, 0, null, null, null, null, null, null, null, null, null, null, null, false, "Device neexistuje v konfiguraci budovy.");
+            return new MeterKpiResult(query.DeviceId, 0, null, null, null, null, null, null, null, null, null, null, null, null, false, "Device neexistuje v konfiguraci budovy.");
         }
 
         if (!device.Type.IsMeteringDevice())
         {
-            return new MeterKpiResult(query.DeviceId, 0, null, null, null, null, null, null, null, null, null, null, null, false, $"Device {query.DeviceId} není smart metering zařízení.");
+            return new MeterKpiResult(query.DeviceId, 0, null, null, null, null, null, null, null, null, null, null, null, null, false, $"Device {query.DeviceId} není smart metering zařízení.");
         }
 
         var records = await _repository.GetRangeAsync(query.DeviceId, query.From, query.To, ct);
         if (records.Count == 0)
         {
-            return new MeterKpiResult(query.DeviceId, 0, null, null, null, null, null, null, null, null, null, null, null, false);
+            return new MeterKpiResult(query.DeviceId, 0, null, null, null, null, null, null, null, null, null, null, null, null, false);
         }
 
         var first = records.First();
@@ -84,7 +92,7 @@ public class KpiService : IKpiService
                     var delta = curr.ActiveEnergyKWh!.Value - prev.ActiveEnergyKWh!.Value;
                     if (delta < 0) delta = 0; // ignorujeme reset čítače
                     
-                    if (IsWorkingHour(curr.Timestamp))
+                    if (IsWorkingHour(curr.Timestamp, buildingConfig))
                         workingHoursConsumption += delta;
                     else
                         offHoursConsumption += delta;
@@ -104,7 +112,7 @@ public class KpiService : IKpiService
                         var avgP = (prev.ActivePowerKW.Value + curr.ActivePowerKW.Value) / 2.0;
                         var energyChunk = avgP * dtHours;
                         totalConsumption += energyChunk;
-                        if (IsWorkingHour(curr.Timestamp)) workingHoursConsumption += energyChunk;
+                        if (IsWorkingHour(curr.Timestamp, buildingConfig)) workingHoursConsumption += energyChunk;
                         else offHoursConsumption += energyChunk;
                     }
                 }
@@ -127,12 +135,19 @@ public class KpiService : IKpiService
                     
                     totalConsumption += energyChunk;
 
-                    if (IsWorkingHour(curr.Timestamp))
+                    if (IsWorkingHour(curr.Timestamp, buildingConfig))
                         workingHoursConsumption += energyChunk;
                     else
                         offHoursConsumption += energyChunk;
                 }
             }
+        }
+
+        double? specificConsumption = null;
+        var area = buildingConfig?.Metadata?.GrossFloorAreaM2;
+        if (area.HasValue && area.Value > 0)
+        {
+            specificConsumption = totalConsumption / area.Value;
         }
 
         return new MeterKpiResult(
@@ -149,6 +164,7 @@ public class KpiService : IKpiService
             TotalConsumptionKWh: totalConsumption,
             WorkingHoursConsumptionKWh: workingHoursConsumption,
             OffHoursConsumptionKWh: offHoursConsumption,
+            SpecificConsumptionKWhPerM2: specificConsumption,
             IsEstimatedConsumption: isEstimated
         );
     }
@@ -177,12 +193,16 @@ public class KpiService : IKpiService
         return new KpiComparisonResult(deviceId, resultA, resultB, diffCons, diffPeak, diffAvg);
     }
 
-    private bool IsWorkingHour(DateTime timestamp)
+    private bool IsWorkingHour(DateTime timestamp, DiplomovaPrace.Models.Configuration.BuildingConfig? buildingConfig)
     {
+        var meta = buildingConfig?.Metadata;
+        var start = meta?.WorkingDayStart.Hours ?? 8;
+        var end = meta?.WorkingDayEnd.Hours ?? 18;
+
         var localTime = timestamp.ToLocalTime();
         if (localTime.DayOfWeek == DayOfWeek.Saturday || localTime.DayOfWeek == DayOfWeek.Sunday)
             return false;
             
-        return localTime.Hour >= 8 && localTime.Hour < 18;
+        return localTime.Hour >= start && localTime.Hour < end;
     }
 }

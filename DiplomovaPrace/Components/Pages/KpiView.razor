@@ -2,6 +2,9 @@
 @rendermode InteractiveServer
 @inject DiplomovaPrace.Services.IKpiService KpiService
 @inject DiplomovaPrace.Services.IBuildingStateService BuildingState
+@inject DiplomovaPrace.Services.IBuildingConfigurationService ConfigService
+@inject DiplomovaPrace.Services.IActiveBuildingService ActiveBuildingService
+@implements IDisposable
 @using DiplomovaPrace.Models.Kpi
 @using Radzen.Blazor
 
@@ -9,7 +12,7 @@
 
 <div class="container-fluid py-4">
     <h2>Analytika (KPI)</h2>
-    <p class="text-muted">Vyberte zařízení a časové období pro výpočet klíčových metrik (bez grafického dashboardu).</p>
+    <p class="text-muted">Přesný výpočet a inspekce KPI (Key Performance Indicators) v širším detailu.</p>
 
     <div class="row mb-4">
         <div class="col-md-3">
@@ -64,7 +67,11 @@
                                 @if (_result.IsEstimatedConsumption) 
                                 { <span class="badge bg-warning ms-1" title="Odhad z výkonu (integrál)">Odhad</span> }
                             </li>
-                            <li><strong>Pracovní hodiny (8-18):</strong> @Format(_result.WorkingHoursConsumptionKWh) kWh</li>
+                            @if (_result.SpecificConsumptionKWhPerM2.HasValue)
+                            {
+                                <li class="text-primary fw-bold"><strong>KPI:</strong> @Format(_result.SpecificConsumptionKWhPerM2) kWh/m²</li>
+                            }
+                            <li><strong>Pracovní hodiny:</strong> @Format(_result.WorkingHoursConsumptionKWh) kWh</li>
                             <li><strong>Mimo prac. dobu:</strong> @Format(_result.OffHoursConsumptionKWh) kWh</li>
                             <hr/>
                             <li><strong>Záznamů:</strong> @_result.RecordCount</li>
@@ -109,12 +116,6 @@
                                 <li><strong>Rozdíl Průměrného Výkonu:</strong> @FormatDiff(_compResult.DiffAveragePowerKW, "kW")</li>
                             </ul>
                         }
-                        else
-                        {
-                            <button class="btn btn-outline-info w-100" @onclick="CalculateComparison" disabled="@_isComparing">
-                                Vypočítat porovnání
-                            </button>
-                        }
                     </div>
                 </div>
             </div>
@@ -134,29 +135,65 @@
     private bool _isComparing;
     private KpiComparisonResult? _compResult;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
+    {
+        ActiveBuildingService.OnActiveBuildingChanged += OnActiveBuildingChanged;
+        await ReloadDevicesAsync();
+    }
+
+    private async void OnActiveBuildingChanged()
+    {
+        await InvokeAsync(ReloadDevicesAsync);
+    }
+
+    private async Task ReloadDevicesAsync()
     {
         var validDevices = new HashSet<string>();
-        var building = BuildingState.Building;
-        if (building != null)
+        var activeId = ActiveBuildingService.ActiveBuildingId;
+
+        if (!string.IsNullOrEmpty(activeId))
         {
-            foreach (var floor in building.Floors)
+            var config = await ConfigService.GetBuildingAsync(activeId);
+            if (config != null)
             {
-                foreach (var room in floor.Rooms)
+                foreach (var floor in config.Floors)
                 {
-                    foreach (var device in room.Devices)
+                    foreach (var room in floor.Rooms)
                     {
-                        if (device.Type.IsMeteringDevice())
+                        foreach (var device in room.Devices)
                         {
-                            validDevices.Add(device.Id);
+                            if (device.Type.IsMeteringDevice())
+                            {
+                                validDevices.Add(device.Id);
+                            }
                         }
                     }
                 }
             }
         }
+
         _availableDevices = validDevices.OrderBy(x => x).ToList();
+
         if (_availableDevices.Any())
-            _selectedDeviceId = _availableDevices.First();
+        {
+            if (string.IsNullOrEmpty(_selectedDeviceId) || !_availableDevices.Contains(_selectedDeviceId))
+            {
+                _selectedDeviceId = _availableDevices.First();
+            }
+        }
+        else
+        {
+            _selectedDeviceId = "";
+            _result = null;
+            _compResult = null;
+        }
+        
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        ActiveBuildingService.OnActiveBuildingChanged -= OnActiveBuildingChanged;
     }
 
     private async Task Calculate()
@@ -169,33 +206,22 @@
         try
         {
             _result = await KpiService.CalculateBasicKpiAsync(new KpiQuery(_selectedDeviceId, _from, _to));
+            
+            // Auto-calculate comparison
+            if (_result != null && _result.Duration != null && _result.RecordCount > 0)
+            {
+                var span = _result.Duration.Value;
+                if (span.TotalSeconds < 1) span = TimeSpan.FromDays(1);
+
+                DateTime prevA = _from.Add(-span);
+                DateTime prevB = _to.Add(-span);
+
+                _compResult = await KpiService.ComparePeriodsAsync(_selectedDeviceId, _from, _to, prevA, prevB);
+            }
         }
         finally
         {
             _isCalculating = false;
-        }
-    }
-
-    private async Task CalculateComparison()
-    {
-        if (_result == null || _result.Duration == null) return;
-        
-        _isComparing = true;
-        StateHasChanged();
-
-        try
-        {
-            var span = _result.Duration.Value;
-            if (span.TotalSeconds < 1) span = TimeSpan.FromDays(1);
-
-            DateTime prevA = _from.Add(-span);
-            DateTime prevB = _to.Add(-span);
-
-            _compResult = await KpiService.ComparePeriodsAsync(_selectedDeviceId, _from, _to, prevA, prevB);
-        }
-        finally
-        {
-            _isComparing = false;
         }
     }
 

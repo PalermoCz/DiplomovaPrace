@@ -20,7 +20,7 @@ public interface IBuildingConfigurationService
     // ── Building CRUD ────────────────────────────────────────────────────────
 
     Task<BuildingConfig> CreateBuildingAsync(string name, string? description, string? address);
-    Task<BuildingConfig> UpdateBuildingMetadataAsync(string buildingId, string name, string? description, string? address);
+    Task<BuildingConfig> UpdateBuildingMetadataAsync(string buildingId, string name, string? description, string? address, FacilityMetadata? metadata = null);
     Task DeleteBuildingAsync(string buildingId);
 
     // ── Floor CRUD ───────────────────────────────────────────────────────────

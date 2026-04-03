@@ -150,6 +150,7 @@
     private readonly string _svgId = "editor-canvas-svg";
     private DotNetObjectReference<EditorCanvas>? _dotNetRef;
     private bool _jsInitialized;
+    private bool _isDisposed;
     private EditorTool _prevTool;
     private string? _prevFloorId;
     private double _prevWidth;
@@ -161,23 +162,38 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (_isDisposed) return;
+
         if (firstRender)
         {
             _dotNetRef = DotNetObjectReference.Create(this);
-            await JSRuntime.InvokeVoidAsync("editorCanvas.init", _svgId, _dotNetRef);
-            await JSRuntime.InvokeVoidAsync("editorCanvas.setTool", ActiveTool.ToString());
-            await JSRuntime.InvokeVoidAsync("editorCanvas.setFloorBounds", ViewBoxWidth, ViewBoxHeight);
-            await JSRuntime.InvokeVoidAsync("editorCanvas.setGrid", ShowGrid, 20);
-            _prevTool     = ActiveTool;
-            _prevFloorId  = Floor?.Id;
-            _prevWidth    = ViewBoxWidth;
-            _prevHeight   = ViewBoxHeight;
-            _prevShowGrid = ShowGrid;
-            _jsInitialized = true;
+            try 
+            {
+                await JSRuntime.InvokeVoidAsync("editorCanvas.init", _svgId, _dotNetRef);
+                
+                if (_isDisposed) 
+                {
+                    // Komponenta byla zničena v průběhu JS inicializace.
+                    await JSRuntime.InvokeVoidAsync("editorCanvas.dispose", _svgId);
+                    return;
+                }
+
+                await JSRuntime.InvokeVoidAsync("editorCanvas.setTool", ActiveTool.ToString());
+                await JSRuntime.InvokeVoidAsync("editorCanvas.setFloorBounds", ViewBoxWidth, ViewBoxHeight);
+                await JSRuntime.InvokeVoidAsync("editorCanvas.setGrid", ShowGrid, 20);
+                
+                _prevTool     = ActiveTool;
+                _prevFloorId  = Floor?.Id;
+                _prevWidth    = ViewBoxWidth;
+                _prevHeight   = ViewBoxHeight;
+                _prevShowGrid = ShowGrid;
+                _jsInitialized = true;
+            }
+            catch { /* ignorujeme případné chyby padající z odpojené stránky */ }
             return;
         }
 
-        if (!_jsInitialized) return;
+        if (!_jsInitialized || _isDisposed) return;
 
         if (ActiveTool != _prevTool)
         {
@@ -269,11 +285,14 @@
 
     public async ValueTask DisposeAsync()
     {
-        if (_jsInitialized)
-        {
-            try { await JSRuntime.InvokeVoidAsync("editorCanvas.dispose", _svgId); }
-            catch { /* komponenta mohla být odpojena dříve než JS */ }
+        _isDisposed = true;
+        try 
+        { 
+            await JSRuntime.InvokeVoidAsync("editorCanvas.dispose", _svgId); 
         }
+        catch { /* ignorujeme chybu, komponenta už pravděpodobně neexistuje v DOMu */ }
+        
         _dotNetRef?.Dispose();
+        _dotNetRef = null;
     }
 }

@@ -3,6 +3,10 @@
 @inject DiplomovaPrace.Services.IKpiService KpiService
 @inject DiplomovaPrace.Services.IMeasurementRepository MeasurementRepository
 @inject DiplomovaPrace.Services.IBuildingStateService BuildingState
+@inject DiplomovaPrace.Services.IActiveBuildingService ActiveBuildingService
+@inject DiplomovaPrace.Services.IBuildingConfigurationService ConfigService
+@inject DiplomovaPrace.Services.IBaselineService BaselineService
+@implements IDisposable
 @using DiplomovaPrace.Models.Kpi
 @using DiplomovaPrace.Models
 @using Radzen.Blazor
@@ -12,7 +16,10 @@
 
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Dashboard</h2>
+        <div>
+            <h2 class="mb-0">Energetický Dashboard</h2>
+            <p class="text-muted mb-0 small">Hlavní přehled o spotřebě energie a výkonu sledovaných zařízení (agregace nad smart metering daty).</p>
+        </div>
     </div>
 
     @* Filtry *@
@@ -21,7 +28,7 @@
             <div class="row g-3 align-items-end">
                 <div class="col-md-3">
                     <label class="form-label text-muted small mb-1">Měřicí bod</label>
-                    <select class="form-select form-select-sm" @bind="_selectedDeviceId">
+                    <select class="form-select form-select-sm" @bind="SelectedDeviceId">
                         <option value="">-- Vyberte zařízení --</option>
                         @foreach (var dev in _availableDevices)
                         {
@@ -85,17 +92,31 @@
             <div class="col-md-3">
                 <div class="card shadow-sm h-100 border-start border-primary border-4">
                     <div class="card-body">
-                        <div class="text-muted small fw-bold text-uppercase mb-1">Celková Spotřeba</div>
-                        <div class="d-flex align-items-center">
+                        <div class="text-muted small fw-bold text-uppercase mb-1" title="Celková naměřená nebo odhadnutá spotřeba v daném období">
+                            Celková Spotřeba <i class="bi bi-info-circle small" title="Celková integrální spotřeba pro vybrané období a měřicí bod."></i>
+                        </div>
+                        <div class="d-flex align-items-center mb-1">
                             <h3 class="mb-0 me-2">@Format(_result.TotalConsumptionKWh) <small class="text-muted fs-6">kWh</small></h3>
                             @if (_result.IsEstimatedConsumption)
                             {
-                                <span class="badge bg-warning text-dark" title="Odhadnuto integrací výkonu v čase">Odhad</span>
+                                <span class="badge bg-warning text-dark" title="Spotřeba byla odhadnuta matematickou integrací aktuálního výkonu, protože chybí přesná kumulativní data z elektroměru.">Odhad</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success" title="Spotřeba je přesně vypočtena z kumulativního registru měřidla.">Přesné</span>
                             }
                         </div>
+                        
+                        @if (_result.SpecificConsumptionKWhPerM2.HasValue)
+                        {
+                            <div class="small fw-bold text-primary mb-1">
+                                @Format(_result.SpecificConsumptionKWhPerM2) kWh/m²
+                            </div>
+                        }
+
                         @if (_compResult?.PeriodB?.RecordCount > 0)
                         {
-                            <div class="mt-2 small">
+                            <div class="mt-2 small" title="Porovnání vůči definovanému stejně dlouhému předcházejícímu období">
                                 @FormatDiff(_compResult.DiffConsumptionKWh, "kWh") <span class="text-muted ms-1">vs předchozí obd.</span>
                             </div>
                         }
@@ -136,18 +157,18 @@
             <div class="col-md-3">
                 <div class="card shadow-sm h-100 bg-light">
                     <div class="card-body">
-                        <div class="text-muted small fw-bold text-uppercase mb-1">Kvalita sítě (Průměr)</div>
+                        <div class="text-muted small fw-bold text-uppercase mb-1" title="Průměrné hodnoty vyjadřující kvalitu napájení">Kvalita sítě (Průměr)</div>
                         <div class="row text-center mt-3">
                             <div class="col-4">
-                                <div class="fs-5 fw-bold">@Format(_result.AverageVoltageV)</div>
+                                <div class="fs-5 fw-bold">@Format(_result.AverageVoltageV, "N/A")</div>
                                 <div class="small text-muted">V</div>
                             </div>
                             <div class="col-4 border-start border-end">
-                                <div class="fs-5 fw-bold">@Format(_result.AverageCurrentA)</div>
+                                <div class="fs-5 fw-bold">@Format(_result.AverageCurrentA, "N/A")</div>
                                 <div class="small text-muted">A</div>
                             </div>
                             <div class="col-4">
-                                <div class="fs-5 fw-bold">@Format(_result.AveragePowerFactor)</div>
+                                <div class="fs-5 fw-bold">@Format(_result.AveragePowerFactor, "N/A")</div>
                                 <div class="small text-muted">PF</div>
                             </div>
                         </div>
@@ -155,6 +176,56 @@
                 </div>
             </div>
         </div>
+
+        @* Řada 1.5: Baseline Analytics *@
+        @if (_baselineResult != null)
+        {
+            <div class="row g-3 mb-4">
+                <div class="col-12">
+                    <div class="card shadow-sm border-start @GetBaselineBorderClass() border-4">
+                        <div class="card-body">
+                            <h6 class="text-muted fw-bold text-uppercase mb-3">
+                                Analýza odchylky vůči standardu (Baseline)
+                                <i class="bi bi-info-circle ms-1 small text-muted" title="Baseline porovnává aktuální spotřebu s chováním ve stejný den/čas během předchozích (@_baselineResult.ValidHistoricalPeriodsUsed) týdnů."></i>
+                            </h6>
+                            <div class="row text-center align-items-center">
+                                <div class="col-md-3">
+                                    <div class="small text-muted mb-1">Aktuální spotřeba</div>
+                                    <div class="fs-4 fw-bold">@Format(_baselineResult.ActualConsumptionKWh) <span class="fs-6 text-muted">kWh</span></div>
+                                </div>
+                                <div class="col-md-1 fs-3 text-muted">
+                                    <i class="bi bi-chevron-right"></i>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="small text-muted mb-1">Očekávaná spotřeba (Baseline)</div>
+                                    <div class="fs-4 fw-bold opacity-75">@Format(_baselineResult.ExpectedConsumptionKWh, "N/A") <span class="fs-6 text-muted">kWh</span></div>
+                                </div>
+                                <div class="col-md-1 fs-3 text-muted">
+                                    <i class="bi bi-calculator"></i>
+                                </div>
+                                <div class="col-md-4 text-start ps-4 border-start">
+                                    @if (_baselineResult.Status == BaselineStatus.InsufficientData)
+                                    {
+                                        <div class="text-secondary fw-bold mb-1">Nelze vyhodnotit</div>
+                                        <div class="small text-muted">@_baselineResult.ErrorMessage Nedostatek historických dat pro Baseline.</div>
+                                    }
+                                    else
+                                    {
+                                        <div class="mb-1">
+                                            @GetBaselineStatusBadge()
+                                        </div>
+                                        <div class="small fw-bold">
+                                            Odchylka: @Format(_baselineResult.DeviationKWh) kWh 
+                                            (@Format(_baselineResult.DeviationPercent) %)
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
 
         @* Druhá řada: Grafy a doplnující metriky *@
         <div class="row g-3 mb-4">
@@ -188,8 +259,9 @@
             
             <div class="col-lg-4">
                 <div class="card shadow-sm h-100">
-                    <div class="card-header bg-white">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h6 class="mb-0 fw-bold">Rozdělení spotřeby</h6>
+                        <i class="bi bi-info-circle text-muted small" title="Rozdělení spotřeby na pracovní a mimopracovní dobu dle nastavení budovy (Facility Metadata)."></i>
                     </div>
                     <div class="card-body d-flex flex-column justify-content-center">
                         @if (_result.TotalConsumptionKWh > 0)
@@ -234,6 +306,7 @@
     
     private MeterKpiResult? _result;
     private KpiComparisonResult? _compResult;
+    private BaselineResult? _baselineResult;
     private List<MeasurementRecord> _chartData = new();
 
     private string PresetSelection
@@ -246,33 +319,104 @@
         }
     }
 
-    protected override void OnInitialized()
+    private string SelectedDeviceId
+    {
+        get => _selectedDeviceId;
+        set
+        {
+            if (_selectedDeviceId != value)
+            {
+                _selectedDeviceId = value;
+                _ = HandleDeviceSelectionAsync();
+            }
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        ActiveBuildingService.OnActiveBuildingChanged += OnActiveBuildingChanged;
+        await ReloadDevicesAsync();
+    }
+
+    private async void OnActiveBuildingChanged()
+    {
+        await InvokeAsync(ReloadDevicesAsync);
+    }
+
+    private async Task ReloadDevicesAsync()
     {
         var validDevices = new HashSet<string>();
-        var building = BuildingState.Building;
-        if (building != null)
+        var activeId = ActiveBuildingService.ActiveBuildingId;
+        
+        if (!string.IsNullOrEmpty(activeId))
         {
-            foreach (var floor in building.Floors)
+            var config = await ConfigService.GetBuildingAsync(activeId);
+            if (config != null)
             {
-                foreach (var room in floor.Rooms)
+                foreach (var floor in config.Floors)
                 {
-                    foreach (var device in room.Devices)
+                    foreach (var room in floor.Rooms)
                     {
-                        if (device.Type.IsMeteringDevice())
+                        foreach (var device in room.Devices)
                         {
-                            validDevices.Add(device.Id);
+                            if (device.Type.IsMeteringDevice())
+                            {
+                                validDevices.Add(device.Id);
+                            }
                         }
                     }
                 }
             }
         }
+        
         _availableDevices = validDevices.OrderBy(x => x).ToList();
+        
         if (_availableDevices.Any())
         {
-            _selectedDeviceId = _availableDevices.First();
+            if (string.IsNullOrEmpty(_selectedDeviceId) || !_availableDevices.Contains(_selectedDeviceId))
+            {
+                _selectedDeviceId = _availableDevices.First();
+                await HandleDeviceSelectionAsync();
+            }
+            // else: valid device still selected, just let it be.
+        }
+        else
+        {
+            _selectedDeviceId = "";
+            ApplyPreset();
+            _result = null;
+            _compResult = null;
+            _baselineResult = null;
+            _chartData = new List<MeasurementRecord>();
+            StateHasChanged();
+        }
+    }
+    
+    public void Dispose()
+    {
+        ActiveBuildingService.OnActiveBuildingChanged -= OnActiveBuildingChanged;
+    }
+
+    private async Task HandleDeviceSelectionAsync()
+    {
+        if (string.IsNullOrEmpty(_selectedDeviceId)) return;
+        
+        if (_selectedDeviceId.StartsWith("bdg2:", StringComparison.OrdinalIgnoreCase))
+        {
+            _preset = "custom";
+            var lastRecord = await MeasurementRepository.GetLatestOneAsync(_selectedDeviceId);
+            if (lastRecord != null)
+            {
+                _to = lastRecord.Timestamp;
+                _from = _to.AddDays(-30);
+            }
+        }
+        else
+        {
+            PresetSelection = "24h";
         }
         
-        ApplyPreset();
+        await LoadDataAsync();
     }
 
     private void ApplyPreset()
@@ -303,6 +447,7 @@
         _error = null;
         _result = null;
         _compResult = null;
+        _baselineResult = null;
         _chartData = new List<MeasurementRecord>();
         StateHasChanged();
 
@@ -348,6 +493,9 @@
                 {
                     _chartData = records.ToList();
                 }
+
+                // 4. Baseline Analytics
+                _baselineResult = await BaselineService.CalculateBaselineSummaryAsync(_selectedDeviceId, _from, _to);
             }
         }
         catch (Exception ex)
@@ -360,7 +508,7 @@
         }
     }
 
-    private string Format(double? val) => val?.ToString("0.##") ?? "0";
+    private string Format(double? val, string def = "0") => val?.ToString("0.##") ?? def;
     
     private Microsoft.AspNetCore.Components.MarkupString FormatDiff(double? val, string unit)
     {
@@ -395,6 +543,40 @@
                 if (off > 0) data.Add(new PieDataItem { Category = "Mimo prac. dobu", Value = off });
             }
             return data;
+        }
+    }
+
+    private string GetBaselineBorderClass()
+    {
+        if (_baselineResult == null) return "border-secondary";
+        return _baselineResult.Status switch
+        {
+            BaselineStatus.Normal => "border-success",
+            BaselineStatus.AboveBaseline => "border-warning",
+            BaselineStatus.SignificantlyAboveBaseline => "border-danger",
+            BaselineStatus.BelowBaseline => "border-info",
+            BaselineStatus.SignificantlyBelowBaseline => "border-primary",
+            _ => "border-secondary"
+        };
+    }
+    
+    private Microsoft.AspNetCore.Components.MarkupString GetBaselineStatusBadge()
+    {
+        if (_baselineResult == null) return new Microsoft.AspNetCore.Components.MarkupString("");
+        
+        switch(_baselineResult.Status)
+        {
+            case BaselineStatus.Normal: 
+                return new Microsoft.AspNetCore.Components.MarkupString("<span class=\"badge bg-success\"><i class=\"bi bi-check-circle me-1\"></i>V normě</span>");
+            case BaselineStatus.AboveBaseline: 
+                return new Microsoft.AspNetCore.Components.MarkupString("<span class=\"badge bg-warning text-dark\"><i class=\"bi bi-exclamation-triangle me-1\"></i>Zvýšená spotřeba</span>");
+            case BaselineStatus.SignificantlyAboveBaseline: 
+                return new Microsoft.AspNetCore.Components.MarkupString("<span class=\"badge bg-danger\"><i class=\"bi bi-exclamation-octagon me-1\"></i>Výrazné překročení</span>");
+            case BaselineStatus.BelowBaseline: 
+            case BaselineStatus.SignificantlyBelowBaseline:
+                return new Microsoft.AspNetCore.Components.MarkupString("<span class=\"badge bg-info text-dark\"><i class=\"bi bi-arrow-down-circle me-1\"></i>Úspora</span>");
+            default:
+                return new Microsoft.AspNetCore.Components.MarkupString("<span class=\"badge bg-secondary\">Nedostatek dat</span>");
         }
     }
 }

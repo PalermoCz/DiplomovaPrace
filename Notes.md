@@ -18,3 +18,11 @@ https://demo.ecostruxure-power-monitoring-expert.se.app/web/#WhatsNew_EN
 user: demo
 password: demo
 
+
+Dataset:
+https://github.com/buds-lab/building-data-genome-project-2/blob/master/LICENSE
+Nutno citovat
+
+https://www.nature.com/articles/s41597-025-05186-3#Ack1
+https://datadryad.org/dataset/doi:10.5061/dryad.73n5tb363
+script: https://github.com/HRI-EU/MonitoringDatasetAnalysis

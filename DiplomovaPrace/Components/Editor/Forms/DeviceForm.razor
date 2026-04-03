@@ -13,16 +13,17 @@
     <div class="mb-2">
         <label class="form-label">Typ</label>
         <InputSelect class="form-select" @bind-Value="_model.Type">
-            <option value="@DeviceType.TemperatureSensor">Teplotní senzor</option>
-            <option value="@DeviceType.HumiditySensor">Senzor vlhkosti</option>
-            <option value="@DeviceType.Light">Osvětlení</option>
-            <option value="@DeviceType.HVAC">Klimatizace</option>
-            <option value="@DeviceType.MotionSensor">Pohybový senzor</option>
-            <option value="@DeviceType.DoorSensor">Dveřní senzor</option>
             <option disabled>── Smart Metering ──</option>
             <option value="@DeviceType.EnergyMeter">Elektroměr</option>
             <option value="@DeviceType.PowerMeter">Analyzátor výkonu</option>
             <option value="@DeviceType.CurrentTransformer">Proudový transformátor</option>
+            <option disabled>── Kontextové senzory ──</option>
+            <option value="@DeviceType.TemperatureSensor">Teplotní senzor</option>
+            <option value="@DeviceType.HumiditySensor">Senzor vlhkosti</option>
+            <option value="@DeviceType.Light">Osvětlení</option>
+            <option value="@DeviceType.HVAC">Klimatizace</option>
+            <option value="@DeviceType.DoorSensor">Dveřní senzor</option>
+            @* MotionSensor skrytý, protože není v novém směru aplikace relevantní *@
         </InputSelect>
     </div>
 
@@ -182,7 +183,7 @@
     {
         [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Název je povinný")]
         public string Name { get; set; } = "";
-        public DeviceType Type { get; set; } = DeviceType.TemperatureSensor;
+        public DeviceType Type { get; set; } = DeviceType.EnergyMeter;
         [System.ComponentModel.DataAnnotations.Range(0, double.MaxValue, ErrorMessage = "Spotřeba musí být >= 0")]
         public double Consumption { get; set; }
         public string? Unit { get; set; }

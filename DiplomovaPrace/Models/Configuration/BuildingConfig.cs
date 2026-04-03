@@ -17,5 +17,6 @@ public record BuildingConfig(
     string CreatedBy,
     string UpdatedBy,
     byte[] RowVersion,
-    bool IsDeleted
+    bool IsDeleted,
+    FacilityMetadata? Metadata = null
 );

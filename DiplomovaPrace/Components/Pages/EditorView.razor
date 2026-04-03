@@ -416,7 +416,7 @@
             async () =>
             {
                 device = await ConfigService.AddDeviceAsync(
-                    roomId, "Nové zařízení", DeviceType.TemperatureSensor,
+                    roomId, "Nové zařízení", DeviceType.EnergyMeter,
                     new DevicePosition(pos.X, pos.Y));
             },
             ConfigService);
@@ -477,13 +477,13 @@
 
     // ── Properties panel — uložení změn ──────────────────────────────────
 
-    private async Task HandleUpdateBuilding((string Name, string? Description, string? Address) args)
+    private async Task HandleUpdateBuilding((string Name, string? Description, string? Address, FacilityMetadata? Metadata) args)
     {
         if (SessionService.CurrentConfig is null) return;
         var id = SessionService.CurrentConfig.Id;
         await SessionService.ExecuteCommandAsync(
             new UpdateBuildingCommand(args.Name),
-            () => ConfigService.UpdateBuildingMetadataAsync(id, args.Name, args.Description, args.Address),
+            () => ConfigService.UpdateBuildingMetadataAsync(id, args.Name, args.Description, args.Address, args.Metadata),
             ConfigService);
         ShowToast("Budova uložena", success: true);
     }

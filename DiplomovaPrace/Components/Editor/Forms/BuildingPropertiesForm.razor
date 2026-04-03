@@ -1,12 +1,12 @@
 @* Formulář vlastností budovy *@
 
-<div class="prop-section-title">Budova</div>
+<div class="prop-section-title">Parametry objektu (Facility)</div>
 
 <EditForm Model="_model" OnValidSubmit="HandleSubmit">
     <DataAnnotationsValidator />
 
     <div class="mb-2">
-        <label class="form-label">Název</label>
+        <label class="form-label">Název budovy</label>
         <InputText class="form-control" @bind-Value="_model.Name" />
     </div>
     <div class="mb-2">
@@ -18,12 +18,34 @@
         <InputText class="form-control" @bind-Value="_model.Address" placeholder="(volitelné)" />
     </div>
 
+    <div class="prop-section-title mt-3">Facility Metadata</div>
+    <div class="mb-2">
+        <label class="form-label">Organizace</label>
+        <InputText class="form-control" @bind-Value="_model.OrganizationName" placeholder="Název firmy" />
+    </div>
+    <div class="mb-2">
+        <label class="form-label">Zóna (Site)</label>
+        <InputText class="form-control" @bind-Value="_model.SiteName" />
+    </div>
+    <div class="mb-2">
+        <label class="form-label">Hrubá plocha (m²)</label>
+        <InputNumber class="form-control" @bind-Value="_model.GrossFloorAreaM2" />
+    </div>
+    <div class="mb-2">
+        <label class="form-label">Pracovní doba od (hodina)</label>
+        <InputNumber class="form-control" @bind-Value="_model.WorkingStartHour" min="0" max="23" />
+    </div>
+    <div class="mb-2">
+        <label class="form-label">Pracovní doba do (hodina)</label>
+        <InputNumber class="form-control" @bind-Value="_model.WorkingEndHour" min="0" max="23" />
+    </div>
+
     <button type="submit" class="btn btn-sm btn-primary btn-save w-100">Uložit</button>
 </EditForm>
 
 @code {
     [Parameter, EditorRequired] public BuildingConfig Building { get; set; } = default!;
-    [Parameter] public EventCallback<(string Name, string? Description, string? Address)> OnSave { get; set; }
+    [Parameter] public EventCallback<(string Name, string? Description, string? Address, FacilityMetadata? Metadata)> OnSave { get; set; }
 
     private FormModel _model = new();
     private string? _prevId;
@@ -36,12 +58,26 @@
         {
             Name = Building.Name,
             Description = Building.Description,
-            Address = Building.Address
+            Address = Building.Address,
+            OrganizationName = Building.Metadata?.OrganizationName,
+            SiteName = Building.Metadata?.SiteName,
+            GrossFloorAreaM2 = Building.Metadata?.GrossFloorAreaM2,
+            WorkingStartHour = Building.Metadata?.WorkingDayStart.Hours ?? 8,
+            WorkingEndHour = Building.Metadata?.WorkingDayEnd.Hours ?? 18
         };
     }
 
-    private async Task HandleSubmit() =>
-        await OnSave.InvokeAsync((_model.Name, _model.Description, _model.Address));
+    private async Task HandleSubmit()
+    {
+        var meta = new FacilityMetadata(
+            OrganizationName: string.IsNullOrWhiteSpace(_model.OrganizationName) ? null : _model.OrganizationName,
+            SiteName: string.IsNullOrWhiteSpace(_model.SiteName) ? null : _model.SiteName,
+            GrossFloorAreaM2: _model.GrossFloorAreaM2,
+            WorkingDayStart: TimeSpan.FromHours(_model.WorkingStartHour),
+            WorkingDayEnd: TimeSpan.FromHours(_model.WorkingEndHour)
+        );
+        await OnSave.InvokeAsync((_model.Name, _model.Description, _model.Address, meta));
+    }
 
     private sealed class FormModel
     {
@@ -50,5 +86,11 @@
         public string Name { get; set; } = "";
         public string? Description { get; set; }
         public string? Address { get; set; }
+        
+        public string? OrganizationName { get; set; }
+        public string? SiteName { get; set; }
+        public double? GrossFloorAreaM2 { get; set; }
+        public int WorkingStartHour { get; set; } = 8;
+        public int WorkingEndHour { get; set; } = 18;
     }
 }

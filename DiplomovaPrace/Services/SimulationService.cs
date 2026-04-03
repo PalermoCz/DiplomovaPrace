@@ -93,6 +93,10 @@ public class SimulationService : IHostedService, ISimulationService, IDisposable
         foreach (var room in floor.Rooms)
         foreach (var device in room.Devices)
         {
+            if (device.Id.StartsWith("bdg2:", StringComparison.OrdinalIgnoreCase))
+            {
+                continue; // Skip simulation for imported historical devices
+            }
             var currentState = _stateService.GetDeviceState(device.Id);
             var newState = GenerateDeviceState(device, currentState);
             _stateService.UpdateDeviceState(device.Id, newState);

@@ -57,7 +57,7 @@
     [Parameter] public FloorConfig? ActiveFloor { get; set; }
     [Parameter] public IReadOnlyList<ValidationIssue> ValidationIssues { get; set; } = [];
 
-    [Parameter] public EventCallback<(string Name, string? Description, string? Address)> OnUpdateBuilding { get; set; }
+    [Parameter] public EventCallback<(string Name, string? Description, string? Address, FacilityMetadata? Metadata)> OnUpdateBuilding { get; set; }
     [Parameter] public EventCallback<(string Name, int Level, double Width, double Height)> OnUpdateFloor { get; set; }
     [Parameter] public EventCallback<RoomConfig> OnUpdateRoomName { get; set; }
     [Parameter] public EventCallback<DeviceConfig> OnUpdateDevice { get; set; }

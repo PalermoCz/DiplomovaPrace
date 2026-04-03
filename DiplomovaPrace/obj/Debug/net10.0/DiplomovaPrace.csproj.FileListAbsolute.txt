@@ -60,7 +60,6 @@ C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\t2tvocn0z4-{0}-puw71i7fe2-puw71i7fe2.gz
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\wb34hdfdov-{0}-khy4lop6wu-khy4lop6wu.gz
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\wqp8zzzo8b-{0}-n4rvgmhl10-n4rvgmhl10.gz
-C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\qcxho35633-{0}-ucpuymnt2e-ucpuymnt2e.gz
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\us1v9g6brm-{0}-t1cqhe9u97-t1cqhe9u97.gz
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\05doesu5t9-{0}-c2jlpeoesf-c2jlpeoesf.gz
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\z8m5ajzah9-{0}-sejl45xvog-sejl45xvog.gz
@@ -153,3 +152,5 @@ C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\bin\
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\bin\Debug\net10.0\runtimes\win-x64\native\e_sqlite3.dll
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\bin\Debug\net10.0\runtimes\win-x86\native\e_sqlite3.dll
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\eya041vhl2-{0}-rqliapcb04-rqliapcb04.gz
+C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\bin\Debug\net10.0\CsvHelper.dll
+C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\qcxho35633-{0}-k0g93sqfix-k0g93sqfix.gz

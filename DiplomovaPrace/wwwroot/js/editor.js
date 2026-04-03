@@ -380,7 +380,7 @@ window.editorCanvas = (function () {
                 document.removeEventListener('keydown', _handlers.keydown);
                 document.removeEventListener('keyup', _handlers.keyup);
             }
-            if (_dotNet) { _dotNet.dispose(); _dotNet = null; }
+            if (_dotNet) { _dotNet = null; }
             _handlers = {};
             _state = null;
         }

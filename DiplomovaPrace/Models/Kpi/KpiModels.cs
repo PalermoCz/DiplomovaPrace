@@ -20,6 +20,7 @@ public record MeterKpiResult(
     double? TotalConsumptionKWh,
     double? WorkingHoursConsumptionKWh,
     double? OffHoursConsumptionKWh,
+    double? SpecificConsumptionKWhPerM2,
     bool IsEstimatedConsumption,
     string? ErrorMessage = null
 )

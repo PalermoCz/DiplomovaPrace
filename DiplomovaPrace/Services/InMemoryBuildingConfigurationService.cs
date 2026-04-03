@@ -62,13 +62,14 @@ public class InMemoryBuildingConfigurationService : IBuildingConfigurationServic
     }
 
     public Task<BuildingConfig> UpdateBuildingMetadataAsync(
-        string buildingId, string name, string? description, string? address)
+        string buildingId, string name, string? description, string? address, FacilityMetadata? metadata = null)
     {
         var updated = MutateBuilding(buildingId, b => b with
         {
             Name = name,
             Description = description,
             Address = address,
+            Metadata = metadata,
             UpdatedAt = Now(),
             UpdatedBy = "editor"
         });
@@ -338,7 +339,7 @@ public class InMemoryBuildingConfigurationService : IBuildingConfigurationServic
                     .ToList()))
             .ToList();
 
-        return new Building(Id: config.Id, Name: config.Name, Floors: floors);
+        return new Building(Id: config.Id, Name: config.Name, Floors: floors, Metadata: config.Metadata);
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────

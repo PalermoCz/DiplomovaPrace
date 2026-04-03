@@ -6,5 +6,6 @@ namespace DiplomovaPrace.Models;
 public record Building(
     string Id,
     string Name,
-    IReadOnlyList<Floor> Floors
+    IReadOnlyList<Floor> Floors,
+    DiplomovaPrace.Models.Configuration.FacilityMetadata? Metadata = null
 );
