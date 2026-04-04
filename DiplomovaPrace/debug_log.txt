@@ -1,0 +1,170 @@
+Použití nastavení spuštění z C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\Properties\launchSettings.json...
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT COUNT(*) FROM "sqlite_master" WHERE "type" = 'table' AND "rootpage" IS NOT NULL;
+info: DiplomovaPrace[0]
+      Databáze inicializována: C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\metering.db
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT EXISTS (
+          SELECT 1
+          FROM "Facilities" AS "f"
+          WHERE "f"."Name" = 'Smart Company Facility')
+info: DiplomovaPrace.Services.FacilityImportService[0]
+      Facility 'Smart Company Facility' již existuje. Seed se přeskočí.
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT COUNT(*)
+      FROM "Facilities" AS "f"
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT COUNT(*)
+      FROM "SchematicNodes" AS "s"
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT COUNT(*)
+      FROM "SchematicEdges" AS "s"
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT COUNT(*)
+      FROM "FacilityMeasurementMaps" AS "f"
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT EXISTS (
+          SELECT 1
+          FROM "Facilities" AS "f"
+          WHERE "f"."Name" = 'Smart Company Facility')
+info: DiplomovaPrace[0]
+      DIAGNOSTIKA SPRINT 2:
+info: DiplomovaPrace[0]
+      - Facilities: 1 (Smart Company Facility: True)
+info: DiplomovaPrace[0]
+      - Nodes: 38
+info: DiplomovaPrace[0]
+      - Edges: 37
+info: DiplomovaPrace[0]
+      - MeasurementMaps: 33
+info: DiplomovaPrace.Services.Bdg2ImportService[0]
+      Zahajuji import BDG2 dat...
+info: DiplomovaPrace.Services.Bdg2ImportService[0]
+      Založena budova Panther_education_Rosalie s měřidlem bdg2:Panther_education_Rosalie:em1
+info: DiplomovaPrace.Services.Bdg2ImportService[0]
+      Založena budova Panther_education_Misty s měřidlem bdg2:Panther_education_Misty:em1
+info: DiplomovaPrace.Services.Bdg2ImportService[0]
+      Založena budova Panther_education_Mattie s měřidlem bdg2:Panther_education_Mattie:em1
+info: DiplomovaPrace.Services.Bdg2ImportService[0]
+      Založena budova Panther_assembly_Denice s měřidlem bdg2:Panther_assembly_Denice:em1
+info: DiplomovaPrace.Services.Bdg2ImportService[0]
+      Založena budova Panther_other_Lucina s měřidlem bdg2:Panther_other_Lucina:em1
+info: DiplomovaPrace.Services.Bdg2ImportService[0]
+      Založena budova Panther_retail_Kristina s měřidlem bdg2:Panther_retail_Kristina:em1
+info: DiplomovaPrace.Services.Bdg2ImportService[0]
+      Založena budova Panther_parking_Asia s měřidlem bdg2:Panther_parking_Asia:em1
+info: DiplomovaPrace.Services.Bdg2ImportService[0]
+      Založena budova Robin_public_Carolina s měřidlem bdg2:Robin_public_Carolina:em1
+info: DiplomovaPrace.Services.Bdg2ImportService[0]
+      Přeskočen import časových řad.
+info: DiplomovaPrace[0]
+      BDG2 konfigurace (in-memory) stabilně rekonstruována na základě subsetu.
+info: DiplomovaPrace.Services.SimulationService[0]
+      Simulace spuštěna: seed=42, interval=2s
+info: DiplomovaPrace.Services.MeasurementPersistenceService[0]
+      MeasurementPersistenceService: zahájena konzumace záznamu
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://localhost:5016
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@p0='?' (DbType = Double), @p1='?' (DbType = Double), @p2='?' (DbType = Double), @p3='?' (DbType = Double), @p4='?' (Size = 11), @p5='?' (DbType = Double), @p6='?' (DbType = Double), @p7='?' (DbType = Double), @p8='?' (DbType = Double), @p9='?' (Size = 28), @p10='?' (DbType = Double)], CommandType='Text', CommandTimeout='30']
+      INSERT INTO "MeasurementRecords" ("ActiveEnergyKWh", "ActivePowerKW", "ApparentPowerKVA", "CurrentA", "DeviceId", "FrequencyHz", "PowerFactor", "ReactiveEnergyKVArh", "ReactivePowerKVAr", "Timestamp", "VoltageV")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10)
+      RETURNING "Id";
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@p0='?' (DbType = Double), @p1='?' (DbType = Double), @p2='?' (DbType = Double), @p3='?' (DbType = Double), @p4='?' (Size = 11), @p5='?' (DbType = Double), @p6='?' (DbType = Double), @p7='?' (DbType = Double), @p8='?' (DbType = Double), @p9='?' (Size = 28), @p10='?' (DbType = Double)], CommandType='Text', CommandTimeout='30']
+      INSERT INTO "MeasurementRecords" ("ActiveEnergyKWh", "ActivePowerKW", "ApparentPowerKVA", "CurrentA", "DeviceId", "FrequencyHz", "PowerFactor", "ReactiveEnergyKVArh", "ReactivePowerKVAr", "Timestamp", "VoltageV")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10)
+      RETURNING "Id";
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@p0='?' (DbType = Double), @p1='?' (DbType = Double), @p2='?' (DbType = Double), @p3='?' (DbType = Double), @p4='?' (Size = 11), @p5='?' (DbType = Double), @p6='?' (DbType = Double), @p7='?' (DbType = Double), @p8='?' (DbType = Double), @p9='?' (Size = 28), @p10='?' (DbType = Double)], CommandType='Text', CommandTimeout='30']
+      INSERT INTO "MeasurementRecords" ("ActiveEnergyKWh", "ActivePowerKW", "ApparentPowerKVA", "CurrentA", "DeviceId", "FrequencyHz", "PowerFactor", "ReactiveEnergyKVArh", "ReactivePowerKVAr", "Timestamp", "VoltageV")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10)
+      RETURNING "Id";
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@p0='?' (DbType = Double), @p1='?' (DbType = Double), @p2='?' (DbType = Double), @p3='?' (DbType = Double), @p4='?' (Size = 11), @p5='?' (DbType = Double), @p6='?' (DbType = Double), @p7='?' (DbType = Double), @p8='?' (DbType = Double), @p9='?' (Size = 28), @p10='?' (DbType = Double)], CommandType='Text', CommandTimeout='30']
+      INSERT INTO "MeasurementRecords" ("ActiveEnergyKWh", "ActivePowerKW", "ApparentPowerKVA", "CurrentA", "DeviceId", "FrequencyHz", "PowerFactor", "ReactiveEnergyKVArh", "ReactivePowerKVAr", "Timestamp", "VoltageV")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10)
+      RETURNING "Id";
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@p0='?' (DbType = Double), @p1='?' (DbType = Double), @p2='?' (DbType = Double), @p3='?' (DbType = Double), @p4='?' (Size = 11), @p5='?' (DbType = Double), @p6='?' (DbType = Double), @p7='?' (DbType = Double), @p8='?' (DbType = Double), @p9='?' (Size = 28), @p10='?' (DbType = Double)], CommandType='Text', CommandTimeout='30']
+      INSERT INTO "MeasurementRecords" ("ActiveEnergyKWh", "ActivePowerKW", "ApparentPowerKVA", "CurrentA", "DeviceId", "FrequencyHz", "PowerFactor", "ReactiveEnergyKVArh", "ReactivePowerKVAr", "Timestamp", "VoltageV")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10)
+      RETURNING "Id";
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@p0='?' (DbType = Double), @p1='?' (DbType = Double), @p2='?' (DbType = Double), @p3='?' (DbType = Double), @p4='?' (Size = 11), @p5='?' (DbType = Double), @p6='?' (DbType = Double), @p7='?' (DbType = Double), @p8='?' (DbType = Double), @p9='?' (Size = 28), @p10='?' (DbType = Double)], CommandType='Text', CommandTimeout='30']
+      INSERT INTO "MeasurementRecords" ("ActiveEnergyKWh", "ActivePowerKW", "ApparentPowerKVA", "CurrentA", "DeviceId", "FrequencyHz", "PowerFactor", "ReactiveEnergyKVArh", "ReactivePowerKVAr", "Timestamp", "VoltageV")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10)
+      RETURNING "Id";
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@p0='?' (DbType = Double), @p1='?' (DbType = Double), @p2='?' (DbType = Double), @p3='?' (DbType = Double), @p4='?' (Size = 11), @p5='?' (DbType = Double), @p6='?' (DbType = Double), @p7='?' (DbType = Double), @p8='?' (DbType = Double), @p9='?' (Size = 28), @p10='?' (DbType = Double)], CommandType='Text', CommandTimeout='30']
+      INSERT INTO "MeasurementRecords" ("ActiveEnergyKWh", "ActivePowerKW", "ApparentPowerKVA", "CurrentA", "DeviceId", "FrequencyHz", "PowerFactor", "ReactiveEnergyKVArh", "ReactivePowerKVAr", "Timestamp", "VoltageV")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10)
+      RETURNING "Id";
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@p0='?' (DbType = Double), @p1='?' (DbType = Double), @p2='?' (DbType = Double), @p3='?' (DbType = Double), @p4='?' (Size = 11), @p5='?' (DbType = Double), @p6='?' (DbType = Double), @p7='?' (DbType = Double), @p8='?' (DbType = Double), @p9='?' (Size = 28), @p10='?' (DbType = Double)], CommandType='Text', CommandTimeout='30']
+      INSERT INTO "MeasurementRecords" ("ActiveEnergyKWh", "ActivePowerKW", "ApparentPowerKVA", "CurrentA", "DeviceId", "FrequencyHz", "PowerFactor", "ReactiveEnergyKVArh", "ReactivePowerKVAr", "Timestamp", "VoltageV")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10)
+      RETURNING "Id";
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@p0='?' (DbType = Double), @p1='?' (DbType = Double), @p2='?' (DbType = Double), @p3='?' (DbType = Double), @p4='?' (Size = 11), @p5='?' (DbType = Double), @p6='?' (DbType = Double), @p7='?' (DbType = Double), @p8='?' (DbType = Double), @p9='?' (Size = 28), @p10='?' (DbType = Double)], CommandType='Text', CommandTimeout='30']
+      INSERT INTO "MeasurementRecords" ("ActiveEnergyKWh", "ActivePowerKW", "ApparentPowerKVA", "CurrentA", "DeviceId", "FrequencyHz", "PowerFactor", "ReactiveEnergyKVArh", "ReactivePowerKVAr", "Timestamp", "VoltageV")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10)
+      RETURNING "Id";
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@p0='?' (DbType = Double), @p1='?' (DbType = Double), @p2='?' (DbType = Double), @p3='?' (DbType = Double), @p4='?' (Size = 11), @p5='?' (DbType = Double), @p6='?' (DbType = Double), @p7='?' (DbType = Double), @p8='?' (DbType = Double), @p9='?' (Size = 28), @p10='?' (DbType = Double)], CommandType='Text', CommandTimeout='30']
+      INSERT INTO "MeasurementRecords" ("ActiveEnergyKWh", "ActivePowerKW", "ApparentPowerKVA", "CurrentA", "DeviceId", "FrequencyHz", "PowerFactor", "ReactiveEnergyKVArh", "ReactivePowerKVAr", "Timestamp", "VoltageV")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10)
+      RETURNING "Id";
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@p0='?' (DbType = Double), @p1='?' (DbType = Double), @p2='?' (DbType = Double), @p3='?' (DbType = Double), @p4='?' (Size = 11), @p5='?' (DbType = Double), @p6='?' (DbType = Double), @p7='?' (DbType = Double), @p8='?' (DbType = Double), @p9='?' (Size = 28), @p10='?' (DbType = Double)], CommandType='Text', CommandTimeout='30']
+      INSERT INTO "MeasurementRecords" ("ActiveEnergyKWh", "ActivePowerKW", "ApparentPowerKVA", "CurrentA", "DeviceId", "FrequencyHz", "PowerFactor", "ReactiveEnergyKVArh", "ReactivePowerKVAr", "Timestamp", "VoltageV")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10)
+      RETURNING "Id";
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@p0='?' (DbType = Double), @p1='?' (DbType = Double), @p2='?' (DbType = Double), @p3='?' (DbType = Double), @p4='?' (Size = 11), @p5='?' (DbType = Double), @p6='?' (DbType = Double), @p7='?' (DbType = Double), @p8='?' (DbType = Double), @p9='?' (Size = 28), @p10='?' (DbType = Double)], CommandType='Text', CommandTimeout='30']
+      INSERT INTO "MeasurementRecords" ("ActiveEnergyKWh", "ActivePowerKW", "ApparentPowerKVA", "CurrentA", "DeviceId", "FrequencyHz", "PowerFactor", "ReactiveEnergyKVArh", "ReactivePowerKVAr", "Timestamp", "VoltageV")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10)
+      RETURNING "Id";
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@p0='?' (DbType = Double), @p1='?' (DbType = Double), @p2='?' (DbType = Double), @p3='?' (DbType = Double), @p4='?' (Size = 11), @p5='?' (DbType = Double), @p6='?' (DbType = Double), @p7='?' (DbType = Double), @p8='?' (DbType = Double), @p9='?' (Size = 28), @p10='?' (DbType = Double)], CommandType='Text', CommandTimeout='30']
+      INSERT INTO "MeasurementRecords" ("ActiveEnergyKWh", "ActivePowerKW", "ApparentPowerKVA", "CurrentA", "DeviceId", "FrequencyHz", "PowerFactor", "ReactiveEnergyKVArh", "ReactivePowerKVAr", "Timestamp", "VoltageV")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10)
+      RETURNING "Id";
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@p0='?' (DbType = Double), @p1='?' (DbType = Double), @p2='?' (DbType = Double), @p3='?' (DbType = Double), @p4='?' (Size = 11), @p5='?' (DbType = Double), @p6='?' (DbType = Double), @p7='?' (DbType = Double), @p8='?' (DbType = Double), @p9='?' (Size = 28), @p10='?' (DbType = Double)], CommandType='Text', CommandTimeout='30']
+      INSERT INTO "MeasurementRecords" ("ActiveEnergyKWh", "ActivePowerKW", "ApparentPowerKVA", "CurrentA", "DeviceId", "FrequencyHz", "PowerFactor", "ReactiveEnergyKVArh", "ReactivePowerKVAr", "Timestamp", "VoltageV")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10)
+      RETURNING "Id";
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@p0='?' (DbType = Double), @p1='?' (DbType = Double), @p2='?' (DbType = Double), @p3='?' (DbType = Double), @p4='?' (Size = 11), @p5='?' (DbType = Double), @p6='?' (DbType = Double), @p7='?' (DbType = Double), @p8='?' (DbType = Double), @p9='?' (Size = 28), @p10='?' (DbType = Double)], CommandType='Text', CommandTimeout='30']
+      INSERT INTO "MeasurementRecords" ("ActiveEnergyKWh", "ActivePowerKW", "ApparentPowerKVA", "CurrentA", "DeviceId", "FrequencyHz", "PowerFactor", "ReactiveEnergyKVArh", "ReactivePowerKVAr", "Timestamp", "VoltageV")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10)
+      RETURNING "Id";
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@p0='?' (DbType = Double), @p1='?' (DbType = Double), @p2='?' (DbType = Double), @p3='?' (DbType = Double), @p4='?' (Size = 11), @p5='?' (DbType = Double), @p6='?' (DbType = Double), @p7='?' (DbType = Double), @p8='?' (DbType = Double), @p9='?' (Size = 28), @p10='?' (DbType = Double)], CommandType='Text', CommandTimeout='30']
+      INSERT INTO "MeasurementRecords" ("ActiveEnergyKWh", "ActivePowerKW", "ApparentPowerKVA", "CurrentA", "DeviceId", "FrequencyHz", "PowerFactor", "ReactiveEnergyKVArh", "ReactivePowerKVAr", "Timestamp", "VoltageV")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10)
+      RETURNING "Id";
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@p0='?' (DbType = Double), @p1='?' (DbType = Double), @p2='?' (DbType = Double), @p3='?' (DbType = Double), @p4='?' (Size = 11), @p5='?' (DbType = Double), @p6='?' (DbType = Double), @p7='?' (DbType = Double), @p8='?' (DbType = Double), @p9='?' (Size = 28), @p10='?' (DbType = Double)], CommandType='Text', CommandTimeout='30']
+      INSERT INTO "MeasurementRecords" ("ActiveEnergyKWh", "ActivePowerKW", "ApparentPowerKVA", "CurrentA", "DeviceId", "FrequencyHz", "PowerFactor", "ReactiveEnergyKVArh", "ReactivePowerKVAr", "Timestamp", "VoltageV")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10)
+      RETURNING "Id";
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@p0='?' (DbType = Double), @p1='?' (DbType = Double), @p2='?' (DbType = Double), @p3='?' (DbType = Double), @p4='?' (Size = 11), @p5='?' (DbType = Double), @p6='?' (DbType = Double), @p7='?' (DbType = Double), @p8='?' (DbType = Double), @p9='?' (Size = 28), @p10='?' (DbType = Double)], CommandType='Text', CommandTimeout='30']
+      INSERT INTO "MeasurementRecords" ("ActiveEnergyKWh", "ActivePowerKW", "ApparentPowerKVA", "CurrentA", "DeviceId", "FrequencyHz", "PowerFactor", "ReactiveEnergyKVArh", "ReactivePowerKVAr", "Timestamp", "VoltageV")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10)
+      RETURNING "Id";

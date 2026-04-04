@@ -218,10 +218,13 @@ window.editorCanvas = (function () {
         if (_tool === 'Select') {
             var deviceEl = findWithData(e.target, 'deviceId');
             var roomEl = findWithData(e.target, 'roomId');
+            var nodeEl = findWithData(e.target, 'nodeKey');
             if (deviceEl) {
                 if (_dotNet) _dotNet.invokeMethodAsync('JsOnElementClicked', deviceEl.dataset.deviceId, 'Device');
             } else if (roomEl) {
                 if (_dotNet) _dotNet.invokeMethodAsync('JsOnElementClicked', roomEl.dataset.roomId, 'Room');
+            } else if (nodeEl) {
+                if (_dotNet) _dotNet.invokeMethodAsync('JsOnElementClicked', nodeEl.dataset.nodeKey, 'FacilityNode');
             } else {
                 if (_dotNet) _dotNet.invokeMethodAsync('JsOnElementClicked', '', 'None');
             }

@@ -5,6 +5,8 @@
 @inject IBuildingStateService StateService
 @inject IActiveBuildingService ActiveBuildingService
 @inject NavigationManager Nav
+@inject FacilityQueryService FacilityQueryService
+@inject NodeAnalyticsPreviewService AnalyticsPreview
 @inject IJSRuntime JSRuntime
 @implements IDisposable
 
@@ -55,19 +57,17 @@
 
         @* ── Canvas ───────────────────────────────────────────────────── *@
         <div class="editor-canvas-wrapper">
-            @if (SessionService.CurrentConfig is null)
+            @if (SessionService.CurrentConfig is null && _facility is null)
             {
                 <div class="editor-empty-state">
                     <div style="font-size:3rem; opacity:0.25;">&#9633;</div>
-                    <p class="mb-0">Žádná konfigurace budovy není načtena.</p>
-                    <button class="btn btn-primary" @onclick="HandleNewBuilding">
-                        Vytvořit novou budovu
-                    </button>
+                    <p class="mb-0">Žádná data nejsou načtena.</p>
                 </div>
             }
             else
             {
                 <EditorCanvas @ref="_canvas"
+                              Facility="_facility"
                               Floor="@SessionService.GetActiveFloor()"
                               ActiveTool="@SessionService.ActiveTool"
                               SelectedElementId="@SessionService.SelectedElementId"
@@ -83,17 +83,119 @@
         </div>
 
         @* ── Properties panel ───────────────────────────────────────── *@
-        <EditorPropertiesPanel Config="@SessionService.CurrentConfig"
-                               SelectedElementId="@SessionService.SelectedElementId"
-                               SelectedElementType="@SessionService.SelectedElementType"
-                               ActiveFloor="@SessionService.GetActiveFloor()"
-                               ValidationIssues="@_validationIssues"
-                               OnUpdateBuilding="HandleUpdateBuilding"
-                               OnUpdateFloor="HandleUpdateFloor"
-                               OnUpdateRoomName="HandleUpdateRoomName"
-                               OnUpdateDevice="HandleUpdateDevice"
-                               OnDeleteRoom="HandleDeleteRoom"
-                               OnDeleteDevice="HandleDeleteDevice" />
+        @if (SessionService.SelectedElementType == EditorSelectionType.FacilityNode && _selectedFacilityNode is not null)
+        {
+            <div class="editor-properties" style="padding: 1rem; overflow-y: auto; background-color: white; border-left: 1px solid #e2e8f0; width: 320px;">
+                <h5 class="mb-3">Detail uzlu</h5>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted mb-0" style="font-size: 0.8rem;">Název</label>
+                    <div class="fw-bold">@_selectedFacilityNode.Label</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-muted mb-0" style="font-size: 0.8rem;">NodeKey</label>
+                    <div><code style="color: #64748b;">@_selectedFacilityNode.NodeKey</code></div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-muted mb-0" style="font-size: 0.8rem;">TypUzlu & Zóna</label>
+                    <div>@(_selectedFacilityNode.NodeType ?? "Neznámý") @(string.IsNullOrEmpty(_selectedFacilityNode.Zone) ? "" : $" ({_selectedFacilityNode.Zone})")</div>
+                </div>
+
+                <hr />
+
+                <h6 class="mb-2">Analytický stav</h6>
+                @if (_isCuratedNode)
+                {
+                    <div class="mb-2"><span class="badge bg-info">Facility-level / Curated Node</span></div>
+                    
+                    @if (_isPreviewLoading)
+                    {
+                        <div class="text-muted"><span class="spinner-border spinner-border-sm me-2" role="status"></span> Načítám curated data...</div>
+                    }
+                    else if (_curatedPreviewData != null)
+                    {
+                        <div class="card bg-light border-0 shadow-sm mb-3">
+                            <div class="card-body py-2 px-3">
+                                <div style="font-size: 0.85rem;" class="text-muted text-uppercase mb-1">@_curatedPreviewData.Title</div>
+                                <div class="fs-5 fw-bold text-dark">
+                                    @if (_selectedFacilityNode?.NodeKey == "weather_main")
+                                    {
+                                        @(_curatedPreviewData.Average.ToString("N1")) <span style="font-size: 0.9rem; font-weight: normal; color: #64748b;">°C (průměr)</span>
+                                    }
+                                    else
+                                    {
+                                        @(_curatedPreviewData.TotalSum.ToString("N0")) <span style="font-size: 0.9rem; font-weight: normal; color: #64748b;">@_curatedPreviewData.Unit</span>
+                                    }
+                                </div>
+                                <div style="font-size: 0.85rem;" class="mt-1 text-muted">
+                                    Zpracováno @_curatedPreviewData.DataPoints.ToString("N0") záznamů
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning py-2" style="font-size: 0.9rem;">
+                            Pro tento high-level systém (<strong>@_selectedFacilityNode?.NodeKey</strong>) aktuálně není k dispozici reálný curated CSV dataset, takže data nebylo možné načíst.
+                        </div>
+                    }
+                }
+                else if (string.IsNullOrEmpty(_selectedFacilityNode.MeterUrn))
+                {
+                    <div class="alert alert-secondary py-2" style="font-size: 0.9rem;">
+                        Tento uzel je čistě strukturální (nemá přiřazený Meter URN). Analytická data zde nejsou očekávána.
+                    </div>
+                }
+                else
+                {
+                    <div class="mb-3">
+                        <label class="form-label text-muted mb-0" style="font-size: 0.8rem;">Meter URN</label>
+                        <div style="word-break: break-all; font-size: 0.85rem;"><code style="color: #0369a1;">@_selectedFacilityNode.MeterUrn</code></div>
+                    </div>
+
+                    @if (_isPreviewLoading)
+                    {
+                        <div class="text-muted"><span class="spinner-border spinner-border-sm me-2" role="status"></span> Načítám analytiku...</div>
+                    }
+                    else if (_nodePreviewData is not null)
+                    {
+                        <div class="card bg-light border-0 shadow-sm mb-3">
+                            <div class="card-body py-2 px-3">
+                                <div style="font-size: 0.85rem;" class="text-muted text-uppercase mb-1">Spotřeba (2020)</div>
+                                <div class="fs-5 fw-bold text-dark">
+                                    @(_nodePreviewData.TotalConsumptionKWh?.ToString("N0") ?? "0") <span style="font-size: 0.9rem; font-weight: normal; color: #64748b;">kWh</span>
+                                </div>
+                                <div style="font-size: 0.85rem;" class="mt-1 text-muted">
+                                    Průměrný výkon: @(_nodePreviewData.AveragePowerKW?.ToString("N2") ?? "0") kW
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning py-2" style="font-size: 0.9rem;">
+                            Pro tento uzel (<strong style="word-break: break-all;">@_selectedFacilityNode.MeterUrn</strong>) zatím nejsou v aplikaci napojená historická data pro rok 2020.
+                        </div>
+                    }
+                }
+            </div>
+        }
+        else
+        {
+            <EditorPropertiesPanel Config="@SessionService.CurrentConfig"
+                                   SelectedElementId="@SessionService.SelectedElementId"
+                                   SelectedElementType="@SessionService.SelectedElementType"
+                                   ActiveFloor="@SessionService.GetActiveFloor()"
+                                   ValidationIssues="@_validationIssues"
+                                   OnUpdateBuilding="HandleUpdateBuilding"
+                                   OnUpdateFloor="HandleUpdateFloor"
+                                   OnUpdateRoomName="HandleUpdateRoomName"
+                                   OnUpdateDevice="HandleUpdateDevice"
+                                   OnDeleteRoom="HandleDeleteRoom"
+                                   OnDeleteDevice="HandleDeleteDevice" />
+        }
 
     </div>
 </div>
@@ -165,6 +267,14 @@
 @code {
     private EditorCanvas? _canvas;
     private bool _showGrid = true;
+    private DiplomovaPrace.Persistence.Schematic.FacilityEntity? _facility;
+    
+    // Facility Node State
+    private DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity? _selectedFacilityNode;
+    private DiplomovaPrace.Models.Kpi.MeterKpiResult? _nodePreviewData;
+    private CuratedNodeSummary? _curatedPreviewData;
+    private bool _isPreviewLoading;
+    private bool _isCuratedNode;
 
     // Validace
     private IReadOnlyList<ValidationIssue> _validationIssues = [];
@@ -189,6 +299,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _facility = await FacilityQueryService.GetMainFacilityAsync();
+
         SessionService.OnSessionChanged += HandleSessionChanged;
         ActiveBuildingService.OnActiveBuildingChanged += HandleActiveBuildingChanged;
 
@@ -229,6 +341,53 @@
     private async void HandleSessionChanged()
     {
         RevalidateCurrentFloor();
+        
+        // Handling FacilityNode selection
+        if (SessionService.SelectedElementType == EditorSelectionType.FacilityNode && _facility != null)
+        {
+            var selectedNodeId = SessionService.SelectedElementId;
+            if (_selectedFacilityNode?.NodeKey != selectedNodeId)
+            {
+                _selectedFacilityNode = _facility.Nodes.FirstOrDefault(n => n.NodeKey == selectedNodeId);
+                _nodePreviewData = null;
+                _curatedPreviewData = null;
+                _isCuratedNode = false;
+                
+                if (_selectedFacilityNode != null)
+                {
+                    _isCuratedNode = _selectedFacilityNode.NodeKey is "pv_main" or "chp_main" or "cooling_main" or "heating_main" or "weather_main";
+
+                    if (_isCuratedNode || !string.IsNullOrEmpty(_selectedFacilityNode.MeterUrn))
+                    {
+                        _isPreviewLoading = true;
+                        await InvokeAsync(StateHasChanged);
+                        
+                        try
+                        {
+                            var from = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                            var to = new DateTime(2021, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                            if (_isCuratedNode)
+                            {
+                                _curatedPreviewData = await AnalyticsPreview.GetCuratedSummaryAsync(_selectedFacilityNode.NodeKey, from, to);
+                            }
+                            else
+                            {
+                                _nodePreviewData = await AnalyticsPreview.GetPreviewDataAsync(_selectedFacilityNode.MeterUrn, from, to);
+                            }
+                        }
+                        finally
+                        {
+                            _isPreviewLoading = false;
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+            _selectedFacilityNode = null;
+        }
+
         await InvokeAsync(StateHasChanged);
     }
 

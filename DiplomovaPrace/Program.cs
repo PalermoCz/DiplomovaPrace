@@ -34,6 +34,9 @@ builder.Services.AddScoped<IKpiService, KpiService>();
 builder.Services.AddScoped<IBaselineService, BaselineService>();
 builder.Services.AddScoped<IPortfolioAnalyticsService, PortfolioAnalyticsService>();
 builder.Services.AddScoped<Bdg2ImportService>();
+builder.Services.AddScoped<FacilityImportService>();
+builder.Services.AddScoped<FacilityQueryService>();
+builder.Services.AddScoped<NodeAnalyticsPreviewService>();
 
 // ── Aplikační služby ───────────────────────────────────────────────────────
 builder.Services.AddSingleton<IBuildingStateService, BuildingStateService>();
@@ -61,8 +64,14 @@ var app = builder.Build();
     await using var db = await factory.CreateDbContextAsync();
     await db.Database.EnsureCreatedAsync();
     app.Logger.LogInformation("Databáze inicializována: {Path}", dbPath);
-    
-    // Automatické natažení in-memory konfigurace BDG2 z lokálního metadatového souboru pro persistenci nad restarty
+
+    // ── Seed: facility-centric schematic model (Sprint 2) ──────────────────
+    var facilityImporter = scope.ServiceProvider.GetRequiredService<FacilityImportService>();
+    var envForFacility = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
+    await facilityImporter.SeedAsync(envForFacility.ContentRootPath);
+
+    // ── Automatické natažení in-memory konfigurace BDG2 ────────────────────
+    // (zachováno pro kompatibilitu — načítá pouze metadata, ne měření)
     var bdgService = scope.ServiceProvider.GetRequiredService<Bdg2ImportService>();
     var env = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
     var metaPath = Path.Combine(env.ContentRootPath, "..", "DataSet", "subset", "metadata_subset.csv");

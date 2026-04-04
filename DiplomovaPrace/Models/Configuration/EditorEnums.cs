@@ -14,7 +14,8 @@ public enum EditorSelectionType
     Building,
     Floor,
     Room,
-    Device
+    Device,
+    FacilityNode
 }
 
 /// <summary>Stav publikace konfigurace do runtime vizualizace.</summary>
