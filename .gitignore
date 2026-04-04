@@ -6,6 +6,14 @@
 # dotenv files
 .env
 
+# Targeted runtime/build artifacts for this repository
+publish/
+DiplomovaPrace/bin/
+DiplomovaPrace/obj/
+DiplomovaPrace/debug_*.txt
+*.db-shm
+*.db-wal
+
 # Ignore Dataset
 DataSet/
 

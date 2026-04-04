@@ -400,21 +400,8 @@
     private async Task HandleDeviceSelectionAsync()
     {
         if (string.IsNullOrEmpty(_selectedDeviceId)) return;
-        
-        if (_selectedDeviceId.StartsWith("bdg2:", StringComparison.OrdinalIgnoreCase))
-        {
-            _preset = "custom";
-            var lastRecord = await MeasurementRepository.GetLatestOneAsync(_selectedDeviceId);
-            if (lastRecord != null)
-            {
-                _to = lastRecord.Timestamp;
-                _from = _to.AddDays(-30);
-            }
-        }
-        else
-        {
-            PresetSelection = "24h";
-        }
+
+        PresetSelection = "24h";
         
         await LoadDataAsync();
     }
