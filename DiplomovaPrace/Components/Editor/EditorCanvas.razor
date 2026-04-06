@@ -1,4 +1,5 @@
 @using DiplomovaPrace.Persistence.Schematic
+@using DiplomovaPrace.Services
 @inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
 
@@ -51,10 +52,35 @@
                 var cx = node.XHint.Value * ViewBoxWidth;
                 var cy = node.YHint.Value * ViewBoxHeight;
 
-                var fillColor = isSelected ? "#3b82f6" : "#f1f5f9";
-                var strokeColor = isSelected ? "#2563eb" : "#475569";
-                var textColor = isSelected ? "white" : "#334155";
-                var strokeW = isSelected ? "3" : "2";
+                NodeDeviationSeverity? alertSeverity = null;
+                if (TryGetEnergyAlertSeverity(node.NodeKey, out var severity))
+                {
+                    alertSeverity = severity;
+                }
+
+                var (fillColor, strokeColor, textColor) = GetFacilityNodePalette(alertSeverity);
+                var strokeW = "2";
+
+                if (isSelected)
+                {
+                    // Selected uzel musí zůstat čitelný i při aktivním alert zabarvení.
+                    strokeColor = "#1d4ed8";
+                    strokeW = "4";
+
+                    if (alertSeverity is null)
+                    {
+                        fillColor = "#3b82f6";
+                        textColor = "white";
+                    }
+                    else if (alertSeverity == NodeDeviationSeverity.Elevated)
+                    {
+                        textColor = "#1f2937";
+                    }
+                    else
+                    {
+                        textColor = "white";
+                    }
+                }
 
                 <g data-node-key="@node.NodeKey">
                     @if (node.NodeType == "Site" || node.NodeType == "Building")
@@ -199,6 +225,7 @@
     [Parameter] public string? SelectedElementId { get; set; }
     [Parameter] public bool ShowGrid { get; set; }
     [Parameter] public IReadOnlyList<ValidationIssue> ValidationIssues { get; set; } = [];
+    [Parameter] public IReadOnlyDictionary<string, NodeDeviationSeverity> FacilityNodeAlertSeverities { get; set; } = new Dictionary<string, NodeDeviationSeverity>();
 
     [Parameter] public EventCallback<RoomGeometry> OnRoomCreated { get; set; }
     [Parameter] public EventCallback<(string DeviceId, DevicePosition Pos)> OnDeviceMoved { get; set; }
@@ -340,6 +367,39 @@
     private static string EscapeXml(string? s) =>
         string.IsNullOrEmpty(s) ? "" :
         s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;");
+
+    private bool TryGetEnergyAlertSeverity(string nodeKey, out NodeDeviationSeverity severity)
+    {
+        severity = default;
+
+        // weather_main je explanatory uzel, ne energetický alert node.
+        if (string.Equals(nodeKey, "weather_main", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!IsEnergyAlertNode(nodeKey))
+        {
+            return false;
+        }
+
+        return FacilityNodeAlertSeverities.TryGetValue(nodeKey, out severity);
+    }
+
+    private static bool IsEnergyAlertNode(string nodeKey)
+    {
+        return nodeKey is "pv_main" or "chp_main" or "cooling_main" or "heating_main";
+    }
+
+    private static (string Fill, string Stroke, string Text) GetFacilityNodePalette(NodeDeviationSeverity? severity)
+    {
+        return severity switch
+        {
+            NodeDeviationSeverity.High => ("#f87171", "#b91c1c", "white"),
+            NodeDeviationSeverity.Elevated => ("#fcd34d", "#b45309", "#1f2937"),
+            _ => ("#f1f5f9", "#475569", "#334155")
+        };
+    }
 
     private static string GetDeviceSymbol(DeviceType type) => type switch
     {

@@ -1,0 +1,367 @@
+@using DiplomovaPrace.Components.Editor
+@using DiplomovaPrace.Services
+@inject FacilityAlertSummaryService AlertSummaryService
+@inject IEditorSessionService SessionService
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<header class="facility-topbar text-white d-flex align-items-center px-3 px-lg-4" style="height: 72px; box-shadow: 0 2px 8px rgba(2, 6, 23, 0.35); flex-shrink: 0; z-index: 1000;">
+    @* Leva cast: Branding & Navigace *@
+    <div class="d-flex align-items-center" style="flex: 1;">
+        <a class="facility-brand text-white text-decoration-none d-inline-flex align-items-center" href="/facility" title="Přejít na Facility Workbench">
+            <span class="facility-brand-mark me-2">FW</span>
+            <span class="d-flex flex-column">
+                <span class="facility-brand-title">Facility Workbench</span>
+                <span class="facility-brand-subtitle">Smart systems monitoring</span>
+            </span>
+        </a>
+    </div>
+
+    @* Stredni cast: Centralni facility selector *@
+    <div class="d-flex justify-content-center align-items-center" style="flex: 1;">
+        <div class="position-relative">
+            <button type="button"
+                    class="facility-selector-trigger"
+                    @onclick="ToggleFacilitySelector"
+                    aria-expanded="@_isFacilitySelectorOpen"
+                    title="Výběr aktivní budovy">
+                <i class="bi bi-buildings facility-selector-icon"></i>
+                <span class="d-flex flex-column text-center align-items-center flex-grow-1">
+                    <span class="facility-selector-label">Aktivní budova</span>
+                    <span class="facility-selector-value">@CurrentFacilityName</span>
+                </span>
+                <i class="bi @( _isFacilitySelectorOpen ? "bi-chevron-up" : "bi-chevron-down") ms-2"></i>
+            </button>
+
+            @if (_isFacilitySelectorOpen)
+            {
+                <div class="card shadow border-0 position-absolute start-50 translate-middle-x mt-2" style="width: 320px; z-index: 1200;">
+                    <div class="card-header bg-light py-2 d-flex align-items-center justify-content-between">
+                        <span class="fw-semibold">Výběr budovy</span>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="CloseFacilitySelector">Zavřít</button>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        <button type="button" class="list-group-item list-group-item-action active d-flex align-items-center justify-content-between" @onclick="OpenFacilityWorkspace">
+                            <span>@CurrentFacilityName</span>
+                            <i class="bi bi-check2-circle"></i>
+                        </button>
+                        <div class="list-group-item text-muted small d-flex align-items-center">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Další budovy budou dostupné v navazujícím kroku.
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    @* Prava cast: Utility *@
+    <div class="d-flex justify-content-end align-items-center gap-2" style="flex: 1;">
+        <div class="position-relative">
+            <button type="button"
+                    class="facility-alert-trigger d-flex align-items-center"
+                    @onclick="ToggleAlertPanel"
+                    aria-expanded="@_isAlertPanelOpen"
+                    title="Globální alert souhrn">
+                <i class="bi bi-bell-fill me-2"></i>
+                <span class="small fw-semibold">Alerty</span>
+                <span @key="_criticalPulseVersion"
+                      class="badge ms-2 facility-badge-critical @(AlertSummaryService.Current.HighCount > 0 ? "facility-badge-critical-pulse" : string.Empty)">
+                    Kritická @AlertSummaryService.Current.HighCount
+                </span>
+                <span class="badge ms-1 facility-badge-elevated">Pozornost @AlertSummaryService.Current.ElevatedCount</span>
+            </button>
+
+            @if (_isAlertPanelOpen)
+            {
+                <div class="card shadow border-0 position-absolute end-0 mt-2" style="width: 420px; z-index: 1200;">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+                        <div class="fw-semibold">Global alert summary</div>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="CloseAlertPanel">Zavřít</button>
+                    </div>
+                    <div class="card-body p-0">
+                        @if (AlertSummaryService.Current.AlertedNodes.Count == 0)
+                        {
+                            <div class="p-3 text-muted small">
+                                Aktuálně nejsou evidované energetické alerty pro high-level uzly.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="list-group list-group-flush">
+                                @foreach (var alertNode in AlertSummaryService.Current.AlertedNodes)
+                                {
+                                    <button type="button"
+                                            class="list-group-item list-group-item-action d-flex align-items-center justify-content-between"
+                                            @onclick="() => OpenNodeFromAlertList(alertNode.NodeKey)">
+                                        <div class="d-flex flex-column align-items-start">
+                                            <span class="small text-muted">@alertNode.FacilityName</span>
+                                            <span class="fw-semibold">@alertNode.Label</span>
+                                            <span class="small text-muted">@alertNode.NodeKey</span>
+                                        </div>
+                                        <span class="badge @GetAlertSeverityBadgeClass(alertNode.Severity)">@GetAlertSeverityText(alertNode.Severity)</span>
+                                    </button>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        @* Vyhrazeno pro pripadne utility buttony - Refresh se presune primo sem z FacilityWorkbench *@
+        <div id="facility-toolbar-portal-right"></div>
+    </div>
+</header>
+
+@code {
+    private bool _isAlertPanelOpen;
+    private bool _isFacilitySelectorOpen;
+    private int _criticalPulseVersion = 1;
+    private int _lastHighCount;
+
+    private string CurrentFacilityName =>
+        !string.IsNullOrWhiteSpace(AlertSummaryService.Current.ActiveFacilityName)
+            ? AlertSummaryService.Current.ActiveFacilityName
+            : "Smart Company Facility";
+
+    protected override void OnInitialized()
+    {
+        AlertSummaryService.OnChanged += HandleAlertSummaryChanged;
+        _lastHighCount = AlertSummaryService.Current.HighCount;
+        TriggerCriticalPulse();
+    }
+
+    private void ToggleAlertPanel()
+    {
+        _isAlertPanelOpen = !_isAlertPanelOpen;
+        if (_isAlertPanelOpen)
+        {
+            _isFacilitySelectorOpen = false;
+        }
+
+        if (_isAlertPanelOpen)
+        {
+            TriggerCriticalPulse();
+        }
+    }
+
+    private void CloseAlertPanel()
+    {
+        _isAlertPanelOpen = false;
+    }
+
+    private void ToggleFacilitySelector()
+    {
+        _isFacilitySelectorOpen = !_isFacilitySelectorOpen;
+        if (_isFacilitySelectorOpen)
+        {
+            _isAlertPanelOpen = false;
+        }
+    }
+
+    private void CloseFacilitySelector()
+    {
+        _isFacilitySelectorOpen = false;
+    }
+
+    private void OpenFacilityWorkspace()
+    {
+        _isFacilitySelectorOpen = false;
+
+        if (!Navigation.Uri.Contains("/facility", StringComparison.OrdinalIgnoreCase))
+        {
+            Navigation.NavigateTo("/facility");
+        }
+    }
+
+    private void OpenNodeFromAlertList(string nodeKey)
+    {
+        _isAlertPanelOpen = false;
+
+        if (!Navigation.Uri.Contains("/facility", StringComparison.OrdinalIgnoreCase))
+        {
+            Navigation.NavigateTo("/facility");
+        }
+
+        SessionService.SetActiveTool(EditorTool.Select);
+        SessionService.SelectElement(nodeKey, EditorSelectionType.FacilityNode);
+    }
+
+    private void HandleAlertSummaryChanged()
+    {
+        if (AlertSummaryService.Current.HighCount != _lastHighCount)
+        {
+            _lastHighCount = AlertSummaryService.Current.HighCount;
+            TriggerCriticalPulse();
+        }
+
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void TriggerCriticalPulse()
+    {
+        if (AlertSummaryService.Current.HighCount > 0)
+        {
+            _criticalPulseVersion++;
+        }
+    }
+
+    private static string GetAlertSeverityText(NodeDeviationSeverity severity)
+    {
+        return severity switch
+        {
+            NodeDeviationSeverity.High => "kritická odchylka",
+            NodeDeviationSeverity.Elevated => "pozornost",
+            _ => "v normě"
+        };
+    }
+
+    private static string GetAlertSeverityBadgeClass(NodeDeviationSeverity severity)
+    {
+        return severity switch
+        {
+            NodeDeviationSeverity.High => "bg-danger",
+            NodeDeviationSeverity.Elevated => "bg-warning text-dark",
+            _ => "bg-success"
+        };
+    }
+
+    public void Dispose()
+    {
+        AlertSummaryService.OnChanged -= HandleAlertSummaryChanged;
+    }
+}
+
+<style>
+    .facility-topbar {
+        background: linear-gradient(92deg, #0f172a 0%, #111827 48%, #1f2937 100%);
+    }
+
+    .facility-brand-mark {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #22d3ee, #3b82f6);
+        color: #ecfeff;
+        font-weight: 800;
+        font-size: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        letter-spacing: 0.02em;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    }
+
+    .facility-brand-title {
+        font-size: 1.02rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+    }
+
+    .facility-brand-subtitle {
+        font-size: 0.74rem;
+        opacity: 0.75;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+    }
+
+    .facility-selector-trigger {
+        position: relative;
+        z-index: 2;
+        pointer-events: auto;
+        min-width: 285px;
+        border: 1px solid rgba(56, 189, 248, 0.45);
+        background: rgba(15, 23, 42, 0.5);
+        color: #e0f2fe;
+        border-radius: 12px;
+        padding: 0.45rem 0.8rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        transition: all 0.16s ease;
+        box-shadow: 0 4px 12px rgba(2, 6, 23, 0.25);
+    }
+
+    .facility-selector-trigger:hover {
+        background: rgba(8, 47, 73, 0.75);
+        border-color: rgba(34, 211, 238, 0.85);
+        color: #f0f9ff;
+        transform: translateY(-1px);
+    }
+
+    .facility-selector-trigger:focus-visible {
+        outline: 2px solid #38bdf8;
+        outline-offset: 2px;
+    }
+
+    .facility-selector-icon {
+        color: #22d3ee;
+        font-size: 1.05rem;
+    }
+
+    .facility-selector-label {
+        font-size: 0.73rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        opacity: 0.75;
+        line-height: 1;
+    }
+
+    .facility-selector-value {
+        font-size: 0.95rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+
+    .facility-alert-trigger {
+        position: relative;
+        z-index: 2;
+        pointer-events: auto;
+        border: 1px solid rgba(251, 191, 36, 0.5);
+        background: rgba(17, 24, 39, 0.75);
+        color: #f8fafc;
+        border-radius: 12px;
+        padding: 0.45rem 0.75rem;
+        min-height: 42px;
+        cursor: pointer;
+        transition: all 0.16s ease;
+        box-shadow: 0 6px 16px rgba(2, 6, 23, 0.28);
+    }
+
+    .facility-alert-trigger:hover {
+        transform: translateY(-1px);
+        border-color: rgba(245, 158, 11, 0.8);
+        background: rgba(30, 41, 59, 0.92);
+    }
+
+    .facility-alert-trigger:focus-visible {
+        outline: 2px solid #f59e0b;
+        outline-offset: 2px;
+    }
+
+    .facility-badge-critical {
+        background: #dc2626;
+        color: white;
+        font-size: 0.78rem;
+        padding: 0.38rem 0.55rem;
+    }
+
+    .facility-badge-elevated {
+        background: #facc15;
+        color: #1f2937;
+        font-size: 0.78rem;
+        padding: 0.38rem 0.55rem;
+    }
+
+    .facility-badge-critical-pulse {
+        animation: facilityCriticalPulse 1.1s ease-in-out 2;
+    }
+
+    @@keyframes facilityCriticalPulse {
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55); }
+        40% { transform: scale(1.07); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+</style>

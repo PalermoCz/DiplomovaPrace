@@ -35,6 +35,7 @@ builder.Services.AddScoped<IBaselineService, BaselineService>();
 builder.Services.AddScoped<FacilityImportService>();
 builder.Services.AddScoped<FacilityQueryService>();
 builder.Services.AddScoped<NodeAnalyticsPreviewService>();
+builder.Services.AddScoped<FacilityAlertSummaryService>();
 
 // ── Aplikační služby ───────────────────────────────────────────────────────
 builder.Services.AddSingleton<IBuildingStateService, BuildingStateService>();

@@ -1,0 +1,11 @@
+source_node_id,target_node_id
+ext_grid,trafo_vz81
+ext_grid,trafo_vz82
+ext_grid,trafo_h2z35
+ext_grid,trafo_h2z36
+ext_grid,pv_main
+ext_grid,chp_main
+trafo_vz81,emission_lab
+ext_grid,design_studio
+trafo_h2z36,office_building
+trafo_h2z35,workshop

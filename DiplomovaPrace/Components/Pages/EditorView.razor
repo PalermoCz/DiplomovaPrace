@@ -372,7 +372,11 @@
                             }
                             else
                             {
-                                _nodePreviewData = await AnalyticsPreview.GetPreviewDataAsync(_selectedFacilityNode.MeterUrn, from, to);
+                                var meterUrn = _selectedFacilityNode.MeterUrn;
+                                if (!string.IsNullOrEmpty(meterUrn))
+                                {
+                                    _nodePreviewData = await AnalyticsPreview.GetPreviewDataAsync(meterUrn, from, to);
+                                }
                             }
                         }
                         finally

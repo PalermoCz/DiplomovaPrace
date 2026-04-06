@@ -199,6 +199,7 @@
     private async Task Calculate()
     {
         _isCalculating = true;
+        _isComparing = false;
         _result = null;
         _compResult = null;
         StateHasChanged();
@@ -210,6 +211,9 @@
             // Auto-calculate comparison
             if (_result != null && _result.Duration != null && _result.RecordCount > 0)
             {
+                _isComparing = true;
+                StateHasChanged();
+
                 var span = _result.Duration.Value;
                 if (span.TotalSeconds < 1) span = TimeSpan.FromDays(1);
 
@@ -221,6 +225,7 @@
         }
         finally
         {
+            _isComparing = false;
             _isCalculating = false;
         }
     }

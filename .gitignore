@@ -15,7 +15,7 @@ DiplomovaPrace/debug_*.txt
 *.db-wal
 
 # Ignore Dataset
-DataSet/
+DataSet/archive_bdg2
 
 # User-specific files
 *.rsuser
