@@ -223,6 +223,20 @@
                         </div>
                     }
 
+                    <h6 class="mb-3 mt-4 fw-bold border-bottom pb-2">Časová řada (v1)</h6>
+                    @if (_isPreviewLoading)
+                    {
+                        <div class="text-muted small mb-3 d-flex align-items-center">
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span> Připravuji časovou řadu pro vybraný interval...
+                        </div>
+                    }
+                    else
+                    {
+                        <FacilityTimeSeriesPanel Data="@_curatedTimeSeriesData"
+                                                SelectedMode="@_timeSeriesMode"
+                                                SelectedModeChanged="OnTimeSeriesModeChanged" />
+                    }
+
                     <h6 class="mb-3 mt-4 fw-bold border-bottom pb-2">Deviation / Baseline</h6>
 
                     @if (_isPreviewLoading)
@@ -281,6 +295,60 @@
                                 }
                             </div>
                         </div>
+                    }
+
+                    @if (SupportsWeatherExplanation(_selectedFacilityNode?.NodeKey))
+                    {
+                        <h6 class="mb-3 mt-4 fw-bold border-bottom pb-2">Weather explanatory (v1)</h6>
+
+                        var weatherExplanation = _curatedDeviationData?.WeatherExplanation;
+                        if (weatherExplanation?.IsAvailable == true)
+                        {
+                            <div class="card border-0 shadow-sm mb-3">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <div class="text-muted text-uppercase fw-bold" style="font-size: 0.8rem;">Počasí vs odchylka</div>
+                                        <span class="badge @GetWeatherExplanationBadgeClass(weatherExplanation.Status)">@GetWeatherExplanationStatusText(weatherExplanation.Status)</span>
+                                    </div>
+
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <div class="small text-muted text-uppercase">Aktuální venkovní teplota</div>
+                                            <div class="fw-bold">@weatherExplanation.CurrentAverageOutdoorTempC?.ToString("N1") °C</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="small text-muted text-uppercase">Referenční venkovní teplota</div>
+                                            <div class="fw-bold">@weatherExplanation.ReferenceAverageOutdoorTempC?.ToString("N1") °C</div>
+                                        </div>
+                                        <div class="col-6 mt-2">
+                                            <div class="small text-muted text-uppercase">Rozdíl teplot</div>
+                                            <div class="fw-bold">@FormatSigned(weatherExplanation.DeltaOutdoorTempC, "N1") °C</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="small text-muted text-uppercase mt-3">Explanatory závěr</div>
+                                    <div class="fw-semibold mt-1">@weatherExplanation.Conclusion</div>
+
+                                    <div class="small text-muted mt-3">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        @weatherExplanation.Methodology
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-secondary py-3 border-0 shadow-sm d-flex align-items-start" style="font-size: 0.9rem;">
+                                <i class="bi bi-info-circle text-secondary fs-5 me-2"></i>
+                                <div>
+                                    <div>@(weatherExplanation?.Conclusion ?? "Vysvětlení počasím není pro vybraný uzel / interval dostupné.")</div>
+                                    @if (!string.IsNullOrWhiteSpace(weatherExplanation?.Methodology))
+                                    {
+                                        <div class="small text-muted mt-1">@weatherExplanation.Methodology</div>
+                                    }
+                                </div>
+                            </div>
+                        }
                     }
 
                     <h6 class="mb-3 mt-4 fw-bold border-bottom pb-2">Alert Foundation (v1)</h6>
@@ -399,6 +467,7 @@
 
 @code {
     private static readonly string[] EnergyAlertNodeKeys = ["pv_main", "chp_main", "cooling_main", "heating_main"];
+    private const int BaselineHistoricalYearsForValidation = 3;
 
     private EditorCanvas? _canvas;
     private DiplomovaPrace.Persistence.Schematic.FacilityEntity? _facility;
@@ -408,6 +477,8 @@
     private DiplomovaPrace.Models.Kpi.MeterKpiResult? _nodePreviewData;
     private CuratedNodeSummary? _curatedPreviewData;
     private CuratedNodeDeviationSummary? _curatedDeviationData;
+    private CuratedNodeTimeSeriesResult? _curatedTimeSeriesData;
+    private CuratedNodeTimeSeriesMode _timeSeriesMode = CuratedNodeTimeSeriesMode.Auto;
     private bool _isPreviewLoading;
     private bool _isCuratedNode;
     
@@ -417,6 +488,7 @@
     private DateTime _customFromUtc = DateTime.UtcNow.Date.AddDays(-7);
     private DateTime _customToUtcExclusive = DateTime.UtcNow.Date.AddDays(1);
     private DateTime _presetAnchorUtc = DateTime.UtcNow;
+    private string? _customIntervalValidationMessage;
 
     private (DateTime From, DateTime To) GetInterval()
     {
@@ -509,6 +581,7 @@
                 _nodePreviewData = null;
                 _curatedPreviewData = null;
                 _curatedDeviationData = null;
+                _curatedTimeSeriesData = null;
                 _isCuratedNode = false;
                 
                 if (_selectedFacilityNode != null)
@@ -528,6 +601,7 @@
             _nodePreviewData = null;
             _curatedPreviewData = null;
             _curatedDeviationData = null;
+            _curatedTimeSeriesData = null;
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -543,34 +617,59 @@
 
     private async Task OnCustomFromChanged(ChangeEventArgs e)
     {
-        if (e.Value is not string raw || !DateTime.TryParse(raw, out var parsed))
+        if (e.Value is not string raw || !TryParseHtmlDate(raw, out var parsedDateUtc))
         {
+            _customIntervalValidationMessage = "Custom interval není ve validním formátu data.";
             return;
         }
 
-        _customFromUtc = DateTime.SpecifyKind(parsed.Date, DateTimeKind.Utc);
+        _customFromUtc = parsedDateUtc;
         if (_customToUtcExclusive <= _customFromUtc)
         {
             _customToUtcExclusive = _customFromUtc.AddDays(1);
         }
 
+        _customIntervalValidationMessage = null;
         await ReloadPreviewDataAsync();
     }
 
     private async Task OnCustomToChanged(ChangeEventArgs e)
     {
-        if (e.Value is not string raw || !DateTime.TryParse(raw, out var parsed))
+        if (e.Value is not string raw || !TryParseHtmlDate(raw, out var parsedDateUtc))
         {
+            _customIntervalValidationMessage = "Custom interval není ve validním formátu data.";
             return;
         }
 
-        _customToUtcExclusive = DateTime.SpecifyKind(parsed.Date.AddDays(1), DateTimeKind.Utc);
+        if (parsedDateUtc.Date >= DateTime.MaxValue.Date)
+        {
+            _customIntervalValidationMessage = "Zadané datum je mimo reprezentovatelný rozsah.";
+            return;
+        }
+
+        _customToUtcExclusive = DateTime.SpecifyKind(parsedDateUtc.Date.AddDays(1), DateTimeKind.Utc);
         if (_customToUtcExclusive <= _customFromUtc)
         {
             _customToUtcExclusive = _customFromUtc.AddDays(1);
         }
 
+        _customIntervalValidationMessage = null;
         await ReloadPreviewDataAsync();
+    }
+
+    private async Task OnTimeSeriesModeChanged(CuratedNodeTimeSeriesMode mode)
+    {
+        if (_timeSeriesMode == mode)
+        {
+            return;
+        }
+
+        _timeSeriesMode = mode;
+
+        if (_selectedFacilityNode is not null && _isCuratedNode)
+        {
+            await ReloadPreviewDataAsync();
+        }
     }
 
     private async Task ReloadPreviewDataAsync()
@@ -579,29 +678,73 @@
         {
             _isPreviewLoading = true;
             await InvokeAsync(StateHasChanged);
+            var skipPostRefresh = false;
             
             try
             {
                 await RefreshPresetAnchorAsync();
                 var interval = GetInterval();
-                if (_isCuratedNode)
+
+                if (_selectedInterval == "custom")
+                {
+                    var customValidationMessage = await ValidateCustomIntervalForAnalyticsAsync();
+                    if (!string.IsNullOrWhiteSpace(customValidationMessage))
+                    {
+                        _customIntervalValidationMessage = customValidationMessage;
+                        _nodePreviewData = null;
+                        _curatedPreviewData = null;
+                        _curatedTimeSeriesData = null;
+
+                        if (_isCuratedNode)
+                        {
+                            _curatedDeviationData = new CuratedNodeDeviationSummary
+                            {
+                                IsAvailable = false,
+                                Message = customValidationMessage,
+                                Methodology = "Validace custom intervalu: analytika se spouští pouze pro validní a datově smysluplný rozsah."
+                            };
+                        }
+                        else
+                        {
+                            _curatedDeviationData = null;
+                        }
+
+                        skipPostRefresh = true;
+                    }
+
+                    if (!skipPostRefresh)
+                    {
+                        _customIntervalValidationMessage = null;
+                    }
+                }
+
+                if (!skipPostRefresh && _isCuratedNode)
                 {
                     var summaryTask = AnalyticsPreview.GetCuratedSummaryAsync(_selectedFacilityNode.NodeKey, interval.From, interval.To);
                     var deviationTask = AnalyticsPreview.GetCuratedDeviationSummaryAsync(_selectedFacilityNode.NodeKey, interval.From, interval.To);
+                    var timeSeriesTask = AnalyticsPreview.GetCuratedTimeSeriesAsync(_selectedFacilityNode.NodeKey, interval.From, interval.To, _timeSeriesMode);
 
-                    await Task.WhenAll(summaryTask, deviationTask);
+                    await Task.WhenAll(summaryTask, deviationTask, timeSeriesTask);
                     _curatedPreviewData = summaryTask.Result;
                     _curatedDeviationData = deviationTask.Result;
+                    _curatedTimeSeriesData = timeSeriesTask.Result;
                 }
-                else
+                else if (!skipPostRefresh)
                 {
                     _curatedDeviationData = null;
+                    _curatedTimeSeriesData = null;
                     _nodePreviewData = await AnalyticsPreview.GetPreviewDataAsync(_selectedFacilityNode.MeterUrn!, interval.From, interval.To);
                 }
             }
             finally
             {
                 _isPreviewLoading = false;
+            }
+
+            if (skipPostRefresh)
+            {
+                await InvokeAsync(StateHasChanged);
+                return;
             }
         }
 
@@ -748,6 +891,33 @@
         };
     }
 
+    private static bool SupportsWeatherExplanation(string? nodeKey)
+    {
+        return nodeKey is "heating_main" or "cooling_main";
+    }
+
+    private static string GetWeatherExplanationStatusText(WeatherExplanationStatus status)
+    {
+        return status switch
+        {
+            WeatherExplanationStatus.SupportedByWeather => "počasí podporuje vysvětlení",
+            WeatherExplanationStatus.NotSupportedByWeather => "počasí nepodporuje vysvětlení",
+            WeatherExplanationStatus.WeatherChangeNeutral => "počasí je téměř beze změny",
+            _ => "vysvětlení není dostupné"
+        };
+    }
+
+    private static string GetWeatherExplanationBadgeClass(WeatherExplanationStatus status)
+    {
+        return status switch
+        {
+            WeatherExplanationStatus.SupportedByWeather => "bg-info text-dark",
+            WeatherExplanationStatus.NotSupportedByWeather => "bg-secondary",
+            WeatherExplanationStatus.WeatherChangeNeutral => "bg-light text-dark border",
+            _ => "bg-light text-dark border"
+        };
+    }
+
     private static string GetAlertStatusText(string? nodeKey, CuratedNodeDeviationSummary? deviation)
     {
         if (IsWeatherNode(nodeKey))
@@ -846,6 +1016,59 @@
     private static bool IsWeatherNode(string? nodeKey)
     {
         return string.Equals(nodeKey, "weather_main", StringComparison.Ordinal);
+    }
+
+    private static bool TryParseHtmlDate(string raw, out DateTime parsedDateUtc)
+    {
+        parsedDateUtc = default;
+
+        if (!DateTime.TryParseExact(raw, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsed))
+        {
+            return false;
+        }
+
+        parsedDateUtc = DateTime.SpecifyKind(parsed.Date, DateTimeKind.Utc);
+        return true;
+    }
+
+    private async Task<string?> ValidateCustomIntervalForAnalyticsAsync()
+    {
+        if (_customFromUtc == default || _customToUtcExclusive == default)
+        {
+            return "Custom interval není kompletně vyplněný.";
+        }
+
+        if (_customToUtcExclusive <= _customFromUtc)
+        {
+            return "Koncové datum musí být později než počáteční datum.";
+        }
+
+        if (_customFromUtc.Year <= BaselineHistoricalYearsForValidation)
+        {
+            return "Počáteční datum je příliš brzké pro baseline porovnání vůči minulým letům.";
+        }
+
+        if (_selectedFacilityNode is null || !_isCuratedNode)
+        {
+            return null;
+        }
+
+        var domain = await AnalyticsPreview.GetCuratedNodeTimeDomainUtcAsync(_selectedFacilityNode.NodeKey);
+        if (!domain.MinUtc.HasValue || !domain.MaxUtc.HasValue)
+        {
+            return null;
+        }
+
+        var domainMin = domain.MinUtc.Value;
+        var domainMaxExclusive = domain.MaxUtc.Value.AddMinutes(15);
+        var hasOverlap = _customFromUtc < domainMaxExclusive && _customToUtcExclusive > domainMin;
+
+        if (!hasOverlap)
+        {
+            return $"Vybraný custom interval je mimo dostupný rozsah dat pro uzel {_selectedFacilityNode.NodeKey} ({domainMin:dd.MM.yyyy} - {domain.MaxUtc.Value:dd.MM.yyyy}).";
+        }
+
+        return null;
     }
 
     public void Dispose()

@@ -1,0 +1,203 @@
+@using DiplomovaPrace.Services
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body p-3">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+            <div class="text-muted text-uppercase fw-bold" style="font-size: 0.8rem;">Single-node časová řada</div>
+            <div class="d-flex align-items-center gap-2">
+                @if (Data?.Points.Count > 0)
+                {
+                    <span class="badge bg-light text-dark border">@Data.Points.Count.ToString("N0") bodů</span>
+                }
+
+                <div class="btn-group btn-group-sm" role="group" aria-label="Režim granularit časové řady">
+                    @foreach (var mode in _availableModes)
+                    {
+                        <button type="button"
+                                class="btn @(SelectedMode == mode ? "btn-primary" : "btn-outline-secondary")"
+                                @onclick="() => SelectModeAsync(mode)">
+                            @GetModeShortLabel(mode)
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="small text-muted mb-2">
+            Režim zobrazení: <strong>@GetModeLabel(SelectedMode)</strong>
+        </div>
+
+        @if (_jsInteropUnavailable)
+        {
+            <div class="alert alert-secondary py-2 mb-0 border-0">
+                Časový graf není dostupný, protože se nepodařilo inicializovat chart runtime.
+            </div>
+        }
+        else if (Data is null)
+        {
+            <div class="alert alert-secondary py-2 mb-0 border-0">
+                Pro tento uzel zatím není chart data source připraven.
+            </div>
+        }
+        else if (Data.Points.Count == 0)
+        {
+            <div class="alert alert-info py-2 mb-0 border-0 d-flex align-items-start">
+                <i class="bi bi-info-circle-fill text-info me-2"></i>
+                <div>@(Data.NoDataMessage ?? "Pro vybraný interval nejsou dostupná data časové řady.")</div>
+            </div>
+            <div class="small text-muted mt-2">
+                Použitá granularita: <strong>@Data.GranularityLabel</strong>
+            </div>
+            <div class="small text-muted mt-1">
+                @Data.AggregationMethod
+            </div>
+        }
+        else
+        {
+            <div id="@_chartElementId" style="height: 300px; width: 100%;"></div>
+            <div class="small text-muted mt-2">
+                Tip: kolečko myši zoomuje časovou osu, tažením v grafu můžete interval posouvat; spodní slider slouží pro přesný výběr části období.
+            </div>
+            <div class="small text-muted mt-2">
+                <i class="bi bi-info-circle me-1"></i>
+                @Data.InterpretationNote
+            </div>
+            <div class="small text-muted mt-1">
+                Použitá granularita: <strong>@Data.GranularityLabel</strong>
+            </div>
+            <div class="small text-muted mt-1">
+                @Data.AggregationMethod
+            </div>
+            <div class="small text-muted mt-1">
+                Osa Y: <strong>@Data.YAxisLabel</strong>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public CuratedNodeTimeSeriesResult? Data { get; set; }
+    [Parameter] public CuratedNodeTimeSeriesMode SelectedMode { get; set; } = CuratedNodeTimeSeriesMode.Auto;
+    [Parameter] public EventCallback<CuratedNodeTimeSeriesMode> SelectedModeChanged { get; set; }
+
+    private static readonly CuratedNodeTimeSeriesMode[] _availableModes =
+    [
+        CuratedNodeTimeSeriesMode.Auto,
+        CuratedNodeTimeSeriesMode.Raw15Min,
+        CuratedNodeTimeSeriesMode.HourlyAverage,
+        CuratedNodeTimeSeriesMode.DailyAverage
+    ];
+
+    private readonly string _chartElementId = $"facility-timeseries-{Guid.NewGuid():N}";
+    private string? _lastRenderedSignature;
+    private bool _jsInteropUnavailable;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_jsInteropUnavailable)
+        {
+            return;
+        }
+
+        try
+        {
+            if (Data?.Points.Count > 0)
+            {
+                var firstPoint = Data.Points[0];
+                var lastPoint = Data.Points[^1];
+                var signature = $"{Data.NodeKey}:{Data.Granularity}:{Data.Points.Count}:{firstPoint.TimestampUtc.Ticks}:{lastPoint.TimestampUtc.Ticks}";
+
+                if (!string.Equals(signature, _lastRenderedSignature, StringComparison.Ordinal))
+                {
+                    _lastRenderedSignature = signature;
+                    await JSRuntime.InvokeVoidAsync("facilityTimeSeriesChart.render", _chartElementId, BuildModel(Data));
+                }
+                else if (firstRender)
+                {
+                    await JSRuntime.InvokeVoidAsync("facilityTimeSeriesChart.resize", _chartElementId);
+                }
+            }
+            else
+            {
+                _lastRenderedSignature = null;
+                await JSRuntime.InvokeVoidAsync("facilityTimeSeriesChart.dispose", _chartElementId);
+            }
+        }
+        catch (JSException)
+        {
+            _jsInteropUnavailable = true;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task SelectModeAsync(CuratedNodeTimeSeriesMode mode)
+    {
+        if (SelectedMode == mode)
+        {
+            return;
+        }
+
+        if (SelectedModeChanged.HasDelegate)
+        {
+            await SelectedModeChanged.InvokeAsync(mode);
+        }
+    }
+
+    private static string GetModeShortLabel(CuratedNodeTimeSeriesMode mode)
+    {
+        return mode switch
+        {
+            CuratedNodeTimeSeriesMode.Auto => "Auto",
+            CuratedNodeTimeSeriesMode.Raw15Min => "15min",
+            CuratedNodeTimeSeriesMode.HourlyAverage => "Hourly",
+            CuratedNodeTimeSeriesMode.DailyAverage => "Daily",
+            _ => "Auto"
+        };
+    }
+
+    private static string GetModeLabel(CuratedNodeTimeSeriesMode mode)
+    {
+        return mode switch
+        {
+            CuratedNodeTimeSeriesMode.Auto => "Auto (adaptivní volba podle délky intervalu)",
+            CuratedNodeTimeSeriesMode.Raw15Min => "15min (ruční override)",
+            CuratedNodeTimeSeriesMode.HourlyAverage => "Hourly (ruční override)",
+            CuratedNodeTimeSeriesMode.DailyAverage => "Daily (ruční override)",
+            _ => "Auto (adaptivní volba podle délky intervalu)"
+        };
+    }
+
+    private static object BuildModel(CuratedNodeTimeSeriesResult data)
+    {
+        return new
+        {
+            title = data.Title,
+            unit = data.Unit,
+            yAxisLabel = data.YAxisLabel,
+            points = data.Points.Select(p => new
+            {
+                timestampUtc = p.TimestampUtc,
+                value = p.Value
+            }).ToArray()
+        };
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("facilityTimeSeriesChart.dispose", _chartElementId);
+        }
+        catch (JSDisconnectedException)
+        {
+            // No-op: circuit is already disconnected.
+        }
+        catch (JSException)
+        {
+            // No-op: chart runtime may not be available.
+        }
+    }
+}
