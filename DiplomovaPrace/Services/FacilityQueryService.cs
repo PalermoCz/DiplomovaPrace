@@ -31,7 +31,19 @@ public class FacilityQueryService
             return null;
         }
 
-        var nodeStatesByKey = await _editorStateService.GetNodeStatesByKeyAsync(ct);
+        var structureStateTask = _editorStateService.GetStructureStateAsync(ct);
+        var nodeStatesByKeyTask = _editorStateService.GetNodeStatesByKeyAsync(ct);
+
+        await Task.WhenAll(structureStateTask, nodeStatesByKeyTask);
+
+        var structureState = structureStateTask.Result;
+        var nodeStatesByKey = nodeStatesByKeyTask.Result;
+
+        if (HasStructuralEdits(structureState))
+        {
+            ApplyStructureEdits(facility, structureState);
+        }
+
         foreach (var node in facility.Nodes)
         {
             if (!nodeStatesByKey.TryGetValue(node.NodeKey, out var nodeState))
@@ -56,5 +68,123 @@ public class FacilityQueryService
         }
 
         return facility;
+    }
+
+    private static bool HasStructuralEdits(FacilityStructureState structureState)
+    {
+        return structureState.AddedNodes.Count > 0
+            || structureState.RemovedNodeKeys.Count > 0
+            || structureState.ParentOverrides.Count > 0;
+    }
+
+    private static void ApplyStructureEdits(FacilityEntity facility, FacilityStructureState structureState)
+    {
+        var removedNodeKeys = structureState.RemovedNodeKeys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var effectiveNodes = facility.Nodes
+            .Where(node => !removedNodeKeys.Contains(node.NodeKey))
+            .ToDictionary(node => node.NodeKey, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var addedNode in structureState.AddedNodes)
+        {
+            if (removedNodeKeys.Contains(addedNode.NodeKey))
+            {
+                continue;
+            }
+
+            if (effectiveNodes.ContainsKey(addedNode.NodeKey))
+            {
+                continue;
+            }
+
+            effectiveNodes[addedNode.NodeKey] = new SchematicNodeEntity
+            {
+                FacilityId = facility.Id,
+                NodeKey = addedNode.NodeKey,
+                Label = addedNode.Label,
+                NodeType = addedNode.NodeType,
+                Zone = addedNode.Zone,
+                MeterUrn = addedNode.MeterUrn,
+                ParentNodeKey = addedNode.ParentNodeKey,
+                XHint = addedNode.XHint,
+                YHint = addedNode.YHint
+            };
+        }
+
+        foreach (var (nodeKey, parentNodeKeyOverride) in structureState.ParentOverrides)
+        {
+            if (!effectiveNodes.TryGetValue(nodeKey, out var node))
+            {
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(parentNodeKeyOverride))
+            {
+                node.ParentNodeKey = null;
+                continue;
+            }
+
+            if (!effectiveNodes.ContainsKey(parentNodeKeyOverride)
+                || parentNodeKeyOverride.Equals(node.NodeKey, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            node.ParentNodeKey = parentNodeKeyOverride;
+        }
+
+        foreach (var node in effectiveNodes.Values)
+        {
+            if (string.IsNullOrWhiteSpace(node.ParentNodeKey))
+            {
+                continue;
+            }
+
+            if (!effectiveNodes.ContainsKey(node.ParentNodeKey)
+                || node.ParentNodeKey.Equals(node.NodeKey, StringComparison.OrdinalIgnoreCase))
+            {
+                node.ParentNodeKey = null;
+            }
+        }
+
+        foreach (var node in effectiveNodes.Values)
+        {
+            if (string.IsNullOrWhiteSpace(node.ParentNodeKey))
+            {
+                continue;
+            }
+
+            var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                node.NodeKey
+            };
+            var cursor = node.ParentNodeKey;
+
+            while (!string.IsNullOrWhiteSpace(cursor) && effectiveNodes.TryGetValue(cursor, out var parentNode))
+            {
+                if (!visited.Add(parentNode.NodeKey))
+                {
+                    node.ParentNodeKey = null;
+                    break;
+                }
+
+                cursor = parentNode.ParentNodeKey;
+            }
+        }
+
+        facility.Nodes = effectiveNodes.Values
+            .OrderBy(node => node.NodeKey, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        facility.Edges = facility.Nodes
+            .Where(node => !string.IsNullOrWhiteSpace(node.ParentNodeKey))
+            .Select(node => new SchematicEdgeEntity
+            {
+                FacilityId = facility.Id,
+                SourceNodeKey = node.ParentNodeKey!,
+                TargetNodeKey = node.NodeKey
+            })
+            .OrderBy(edge => edge.SourceNodeKey, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(edge => edge.TargetNodeKey, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 }
