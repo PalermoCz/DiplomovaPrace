@@ -38,8 +38,38 @@ public sealed class CuratedNodeTimeSeriesResult
     public string InterpretationNote { get; init; } = string.Empty;
     public CuratedNodeTimeSeriesMode RequestedMode { get; init; } = CuratedNodeTimeSeriesMode.Auto;
     public string RequestedModeLabel { get; init; } = "Auto";
+    public bool BaselineOverlayRequested { get; init; }
+    public bool BaselineOverlayAvailable { get; init; }
+    public string? BaselineOverlayMessage { get; init; }
+    public IReadOnlyList<CuratedNodeTimeSeriesPoint> BaselinePoints { get; init; } = [];
     public string? NoDataMessage { get; init; }
     public IReadOnlyList<CuratedNodeTimeSeriesPoint> Points { get; init; } = [];
+}
+
+public sealed class CuratedNodeCompareSeries
+{
+    public string NodeKey { get; init; } = string.Empty;
+    public string Label { get; init; } = string.Empty;
+    public bool IsPrimary { get; init; }
+    public string? NoDataMessage { get; init; }
+    public IReadOnlyList<CuratedNodeTimeSeriesPoint> Points { get; init; } = [];
+}
+
+public sealed class CuratedNodeCompareTimeSeriesResult
+{
+    public string PrimaryNodeKey { get; init; } = string.Empty;
+    public string Title { get; init; } = string.Empty;
+    public string Unit { get; init; } = string.Empty;
+    public string YAxisLabel { get; init; } = string.Empty;
+    public CuratedNodeTimeSeriesGranularity Granularity { get; init; } = CuratedNodeTimeSeriesGranularity.Raw15Min;
+    public string GranularityLabel { get; init; } = "15min detail";
+    public string AggregationMethod { get; init; } = "Bez agregace (raw řada).";
+    public string InterpretationNote { get; init; } = string.Empty;
+    public CuratedNodeTimeSeriesMode RequestedMode { get; init; } = CuratedNodeTimeSeriesMode.Auto;
+    public string RequestedModeLabel { get; init; } = "Auto";
+    public IReadOnlyList<CuratedNodeCompareSeries> Series { get; init; } = [];
+    public IReadOnlyList<string> ExcludedNodeMessages { get; init; } = [];
+    public string? NoDataMessage { get; init; }
 }
 
 public enum CuratedNodeTimeSeriesMode
@@ -108,6 +138,13 @@ public class NodeAnalyticsPreviewService
     private const double WeatherExplanationDeltaThresholdC = 0.8;
     private static readonly TimeSpan RawTimeSeriesThreshold = TimeSpan.FromDays(7);
     private static readonly TimeSpan HourlyTimeSeriesThreshold = TimeSpan.FromDays(45);
+    private static readonly HashSet<string> ComparePreviewSupportedNodeKeys = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "heating_main",
+        "cooling_main",
+        "pv_main",
+        "chp_main"
+    };
 
     private readonly IKpiService _kpiService;
     private readonly IWebHostEnvironment _env;
@@ -154,6 +191,7 @@ public class NodeAnalyticsPreviewService
         DateTime from,
         DateTime to,
         CuratedNodeTimeSeriesMode mode = CuratedNodeTimeSeriesMode.Auto,
+        bool includeBaselineOverlay = false,
         CancellationToken ct = default)
     {
         var source = ResolveCuratedNodeSource(nodeKey);
@@ -178,11 +216,18 @@ public class NodeAnalyticsPreviewService
                 InterpretationNote = ResolveTimeSeriesInterpretationNote(source, granularity),
                 RequestedMode = granularity.RequestedMode,
                 RequestedModeLabel = granularity.RequestedModeLabel,
+                BaselineOverlayRequested = includeBaselineOverlay,
+                BaselineOverlayAvailable = false,
+                BaselineOverlayMessage = includeBaselineOverlay
+                    ? (source.SupportsDeviation
+                        ? "Baseline overlay není dostupný: chybí lokální reduced source."
+                        : "Baseline overlay není pro tento uzel podporován.")
+                    : null,
                 NoDataMessage = "Chybí lokální reduced source pro vykreslení časové řady."
             };
         }
 
-        return await ParseCuratedTimeSeriesAsync(nodeKey, filePath, source, from, to, mode, ct);
+        return await ParseCuratedTimeSeriesAsync(nodeKey, filePath, source, from, to, mode, includeBaselineOverlay, ct);
     }
 
     public async Task<DateTime?> GetCuratedNodeMaxTimestampUtcAsync(string nodeKey, CancellationToken ct = default)
@@ -211,6 +256,133 @@ public class NodeAnalyticsPreviewService
         }
 
         return maxTimestamp;
+    }
+
+    public async Task<CuratedNodeCompareTimeSeriesResult?> GetCuratedCompareTimeSeriesAsync(
+        string primaryNodeKey,
+        IEnumerable<string> compareNodeKeys,
+        DateTime from,
+        DateTime to,
+        CuratedNodeTimeSeriesMode mode = CuratedNodeTimeSeriesMode.Auto,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(primaryNodeKey) || !ComparePreviewSupportedNodeKeys.Contains(primaryNodeKey))
+        {
+            return null;
+        }
+
+        compareNodeKeys ??= [];
+
+        var primaryTimeSeries = await GetCuratedTimeSeriesAsync(primaryNodeKey, from, to, mode, includeBaselineOverlay: false, ct);
+        if (primaryTimeSeries is null)
+        {
+            return null;
+        }
+
+        var orderedCompareNodeKeys = new List<string>();
+        var excludedNodeMessages = new List<string>();
+        var seenNodeKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            primaryNodeKey
+        };
+
+        foreach (var rawNodeKey in compareNodeKeys)
+        {
+            if (string.IsNullOrWhiteSpace(rawNodeKey))
+            {
+                continue;
+            }
+
+            if (!seenNodeKeys.Add(rawNodeKey))
+            {
+                continue;
+            }
+
+            if (!ComparePreviewSupportedNodeKeys.Contains(rawNodeKey))
+            {
+                excludedNodeMessages.Add($"{rawNodeKey}: compare preview pro tento uzel není v této verzi podporován.");
+                continue;
+            }
+
+            orderedCompareNodeKeys.Add(rawNodeKey);
+        }
+
+        var series = new List<CuratedNodeCompareSeries>();
+
+        if (primaryTimeSeries.Points.Count > 0)
+        {
+            series.Add(new CuratedNodeCompareSeries
+            {
+                NodeKey = primaryNodeKey,
+                Label = ResolveCompareSeriesLabel(primaryNodeKey),
+                IsPrimary = true,
+                Points = primaryTimeSeries.Points
+            });
+        }
+        else
+        {
+            excludedNodeMessages.Add($"{primaryNodeKey}: {primaryTimeSeries.NoDataMessage ?? "v analysis window nejsou dostupná data"}.");
+        }
+
+        if (orderedCompareNodeKeys.Count > 0)
+        {
+            var compareTasks = orderedCompareNodeKeys
+                .Select(async nodeKey =>
+                {
+                    var result = await GetCuratedTimeSeriesAsync(nodeKey, from, to, mode, includeBaselineOverlay: false, ct);
+                    return (NodeKey: nodeKey, Result: result);
+                })
+                .ToArray();
+
+            await Task.WhenAll(compareTasks);
+
+            foreach (var task in compareTasks)
+            {
+                var nodeKey = task.Result.NodeKey;
+                var result = task.Result.Result;
+
+                if (result is null)
+                {
+                    excludedNodeMessages.Add($"{nodeKey}: nepodařilo se připravit časovou řadu.");
+                    continue;
+                }
+
+                if (result.Points.Count == 0)
+                {
+                    excludedNodeMessages.Add($"{nodeKey}: {result.NoDataMessage ?? "v analysis window nejsou dostupná data"}.");
+                    continue;
+                }
+
+                series.Add(new CuratedNodeCompareSeries
+                {
+                    NodeKey = nodeKey,
+                    Label = ResolveCompareSeriesLabel(nodeKey),
+                    IsPrimary = false,
+                    Points = result.Points
+                });
+            }
+        }
+
+        var noDataMessage = series.Count == 0
+            ? "Compare preview nemá žádnou dostupnou výkonovou řadu pro vybrané uzly a interval."
+            : null;
+
+        return new CuratedNodeCompareTimeSeriesResult
+        {
+            PrimaryNodeKey = primaryNodeKey,
+            Title = "Compare chart preview",
+            Unit = primaryTimeSeries.Unit,
+            YAxisLabel = primaryTimeSeries.YAxisLabel,
+            Granularity = primaryTimeSeries.Granularity,
+            GranularityLabel = primaryTimeSeries.GranularityLabel,
+            AggregationMethod = primaryTimeSeries.AggregationMethod,
+            InterpretationNote = ResolveCompareInterpretationNote(primaryTimeSeries.Granularity),
+            RequestedMode = primaryTimeSeries.RequestedMode,
+            RequestedModeLabel = primaryTimeSeries.RequestedModeLabel,
+            Series = series,
+            ExcludedNodeMessages = excludedNodeMessages,
+            NoDataMessage = noDataMessage
+        };
     }
 
     public async Task<(DateTime? MinUtc, DateTime? MaxUtc)> GetCuratedNodeTimeDomainUtcAsync(string nodeKey, CancellationToken ct = default)
@@ -1320,6 +1492,24 @@ public class NodeAnalyticsPreviewService
         };
     }
 
+    private string ResolveCompareSeriesLabel(string nodeKey)
+    {
+        var source = ResolveCuratedNodeSource(nodeKey);
+        return !string.IsNullOrWhiteSpace(source?.Title)
+            ? source.Title
+            : nodeKey;
+    }
+
+    private static string ResolveCompareInterpretationNote(CuratedNodeTimeSeriesGranularity granularity)
+    {
+        return granularity switch
+        {
+            CuratedNodeTimeSeriesGranularity.HourlyAverage => "Compare preview zobrazuje výkonové řady v čase (kW) pro více uzlů. Hodinová agregace znamená průměr výkonu za hodinový bucket.",
+            CuratedNodeTimeSeriesGranularity.DailyAverage => "Compare preview zobrazuje výkonové řady v čase (kW) pro více uzlů. Denní agregace znamená průměr výkonu za denní bucket.",
+            _ => "Compare preview zobrazuje výkonové řady v čase (kW) pro více uzlů v původním detailním kroku dat (~15 min)."
+        };
+    }
+
     private async Task<CuratedNodeTimeSeriesResult> ParseCuratedTimeSeriesAsync(
         string nodeKey,
         string filePath,
@@ -1327,12 +1517,38 @@ public class NodeAnalyticsPreviewService
         DateTime from,
         DateTime to,
         CuratedNodeTimeSeriesMode mode,
+        bool includeBaselineOverlay,
         CancellationToken ct)
     {
         var unit = ResolveTimeSeriesUnit(source);
         var granularity = ResolveTimeSeriesGranularity(from, to, source, mode);
+        var baselineCandidates = includeBaselineOverlay && source.SupportsDeviation && to > from
+            ? BuildBaselineCandidates(from, to)
+            : [];
 
-        CuratedNodeTimeSeriesResult CreateResult(IReadOnlyList<CuratedNodeTimeSeriesPoint> points, string? noDataMessage)
+        var minRelevantFrom = from;
+        var maxRelevantTo = to;
+        if (baselineCandidates.Count > 0)
+        {
+            var baselineMin = baselineCandidates.Min(candidate => candidate.From);
+            var baselineMax = baselineCandidates.Max(candidate => candidate.To);
+
+            if (baselineMin < minRelevantFrom)
+            {
+                minRelevantFrom = baselineMin;
+            }
+
+            if (baselineMax > maxRelevantTo)
+            {
+                maxRelevantTo = baselineMax;
+            }
+        }
+
+        CuratedNodeTimeSeriesResult CreateResult(
+            IReadOnlyList<CuratedNodeTimeSeriesPoint> points,
+            string? noDataMessage,
+            IReadOnlyList<CuratedNodeTimeSeriesPoint> baselinePoints,
+            string? baselineOverlayMessage)
         {
             return new CuratedNodeTimeSeriesResult
             {
@@ -1346,6 +1562,10 @@ public class NodeAnalyticsPreviewService
                 InterpretationNote = ResolveTimeSeriesInterpretationNote(source, granularity),
                 RequestedMode = granularity.RequestedMode,
                 RequestedModeLabel = granularity.RequestedModeLabel,
+                BaselineOverlayRequested = includeBaselineOverlay,
+                BaselineOverlayAvailable = baselinePoints.Count > 0,
+                BaselineOverlayMessage = baselineOverlayMessage,
+                BaselinePoints = baselinePoints,
                 NoDataMessage = noDataMessage,
                 Points = points
             };
@@ -1357,7 +1577,11 @@ public class NodeAnalyticsPreviewService
             var headerLine = await reader.ReadLineAsync(ct);
             if (string.IsNullOrEmpty(headerLine))
             {
-                return CreateResult([], "Reduced source je prázdný.");
+                return CreateResult(
+                    [],
+                    "Reduced source je prázdný.",
+                    [],
+                    includeBaselineOverlay ? "Baseline overlay není dostupný: reduced source je prázdný." : null);
             }
 
             var headers = headerLine.Split(',');
@@ -1369,7 +1593,11 @@ public class NodeAnalyticsPreviewService
 
             if (colIndex == -1)
             {
-                return CreateResult([], "Reduced source neobsahuje očekávaný sloupec pro vybraný uzel.");
+                return CreateResult(
+                    [],
+                    "Reduced source neobsahuje očekávaný sloupec pro vybraný uzel.",
+                    [],
+                    includeBaselineOverlay ? "Baseline overlay není dostupný: reduced source neobsahuje očekávaný sloupec." : null);
             }
 
             if (timeColIndex == -1)
@@ -1379,6 +1607,16 @@ public class NodeAnalyticsPreviewService
 
             var rawPoints = new List<CuratedNodeTimeSeriesPoint>();
             var bucketStats = new SortedDictionary<DateTime, RunningStats>();
+            var baselineBucketStatsByCandidate = baselineCandidates.ToDictionary(
+                candidate => candidate,
+                _ => new SortedDictionary<DateTime, RunningStats>());
+            var baselineEnergyStatsByCandidate = baselineCandidates.ToDictionary(
+                candidate => candidate,
+                _ => new RunningStats());
+
+            var currentIntervalSamples = 0;
+            var sampleStepHours = DefaultPowerSampleStepHours;
+            DateTime? previousTimestamp = null;
 
             string? line;
             while ((line = await reader.ReadLineAsync(ct)) != null)
@@ -1394,12 +1632,15 @@ public class NodeAnalyticsPreviewService
                     continue;
                 }
 
-                if (timestamp < from)
+                UpdateSampleStepHours(previousTimestamp, timestamp, ref sampleStepHours);
+                previousTimestamp = timestamp;
+
+                if (timestamp < minRelevantFrom)
                 {
                     continue;
                 }
 
-                if (timestamp >= to)
+                if (timestamp >= maxRelevantTo)
                 {
                     break;
                 }
@@ -1410,24 +1651,63 @@ public class NodeAnalyticsPreviewService
                 }
 
                 var statsValue = NormalizeValueForStats(rawValue, source);
-                if (granularity.Granularity == CuratedNodeTimeSeriesGranularity.Raw15Min)
+                var aggregationValue = NormalizeValueForAggregation(rawValue, source, sampleStepHours);
+
+                if (timestamp >= from && timestamp < to)
                 {
-                    rawPoints.Add(new CuratedNodeTimeSeriesPoint
+                    currentIntervalSamples++;
+
+                    if (granularity.Granularity == CuratedNodeTimeSeriesGranularity.Raw15Min)
                     {
-                        TimestampUtc = timestamp,
-                        Value = statsValue
-                    });
+                        rawPoints.Add(new CuratedNodeTimeSeriesPoint
+                        {
+                            TimestampUtc = timestamp,
+                            Value = statsValue
+                        });
+                    }
+                    else
+                    {
+                        var bucketStart = GetBucketStartUtc(timestamp, granularity.Granularity);
+                        if (!bucketStats.TryGetValue(bucketStart, out var stats))
+                        {
+                            stats = new RunningStats();
+                            bucketStats[bucketStart] = stats;
+                        }
+
+                        stats.Add(statsValue);
+                    }
+                }
+
+                if (baselineCandidates.Count == 0)
+                {
                     continue;
                 }
 
-                var bucketStart = GetBucketStartUtc(timestamp, granularity.Granularity);
-                if (!bucketStats.TryGetValue(bucketStart, out var stats))
+                foreach (var candidate in baselineCandidates)
                 {
-                    stats = new RunningStats();
-                    bucketStats[bucketStart] = stats;
-                }
+                    if (timestamp < candidate.From || timestamp >= candidate.To)
+                    {
+                        continue;
+                    }
 
-                stats.Add(statsValue);
+                    baselineEnergyStatsByCandidate[candidate].Add(aggregationValue);
+
+                    var alignedTimestamp = from + (timestamp - candidate.From);
+                    if (alignedTimestamp < from || alignedTimestamp >= to)
+                    {
+                        continue;
+                    }
+
+                    var baselineBucketStart = GetBucketStartUtc(alignedTimestamp, granularity.Granularity);
+                    var candidateBuckets = baselineBucketStatsByCandidate[candidate];
+                    if (!candidateBuckets.TryGetValue(baselineBucketStart, out var baselineStats))
+                    {
+                        baselineStats = new RunningStats();
+                        candidateBuckets[baselineBucketStart] = baselineStats;
+                    }
+
+                    baselineStats.Add(statsValue);
+                }
             }
 
             IReadOnlyList<CuratedNodeTimeSeriesPoint> points = granularity.Granularity == CuratedNodeTimeSeriesGranularity.Raw15Min
@@ -1441,14 +1721,186 @@ public class NodeAnalyticsPreviewService
                     })
                     .ToList();
 
+            IReadOnlyList<CuratedNodeTimeSeriesPoint> baselinePoints = [];
+            string? baselineOverlayMessage = null;
+
+            if (includeBaselineOverlay)
+            {
+                if (!source.SupportsDeviation)
+                {
+                    baselineOverlayMessage = "Baseline overlay není pro tento uzel podporován.";
+                }
+                else if (baselineCandidates.Count == 0)
+                {
+                    baselineOverlayMessage = "Baseline overlay není dostupný: chybí referenční baseline okna.";
+                }
+                else if (currentIntervalSamples == 0)
+                {
+                    baselineOverlayMessage = "Baseline overlay nelze spočítat, protože v analysis window chybí aktuální vzorky.";
+                }
+                else
+                {
+                    var minimumReferenceSamples = Math.Max(2, (int)Math.Round(currentIntervalSamples * MinimumReferenceCoverageRatio));
+
+                    var samePeriodReferenceAggregates = baselineCandidates
+                        .Where(candidate => candidate.Kind == BaselineReferenceKind.SamePeriodPreviousYear)
+                        .Select(candidate => new BaselineReferenceAggregate(candidate, baselineEnergyStatsByCandidate[candidate].Sum))
+                        .Where(aggregate => baselineEnergyStatsByCandidate[aggregate.Candidate].Count >= minimumReferenceSamples)
+                        .ToList();
+
+                    var recentComparableReferenceAggregates = baselineCandidates
+                        .Where(candidate => candidate.Kind == BaselineReferenceKind.RecentComparablePeriod)
+                        .Select(candidate => new BaselineReferenceAggregate(candidate, baselineEnergyStatsByCandidate[candidate].Sum))
+                        .Where(aggregate => baselineEnergyStatsByCandidate[aggregate.Candidate].Count >= minimumReferenceSamples)
+                        .ToList();
+
+                    var selectedBaseline = SelectBaselineValue(samePeriodReferenceAggregates, recentComparableReferenceAggregates);
+                    if (selectedBaseline is null)
+                    {
+                        baselineOverlayMessage = "Baseline overlay není dostupný: referenční baseline okna nemají dostatečné pokrytí dat.";
+                    }
+                    else
+                    {
+                        baselinePoints = BuildBaselineOverlaySeries(selectedBaseline, baselineBucketStatsByCandidate);
+                        if (baselinePoints.Count == 0)
+                        {
+                            baselineOverlayMessage = "Baseline overlay není dostupný: referenční řada pro vybranou granularitu nemá žádné body.";
+                        }
+                    }
+                }
+            }
+
             return CreateResult(
                 points,
-                points.Count == 0 ? "Pro vybraný interval nejsou k dispozici žádné body časové řady." : null);
+                points.Count == 0 ? "Pro vybraný interval nejsou k dispozici žádné body časové řady." : null,
+                baselinePoints,
+                baselineOverlayMessage);
         }
         catch
         {
-            return CreateResult([], "Nepodařilo se načíst reduced source pro časovou řadu.");
+            return CreateResult(
+                [],
+                "Nepodařilo se načíst reduced source pro časovou řadu.",
+                [],
+                includeBaselineOverlay ? "Baseline overlay není dostupný: nepodařilo se načíst reduced source." : null);
         }
+    }
+
+    private static IReadOnlyList<CuratedNodeTimeSeriesPoint> BuildBaselineOverlaySeries(
+        BaselineSelection selectedBaseline,
+        IReadOnlyDictionary<BaselineCandidate, SortedDictionary<DateTime, RunningStats>> baselineBucketStatsByCandidate)
+    {
+        var selectedCandidates = selectedBaseline.ReferenceCandidates
+            .Where(candidate => baselineBucketStatsByCandidate.ContainsKey(candidate))
+            .ToList();
+
+        if (selectedCandidates.Count == 0)
+        {
+            return [];
+        }
+
+        var seriesByCandidate = selectedCandidates.ToDictionary(
+            candidate => candidate,
+            candidate => baselineBucketStatsByCandidate[candidate]
+                .Where(x => x.Value.Count > 0)
+                .ToDictionary(x => x.Key, x => x.Value.Sum / x.Value.Count));
+
+        var samePeriodCandidates = selectedCandidates
+            .Where(candidate => candidate.Kind == BaselineReferenceKind.SamePeriodPreviousYear)
+            .ToList();
+        var recentComparableCandidates = selectedCandidates
+            .Where(candidate => candidate.Kind == BaselineReferenceKind.RecentComparablePeriod)
+            .ToList();
+
+        if (selectedBaseline.StrategyDescription.StartsWith("Hybrid:", StringComparison.OrdinalIgnoreCase)
+            && samePeriodCandidates.Count == 1
+            && recentComparableCandidates.Count > 0)
+        {
+            var sameSeries = seriesByCandidate[samePeriodCandidates[0]];
+            var recentBuckets = new Dictionary<DateTime, List<double>>();
+
+            foreach (var candidate in recentComparableCandidates)
+            {
+                foreach (var point in seriesByCandidate[candidate])
+                {
+                    if (!recentBuckets.TryGetValue(point.Key, out var values))
+                    {
+                        values = [];
+                        recentBuckets[point.Key] = values;
+                    }
+
+                    values.Add(point.Value);
+                }
+            }
+
+            var allBuckets = sameSeries.Keys
+                .Union(recentBuckets.Keys)
+                .OrderBy(x => x)
+                .ToList();
+
+            return allBuckets
+                .Select(bucket =>
+                {
+                    var hasSame = sameSeries.TryGetValue(bucket, out var sameValue);
+                    recentBuckets.TryGetValue(bucket, out var recentValues);
+
+                    if (!hasSame && (recentValues is null || recentValues.Count == 0))
+                    {
+                        return null;
+                    }
+
+                    if (hasSame && recentValues is { Count: > 0 })
+                    {
+                        return new CuratedNodeTimeSeriesPoint
+                        {
+                            TimestampUtc = bucket,
+                            Value = (sameValue * 0.70) + (Median(recentValues) * 0.30)
+                        };
+                    }
+
+                    if (hasSame)
+                    {
+                        return new CuratedNodeTimeSeriesPoint
+                        {
+                            TimestampUtc = bucket,
+                            Value = sameValue
+                        };
+                    }
+
+                    return new CuratedNodeTimeSeriesPoint
+                    {
+                        TimestampUtc = bucket,
+                        Value = Median(recentValues!)
+                    };
+                })
+                .Where(point => point is not null)
+                .Cast<CuratedNodeTimeSeriesPoint>()
+                .ToList();
+        }
+
+        var bucketValues = new Dictionary<DateTime, List<double>>();
+        foreach (var candidate in selectedCandidates)
+        {
+            foreach (var point in seriesByCandidate[candidate])
+            {
+                if (!bucketValues.TryGetValue(point.Key, out var values))
+                {
+                    values = [];
+                    bucketValues[point.Key] = values;
+                }
+
+                values.Add(point.Value);
+            }
+        }
+
+        return bucketValues
+            .OrderBy(x => x.Key)
+            .Select(x => new CuratedNodeTimeSeriesPoint
+            {
+                TimestampUtc = x.Key,
+                Value = Median(x.Value)
+            })
+            .ToList();
     }
 
     private async Task<CuratedNodeSummary?> ParseCsvColumnAsync(string filePath, CuratedNodeSource source, DateTime from, DateTime to, CancellationToken ct)

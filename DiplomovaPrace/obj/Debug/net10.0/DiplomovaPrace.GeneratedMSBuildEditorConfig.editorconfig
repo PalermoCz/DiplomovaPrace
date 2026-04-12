@@ -42,6 +42,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xCdWlsZGluZ1xFeHByZXNzaW9uUGFuZWwucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Building/FacilityCompareTimeSeriesPanel.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xCdWlsZGluZ1xGYWNpbGl0eUNvbXBhcmVUaW1lU2VyaWVzUGFuZWwucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/Matthew/Desktop/Diplomova_Prace/Code/DiplomovaPrace/DiplomovaPrace/Components/Building/FacilityTimeSeriesPanel.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xCdWlsZGluZ1xGYWNpbGl0eVRpbWVTZXJpZXNQYW5lbC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 

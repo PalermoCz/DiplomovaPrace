@@ -121,6 +121,74 @@
                     </div>
                 </div>
 
+                <h6 class="mb-3 fw-bold border-bottom pb-2">Vybrané uzly k porovnání</h6>
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body p-3">
+                        <div class="small text-muted mb-2">
+                            Compare set foundation: podporuje výběr uzlů pro compare preview v detailu uzlu (actual-vs-actual multi-series).
+                        </div>
+
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                            @if (IsCurrentNodeInCompareSet)
+                            {
+                                <button class="btn btn-sm btn-outline-danger" @onclick="RemoveCurrentNodeFromCompareSet">
+                                    <i class="bi bi-dash-circle me-1"></i> Odebrat z porovnání
+                                </button>
+                            }
+                            else if (CanAddCurrentNodeToCompareSet)
+                            {
+                                <button class="btn btn-sm btn-outline-primary" @onclick="AddCurrentNodeToCompareSet">
+                                    <i class="bi bi-plus-circle me-1"></i> Přidat do porovnání
+                                </button>
+                            }
+                            else if (!IsCurrentNodeCompareSupported)
+                            {
+                                <span class="small text-muted">Tento uzel není v této verzi podporován pro compare set.</span>
+                            }
+                            else if (IsCompareSetAtCapacity)
+                            {
+                                <span class="small text-muted">Compare set je plný (@MaxCompareSetSize uzly).</span>
+                            }
+                        </div>
+
+                        <div class="small text-muted mb-2">
+                            Podporované uzly v této verzi: <strong>@CompareSetSupportedNodeListText</strong>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(_compareSetStatusMessage))
+                        {
+                            <div class="small text-muted mb-2">@_compareSetStatusMessage</div>
+                        }
+
+                        <div class="small text-muted text-uppercase mb-2">Položky compare setu (@_compareSet.Count/@MaxCompareSetSize)</div>
+                        @if (_compareSet.Count == 0)
+                        {
+                            <div class="small text-muted">Zatím nejsou vybrány žádné uzly pro porovnání.</div>
+                        }
+                        else
+                        {
+                            <ul class="list-group list-group-flush mb-2">
+                                @foreach (var item in _compareSet)
+                                {
+                                    <li class="list-group-item px-0 py-2 d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <div class="fw-semibold">@item.Label</div>
+                                            <div class="small text-muted">@item.NodeKey</div>
+                                        </div>
+                                        <button class="btn btn-sm btn-link text-danger" @onclick="() => RemoveNodeFromCompareSet(item.NodeKey)">
+                                            Odebrat
+                                        </button>
+                                    </li>
+                                }
+                            </ul>
+
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="ClearCompareSet">
+                                Vyčistit compare set
+                            </button>
+                        }
+                    </div>
+                </div>
+
                 <h6 class="mb-3 fw-bold border-bottom pb-2">Časový rozsah</h6>
                 <div class="mb-4">
                     <select class="form-select bg-light fw-medium" @onchange="OnIntervalChanged" value="@_selectedInterval">
@@ -234,7 +302,15 @@
                     {
                         <FacilityTimeSeriesPanel Data="@_curatedTimeSeriesData"
                                                 SelectedMode="@_timeSeriesMode"
+                                                ShowBaselineOverlay="@_showBaselineOverlay"
+                                                ShowBaselineOverlayChanged="OnShowBaselineOverlayChanged"
                                                 SelectedModeChanged="OnTimeSeriesModeChanged" />
+
+                        @if (ShouldShowComparePreview)
+                        {
+                            <h6 class="mb-3 mt-4 fw-bold border-bottom pb-2">Compare chart preview (v1)</h6>
+                            <FacilityCompareTimeSeriesPanel Data="@_curatedCompareTimeSeriesData" />
+                        }
                     }
 
                     <h6 class="mb-3 mt-4 fw-bold border-bottom pb-2">Deviation / Baseline</h6>
@@ -468,6 +544,15 @@
 @code {
     private static readonly string[] EnergyAlertNodeKeys = ["pv_main", "chp_main", "cooling_main", "heating_main"];
     private const int BaselineHistoricalYearsForValidation = 3;
+    private const int MaxCompareSetSize = 4;
+    private static readonly HashSet<string> CompareSetSupportedNodeKeys =
+    [
+        "heating_main",
+        "cooling_main",
+        "pv_main",
+        "chp_main"
+    ];
+    private const string CompareSetSupportedNodeListText = "heating_main, cooling_main, pv_main, chp_main";
 
     private EditorCanvas? _canvas;
     private DiplomovaPrace.Persistence.Schematic.FacilityEntity? _facility;
@@ -478,7 +563,11 @@
     private CuratedNodeSummary? _curatedPreviewData;
     private CuratedNodeDeviationSummary? _curatedDeviationData;
     private CuratedNodeTimeSeriesResult? _curatedTimeSeriesData;
+    private CuratedNodeCompareTimeSeriesResult? _curatedCompareTimeSeriesData;
     private CuratedNodeTimeSeriesMode _timeSeriesMode = CuratedNodeTimeSeriesMode.Auto;
+    private bool _showBaselineOverlay;
+    private readonly List<CompareSetItem> _compareSet = [];
+    private string? _compareSetStatusMessage;
     private bool _isPreviewLoading;
     private bool _isCuratedNode;
     
@@ -550,10 +639,23 @@
     }
 
     private bool ShowPresetAnchorNote => _isCuratedNode && _selectedInterval != "custom";
+    private bool IsCurrentNodeCompareSupported => _selectedFacilityNode is not null && IsCompareSupportedNode(_selectedFacilityNode.NodeKey);
+    private bool IsCurrentNodeInCompareSet => _selectedFacilityNode is not null && _compareSet.Any(x => x.NodeKey.Equals(_selectedFacilityNode.NodeKey, StringComparison.OrdinalIgnoreCase));
+    private bool IsCompareSetAtCapacity => _compareSet.Count >= MaxCompareSetSize;
+    private bool CanAddCurrentNodeToCompareSet => _selectedFacilityNode is not null && IsCurrentNodeCompareSupported && !IsCurrentNodeInCompareSet && !IsCompareSetAtCapacity;
+    private bool IsSelectedNodeComparePreviewSupported => _selectedFacilityNode is not null && IsCompareSupportedNode(_selectedFacilityNode.NodeKey);
+    private bool ShouldShowComparePreview => _isCuratedNode && IsSelectedNodeComparePreviewSupported && GetEffectiveCompareNodeKeysForSelectedNode().Count > 0;
 
     private IReadOnlyDictionary<string, NodeDeviationSeverity> AlertSeverityByNodeKey =>
         GlobalAlertSummaryService.Current.AlertedNodes
             .ToDictionary(x => x.NodeKey, x => x.Severity, StringComparer.OrdinalIgnoreCase);
+
+    private sealed class CompareSetItem
+    {
+        public required string NodeKey { get; init; }
+        public required string Label { get; init; }
+        public string? NodeType { get; init; }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -582,6 +684,8 @@
                 _curatedPreviewData = null;
                 _curatedDeviationData = null;
                 _curatedTimeSeriesData = null;
+                _curatedCompareTimeSeriesData = null;
+                _compareSetStatusMessage = null;
                 _isCuratedNode = false;
                 
                 if (_selectedFacilityNode != null)
@@ -602,8 +706,136 @@
             _curatedPreviewData = null;
             _curatedDeviationData = null;
             _curatedTimeSeriesData = null;
+            _curatedCompareTimeSeriesData = null;
+            _compareSetStatusMessage = null;
             await InvokeAsync(StateHasChanged);
         }
+    }
+
+    private static bool IsCompareSupportedNode(string? nodeKey)
+    {
+        if (string.IsNullOrWhiteSpace(nodeKey))
+        {
+            return false;
+        }
+
+        return CompareSetSupportedNodeKeys.Contains(nodeKey);
+    }
+
+    private List<string> GetEffectiveCompareNodeKeysForSelectedNode()
+    {
+        if (_selectedFacilityNode is null)
+        {
+            return [];
+        }
+
+        var primaryNodeKey = _selectedFacilityNode.NodeKey;
+        var seenNodeKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            primaryNodeKey
+        };
+        var keys = new List<string>();
+
+        foreach (var item in _compareSet)
+        {
+            if (!IsCompareSupportedNode(item.NodeKey))
+            {
+                continue;
+            }
+
+            if (!seenNodeKeys.Add(item.NodeKey))
+            {
+                continue;
+            }
+
+            keys.Add(item.NodeKey);
+        }
+
+        return keys;
+    }
+
+    private async Task RefreshComparePreviewAfterCompareSetChangedAsync()
+    {
+        if (_selectedFacilityNode is not null && _isCuratedNode)
+        {
+            await ReloadPreviewDataAsync();
+            return;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task AddCurrentNodeToCompareSet()
+    {
+        if (_selectedFacilityNode is null)
+        {
+            return;
+        }
+
+        if (!IsCompareSupportedNode(_selectedFacilityNode.NodeKey))
+        {
+            _compareSetStatusMessage = "Vybraný uzel nelze v této verzi přidat do compare setu.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (_compareSet.Any(x => x.NodeKey.Equals(_selectedFacilityNode.NodeKey, StringComparison.OrdinalIgnoreCase)))
+        {
+            _compareSetStatusMessage = "Uzel už je v compare setu.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (_compareSet.Count >= MaxCompareSetSize)
+        {
+            _compareSetStatusMessage = $"Compare set má limit {MaxCompareSetSize} uzly.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        _compareSet.Add(new CompareSetItem
+        {
+            NodeKey = _selectedFacilityNode.NodeKey,
+            Label = _selectedFacilityNode.Label,
+            NodeType = _selectedFacilityNode.NodeType
+        });
+
+        _compareSetStatusMessage = $"Uzel {_selectedFacilityNode.Label} byl přidán do compare setu.";
+        await RefreshComparePreviewAfterCompareSetChangedAsync();
+    }
+
+    private async Task RemoveCurrentNodeFromCompareSet()
+    {
+        if (_selectedFacilityNode is null)
+        {
+            return;
+        }
+
+        await RemoveNodeFromCompareSet(_selectedFacilityNode.NodeKey);
+    }
+
+    private async Task RemoveNodeFromCompareSet(string nodeKey)
+    {
+        var removedCount = _compareSet.RemoveAll(x => x.NodeKey.Equals(nodeKey, StringComparison.OrdinalIgnoreCase));
+        _compareSetStatusMessage = removedCount > 0
+            ? "Uzel byl odebrán z compare setu."
+            : "Uzel v compare setu nebyl nalezen.";
+
+        await RefreshComparePreviewAfterCompareSetChangedAsync();
+    }
+
+    private async Task ClearCompareSet()
+    {
+        if (_compareSet.Count == 0)
+        {
+            _compareSetStatusMessage = "Compare set je už prázdný.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        _compareSet.Clear();
+        _compareSetStatusMessage = "Compare set byl vyčištěn.";
+        await RefreshComparePreviewAfterCompareSetChangedAsync();
     }
 
     private async Task OnIntervalChanged(ChangeEventArgs e)
@@ -672,6 +904,21 @@
         }
     }
 
+    private async Task OnShowBaselineOverlayChanged(bool enabled)
+    {
+        if (_showBaselineOverlay == enabled)
+        {
+            return;
+        }
+
+        _showBaselineOverlay = enabled;
+
+        if (_selectedFacilityNode is not null && _isCuratedNode)
+        {
+            await ReloadPreviewDataAsync();
+        }
+    }
+
     private async Task ReloadPreviewDataAsync()
     {
         if (_selectedFacilityNode != null && (_isCuratedNode || !string.IsNullOrEmpty(_selectedFacilityNode.MeterUrn)))
@@ -694,6 +941,7 @@
                         _nodePreviewData = null;
                         _curatedPreviewData = null;
                         _curatedTimeSeriesData = null;
+                        _curatedCompareTimeSeriesData = null;
 
                         if (_isCuratedNode)
                         {
@@ -722,17 +970,42 @@
                 {
                     var summaryTask = AnalyticsPreview.GetCuratedSummaryAsync(_selectedFacilityNode.NodeKey, interval.From, interval.To);
                     var deviationTask = AnalyticsPreview.GetCuratedDeviationSummaryAsync(_selectedFacilityNode.NodeKey, interval.From, interval.To);
-                    var timeSeriesTask = AnalyticsPreview.GetCuratedTimeSeriesAsync(_selectedFacilityNode.NodeKey, interval.From, interval.To, _timeSeriesMode);
+                    var timeSeriesTask = AnalyticsPreview.GetCuratedTimeSeriesAsync(
+                        _selectedFacilityNode.NodeKey,
+                        interval.From,
+                        interval.To,
+                        _timeSeriesMode,
+                        _showBaselineOverlay);
+                    var effectiveCompareNodeKeys = GetEffectiveCompareNodeKeysForSelectedNode();
+                    Task<CuratedNodeCompareTimeSeriesResult?>? compareTask = null;
 
-                    await Task.WhenAll(summaryTask, deviationTask, timeSeriesTask);
+                    if (IsSelectedNodeComparePreviewSupported && effectiveCompareNodeKeys.Count > 0)
+                    {
+                        compareTask = AnalyticsPreview.GetCuratedCompareTimeSeriesAsync(
+                            _selectedFacilityNode.NodeKey,
+                            effectiveCompareNodeKeys,
+                            interval.From,
+                            interval.To,
+                            _timeSeriesMode);
+                    }
+
+                    var loadTasks = new List<Task> { summaryTask, deviationTask, timeSeriesTask };
+                    if (compareTask is not null)
+                    {
+                        loadTasks.Add(compareTask);
+                    }
+
+                    await Task.WhenAll(loadTasks);
                     _curatedPreviewData = summaryTask.Result;
                     _curatedDeviationData = deviationTask.Result;
                     _curatedTimeSeriesData = timeSeriesTask.Result;
+                    _curatedCompareTimeSeriesData = compareTask?.Result;
                 }
                 else if (!skipPostRefresh)
                 {
                     _curatedDeviationData = null;
                     _curatedTimeSeriesData = null;
+                    _curatedCompareTimeSeriesData = null;
                     _nodePreviewData = await AnalyticsPreview.GetPreviewDataAsync(_selectedFacilityNode.MeterUrn!, interval.From, interval.To);
                 }
             }

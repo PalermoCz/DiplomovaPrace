@@ -95,13 +95,21 @@ window.facilityTimeSeriesChart = (function () {
             return;
         }
 
-        var seriesData = model.points.map(function (point) {
+        var actualSeriesData = model.points.map(function (point) {
             return [point.timestampUtc, point.value];
         });
 
-        var pointCount = seriesData.length;
-        var firstTimestamp = pointCount > 0 ? new Date(seriesData[0][0]).getTime() : 0;
-        var lastTimestamp = pointCount > 1 ? new Date(seriesData[pointCount - 1][0]).getTime() : firstTimestamp;
+        var baselineSeriesData = Array.isArray(model.baselinePoints)
+            ? model.baselinePoints.map(function (point) {
+                return [point.timestampUtc, point.value];
+            })
+            : [];
+
+        var hasBaseline = baselineSeriesData.length > 0;
+
+        var pointCount = Math.max(actualSeriesData.length, baselineSeriesData.length);
+        var firstTimestamp = pointCount > 0 ? new Date(actualSeriesData[0][0]).getTime() : 0;
+        var lastTimestamp = pointCount > 1 ? new Date(actualSeriesData[actualSeriesData.length - 1][0]).getTime() : firstTimestamp;
         var rangeMs = Math.max(0, lastTimestamp - firstTimestamp);
         var denseSeries = pointCount >= 500;
         var useSampling = pointCount >= 300;
@@ -109,12 +117,62 @@ window.facilityTimeSeriesChart = (function () {
             ? 6
             : (rangeMs > 7 * 24 * 60 * 60 * 1000 ? 8 : 10);
 
+        var series = [{
+            type: 'line',
+            name: model.actualSeriesName || model.title || 'Aktuální výkon',
+            data: actualSeriesData,
+            showSymbol: false,
+            smooth: false,
+            sampling: useSampling ? 'lttb' : undefined,
+            progressive: 1000,
+            progressiveThreshold: 2000,
+            lineStyle: {
+                width: denseSeries ? 1.8 : 2.2,
+                color: '#0ea5e9'
+            },
+            areaStyle: {
+                opacity: denseSeries ? 0.04 : 0.08,
+                color: '#0ea5e9'
+            }
+        }];
+
+        if (hasBaseline) {
+            series.push({
+                type: 'line',
+                name: model.baselineSeriesName || 'Baseline reference',
+                data: baselineSeriesData,
+                showSymbol: false,
+                smooth: false,
+                sampling: useSampling ? 'lttb' : undefined,
+                progressive: 1000,
+                progressiveThreshold: 2000,
+                lineStyle: {
+                    width: denseSeries ? 1.2 : 1.6,
+                    type: 'dashed',
+                    color: '#64748b'
+                },
+                itemStyle: {
+                    color: '#64748b'
+                }
+            });
+        }
+
         chart.setOption({
             animation: pointCount < 1200,
+            legend: hasBaseline
+                ? {
+                    top: 0,
+                    right: 0,
+                    textStyle: {
+                        fontSize: 11,
+                        color: '#334155'
+                    }
+                }
+                : undefined,
             grid: {
                 left: 54,
                 right: 22,
-                top: 24,
+                top: hasBaseline ? 36 : 24,
                 bottom: 74,
                 containLabel: false
             },
@@ -127,13 +185,18 @@ window.facilityTimeSeriesChart = (function () {
                         return '';
                     }
 
-                    var point = params[0];
-                    var value = Number(point.value[1]);
-                    var formattedValue = Number.isFinite(value)
-                        ? value.toLocaleString('cs-CZ', { maximumFractionDigits: 2 })
-                        : '-';
+                    var lines = [toTooltipDate(params[0].value[0])];
 
-                    return toTooltipDate(point.value[0]) + '<br/>' + formattedValue + ' ' + (model.unit || '');
+                    params.forEach(function (point) {
+                        var value = Number(point.value[1]);
+                        var formattedValue = Number.isFinite(value)
+                            ? value.toLocaleString('cs-CZ', { maximumFractionDigits: 2 })
+                            : '-';
+
+                        lines.push((point.marker || '') + (point.seriesName || '') + ': ' + formattedValue + ' ' + (model.unit || ''));
+                    });
+
+                    return lines.join('<br/>');
                 }
             },
             dataZoom: [
@@ -187,24 +250,196 @@ window.facilityTimeSeriesChart = (function () {
                     lineStyle: { color: '#e2e8f0' }
                 }
             },
-            series: [{
+            series: series
+        }, true);
+
+        chart.resize();
+    }
+
+    function renderCompare(containerId, model) {
+        var chart = getInstance(containerId);
+        if (!chart || !model || !Array.isArray(model.series)) {
+            return;
+        }
+
+        var palette = ['#0ea5e9', '#f97316', '#16a34a', '#ef4444', '#14b8a6', '#0891b2'];
+        var preparedSeries = model.series
+            .map(function (series) {
+                var points = Array.isArray(series.points)
+                    ? series.points.map(function (point) {
+                        return [point.timestampUtc, point.value];
+                    })
+                    : [];
+
+                return {
+                    name: series.name || series.nodeKey || 'Série',
+                    isPrimary: !!series.isPrimary,
+                    data: points
+                };
+            })
+            .filter(function (series) {
+                return series.data.length > 0;
+            });
+
+        if (preparedSeries.length === 0) {
+            chart.clear();
+            return;
+        }
+
+        var pointCount = preparedSeries.reduce(function (acc, series) {
+            return Math.max(acc, series.data.length);
+        }, 0);
+
+        var firstTimestamp = Number.POSITIVE_INFINITY;
+        var lastTimestamp = Number.NEGATIVE_INFINITY;
+
+        preparedSeries.forEach(function (series) {
+            var first = new Date(series.data[0][0]).getTime();
+            var last = new Date(series.data[series.data.length - 1][0]).getTime();
+            if (first < firstTimestamp) {
+                firstTimestamp = first;
+            }
+            if (last > lastTimestamp) {
+                lastTimestamp = last;
+            }
+        });
+
+        if (!Number.isFinite(firstTimestamp) || !Number.isFinite(lastTimestamp)) {
+            chart.clear();
+            return;
+        }
+
+        var rangeMs = Math.max(0, lastTimestamp - firstTimestamp);
+        var denseSeries = pointCount >= 500;
+        var useSampling = pointCount >= 300;
+        var splitNumber = rangeMs > 30 * 24 * 60 * 60 * 1000
+            ? 6
+            : (rangeMs > 7 * 24 * 60 * 60 * 1000 ? 8 : 10);
+
+        var series = preparedSeries.map(function (item, index) {
+            var color = palette[index % palette.length];
+            var lineWidth = item.isPrimary
+                ? (denseSeries ? 2.2 : 2.6)
+                : (denseSeries ? 1.4 : 1.8);
+
+            return {
                 type: 'line',
-                name: model.title || 'Časová řada',
-                data: seriesData,
+                name: item.name,
+                data: item.data,
                 showSymbol: false,
                 smooth: false,
                 sampling: useSampling ? 'lttb' : undefined,
                 progressive: 1000,
                 progressiveThreshold: 2000,
                 lineStyle: {
-                    width: denseSeries ? 1.6 : 2,
-                    color: '#0ea5e9'
+                    width: lineWidth,
+                    color: color,
+                    opacity: item.isPrimary ? 1 : 0.85
                 },
-                areaStyle: {
-                    opacity: denseSeries ? 0.04 : 0.08,
-                    color: '#0ea5e9'
+                itemStyle: {
+                    color: color
+                },
+                areaStyle: item.isPrimary
+                    ? {
+                        opacity: denseSeries ? 0.03 : 0.06,
+                        color: color
+                    }
+                    : undefined
+            };
+        });
+
+        chart.setOption({
+            animation: pointCount < 1200,
+            legend: {
+                top: 0,
+                right: 0,
+                textStyle: {
+                    fontSize: 11,
+                    color: '#334155'
                 }
-            }]
+            },
+            grid: {
+                left: 54,
+                right: 22,
+                top: 36,
+                bottom: 74,
+                containLabel: false
+            },
+            tooltip: {
+                trigger: 'axis',
+                confine: true,
+                axisPointer: { type: 'line' },
+                formatter: function (params) {
+                    if (!params || params.length === 0) {
+                        return '';
+                    }
+
+                    var lines = [toTooltipDate(params[0].value[0])];
+
+                    params.forEach(function (point) {
+                        var value = Number(point.value[1]);
+                        var formattedValue = Number.isFinite(value)
+                            ? value.toLocaleString('cs-CZ', { maximumFractionDigits: 2 })
+                            : '-';
+
+                        lines.push((point.marker || '') + (point.seriesName || '') + ': ' + formattedValue + ' ' + (model.unit || ''));
+                    });
+
+                    return lines.join('<br/>');
+                }
+            },
+            dataZoom: [
+                {
+                    type: 'inside',
+                    xAxisIndex: 0,
+                    filterMode: 'none',
+                    throttle: 80,
+                    zoomOnMouseWheel: true,
+                    moveOnMouseMove: true,
+                    moveOnMouseWheel: true
+                },
+                {
+                    type: 'slider',
+                    xAxisIndex: 0,
+                    height: 18,
+                    bottom: 26,
+                    showDetail: false,
+                    brushSelect: false,
+                    filterMode: 'none',
+                    borderColor: '#cbd5e1',
+                    fillerColor: 'rgba(14, 165, 233, 0.15)',
+                    handleSize: '85%'
+                }
+            ],
+            xAxis: {
+                type: 'time',
+                boundaryGap: false,
+                splitNumber: splitNumber,
+                min: 'dataMin',
+                max: 'dataMax',
+                axisTick: {
+                    alignWithLabel: true
+                },
+                axisLabel: {
+                    hideOverlap: true,
+                    margin: 10,
+                    formatter: function (value) {
+                        return toAxisDateByRange(value, rangeMs);
+                    }
+                }
+            },
+            yAxis: {
+                type: 'value',
+                name: model.yAxisLabel || '',
+                nameGap: 28,
+                axisLabel: {
+                    margin: 10
+                },
+                splitLine: {
+                    lineStyle: { color: '#e2e8f0' }
+                }
+            },
+            series: series
         }, true);
 
         chart.resize();
@@ -243,6 +478,7 @@ window.facilityTimeSeriesChart = (function () {
 
     return {
         render: render,
+        renderCompare: renderCompare,
         dispose: dispose,
         resize: resize
     };
