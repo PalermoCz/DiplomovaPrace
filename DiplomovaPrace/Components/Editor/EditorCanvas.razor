@@ -21,36 +21,91 @@
 
         @if (Facility is not null)
         {
+            var positionedNodes = Facility.Nodes
+                .Where(node => node.XHint.HasValue && node.YHint.HasValue)
+                .ToList();
+            var nodeByKey = positionedNodes.ToDictionary(node => node.NodeKey, StringComparer.OrdinalIgnoreCase);
+            var childrenByParentKey = BuildFacilityChildrenLookup(positionedNodes);
+            var depthByNodeKey = BuildFacilityDepthLookup(positionedNodes, childrenByParentKey);
+            var hasAnySelection = SelectedElementIds.Count > 0;
+            var subtreeBounds = BuildSelectedSubtreeBounds(nodeByKey, depthByNodeKey, childrenByParentKey);
+
             @* Bílé pozadí facility *@
             <rect x="0" y="0"
                   width="@Fmt(ViewBoxWidth)" height="@Fmt(ViewBoxHeight)"
                   fill="white" class="floor-background" pointer-events="none" />
 
+            @if (subtreeBounds is not null)
+            {
+                <rect x="@Fmt(subtreeBounds.X)"
+                      y="@Fmt(subtreeBounds.Y)"
+                      width="@Fmt(subtreeBounds.Width)"
+                      height="@Fmt(subtreeBounds.Height)"
+                      rx="16"
+                      fill="#dbeafe"
+                      fill-opacity="0.28"
+                      stroke="#60a5fa"
+                      stroke-width="2"
+                      stroke-dasharray="8 5"
+                      pointer-events="none" />
+            }
+
             @* Vykreslení hran *@
             @foreach (var edge in Facility.Edges)
             {
-                var sourceNode = Facility.Nodes.FirstOrDefault(n => n.NodeKey == edge.SourceNodeKey);
-                var targetNode = Facility.Nodes.FirstOrDefault(n => n.NodeKey == edge.TargetNodeKey);
-
-                if (sourceNode != null && targetNode != null && sourceNode.XHint.HasValue && sourceNode.YHint.HasValue && targetNode.XHint.HasValue && targetNode.YHint.HasValue)
+                if (!nodeByKey.TryGetValue(edge.SourceNodeKey, out var sourceNode) || !nodeByKey.TryGetValue(edge.TargetNodeKey, out var targetNode))
                 {
-                    <line x1="@Fmt(sourceNode.XHint.Value * ViewBoxWidth)"
-                          y1="@Fmt(sourceNode.YHint.Value * ViewBoxHeight)"
-                          x2="@Fmt(targetNode.XHint.Value * ViewBoxWidth)"
-                          y2="@Fmt(targetNode.YHint.Value * ViewBoxHeight)"
-                          stroke="#cbd5e0"
-                          stroke-width="2" />
+                    continue;
                 }
+
+                var edgeIsInSelectedSubtree = SelectedSubtreeNodeKeys.Contains(edge.SourceNodeKey) && SelectedSubtreeNodeKeys.Contains(edge.TargetNodeKey);
+                var edgeTouchesSelection = SelectedElementIds.Contains(edge.SourceNodeKey) || SelectedElementIds.Contains(edge.TargetNodeKey);
+
+                var edgeStroke = edgeIsInSelectedSubtree
+                    ? "#3b82f6"
+                    : edgeTouchesSelection
+                        ? "#60a5fa"
+                        : "#cbd5e1";
+                var edgeStrokeWidth = edgeIsInSelectedSubtree
+                    ? "3.6"
+                    : edgeTouchesSelection
+                        ? "2.8"
+                        : "1.9";
+                var edgeOpacity = hasAnySelection && !edgeTouchesSelection && !edgeIsInSelectedSubtree
+                    ? "0.25"
+                    : edgeIsInSelectedSubtree
+                        ? "0.92"
+                        : "0.68";
+
+                <line x1="@Fmt(sourceNode.XHint!.Value * ViewBoxWidth)"
+                      y1="@Fmt(sourceNode.YHint!.Value * ViewBoxHeight)"
+                      x2="@Fmt(targetNode.XHint!.Value * ViewBoxWidth)"
+                      y2="@Fmt(targetNode.YHint!.Value * ViewBoxHeight)"
+                      stroke="@edgeStroke"
+                      stroke-width="@edgeStrokeWidth"
+                      stroke-opacity="@edgeOpacity"
+                      stroke-linecap="round" />
             }
 
             @* Vykreslení uzlů *@
-            @foreach (var node in Facility.Nodes)
+            @foreach (var node in positionedNodes
+                .OrderBy(node => GetFacilityDepth(depthByNodeKey, node.NodeKey))
+                .ThenBy(node => node.YHint))
             {
-                if (!node.XHint.HasValue || !node.YHint.HasValue) continue;
-
-                var isSelected = SelectedElementId == node.NodeKey;
-                var cx = node.XHint.Value * ViewBoxWidth;
-                var cy = node.YHint.Value * ViewBoxHeight;
+                var isFocusNode = IsFocusElement(node.NodeKey);
+                var isSelectionNode = SelectedElementIds.Contains(node.NodeKey);
+                var isSubtreeNode = SelectedSubtreeNodeKeys.Contains(node.NodeKey);
+                var hasChildren = childrenByParentKey.TryGetValue(node.NodeKey, out var children) && children.Count > 0;
+                var depth = GetFacilityDepth(depthByNodeKey, node.NodeKey);
+                var cx = node.XHint!.Value * ViewBoxWidth;
+                var cy = node.YHint!.Value * ViewBoxHeight;
+                var isRectNode = IsRectFacilityNode(node, depth, hasChildren);
+                var nodeSize = hasChildren ? (depth == 0 ? 20d : 18d) : 15d;
+                var symbol = GetFacilityNodeSymbol(node.NodeType);
+                var nodeRole = FacilityNodeSemantics.ResolveRole(node.NodeKey, node.NodeType, node.Label);
+                var nodeRoleLabel = FacilityNodeSemantics.GetRoleLabel(nodeRole);
+                var nodeOpacity = 1d;
+                var labelOpacity = 1d;
 
                 NodeDeviationSeverity? alertSeverity = null;
                 if (TryGetEnergyAlertSeverity(node.NodeKey, out var severity))
@@ -59,17 +114,42 @@
                 }
 
                 var (fillColor, strokeColor, textColor) = GetFacilityNodePalette(alertSeverity);
-                var strokeW = "2";
-
-                if (isSelected)
+                if (alertSeverity is null)
                 {
-                    // Selected uzel musí zůstat čitelný i při aktivním alert zabarvení.
+                    strokeColor = GetFacilityRoleAccent(nodeRole);
+                }
+
+                var labelColor = hasChildren ? "#1e293b" : "#475569";
+                var labelWeight = hasChildren ? "650" : "540";
+                var strokeW = "2.2";
+                var haloStroke = "none";
+                var haloStrokeWidth = "0";
+                var haloDashArray = string.Empty;
+
+                if (hasAnySelection && !isSelectionNode && !isFocusNode && !isSubtreeNode)
+                {
+                    nodeOpacity = 0.5;
+                    labelOpacity = 0.48;
+                }
+
+                if (isSubtreeNode && !isSelectionNode && !isFocusNode)
+                {
+                    strokeColor = "#60a5fa";
+                    strokeW = "3.1";
+                    labelColor = "#1d4ed8";
+                    labelWeight = "620";
+                }
+
+                if (isSelectionNode)
+                {
                     strokeColor = "#1d4ed8";
-                    strokeW = "4";
+                    strokeW = "4.4";
+                    haloStroke = "#93c5fd";
+                    haloStrokeWidth = "7";
 
                     if (alertSeverity is null)
                     {
-                        fillColor = "#3b82f6";
+                        fillColor = "#2563eb";
                         textColor = "white";
                     }
                     else if (alertSeverity == NodeDeviationSeverity.Elevated)
@@ -80,26 +160,70 @@
                     {
                         textColor = "white";
                     }
+
+                    labelColor = "#1e3a8a";
+                    labelWeight = "700";
                 }
 
-                <g data-node-key="@node.NodeKey">
-                    @if (node.NodeType == "Site" || node.NodeType == "Building")
+                if (isFocusNode)
+                {
+                    if (!isSelectionNode)
                     {
-                        <rect x="@Fmt(cx - 20)" y="@Fmt(cy - 20)" width="40" height="40" rx="6"
+                        strokeColor = "#334155";
+                        strokeW = "3.6";
+                    }
+
+                    haloStroke = "#0f172a";
+                    haloStrokeWidth = "2.4";
+                    haloDashArray = "6 4";
+                    labelColor = "#0f172a";
+                }
+
+                var labelText = node.Label ?? node.NodeKey;
+                var labelWidth = EstimateLabelWidth(labelText);
+                var placeLabelRight = node.XHint.Value < 0.84;
+                var labelX = placeLabelRight ? cx + nodeSize + 12 : cx - nodeSize - 12;
+                var labelY = cy + 4;
+                var labelAnchor = placeLabelRight ? "start" : "end";
+                var labelBoxX = placeLabelRight ? labelX - 4 : labelX - labelWidth - 4;
+
+                <g data-node-key="@node.NodeKey" opacity="@Fmt(nodeOpacity)">
+                    <title>@($"{labelText} - {nodeRoleLabel}")</title>
+                    @if (haloStrokeWidth != "0")
+                    {
+                        @if (isRectNode)
+                        {
+                            <rect x="@Fmt(cx - nodeSize - 3)" y="@Fmt(cy - nodeSize - 3)"
+                                  width="@Fmt((nodeSize + 3) * 2)" height="@Fmt((nodeSize + 3) * 2)" rx="9"
+                                  fill="none" stroke="@haloStroke" stroke-width="@haloStrokeWidth" stroke-dasharray="@haloDashArray" pointer-events="none" />
+                        }
+                        else
+                        {
+                            <circle cx="@Fmt(cx)" cy="@Fmt(cy)" r="@Fmt(nodeSize + 4)"
+                                    fill="none" stroke="@haloStroke" stroke-width="@haloStrokeWidth" stroke-dasharray="@haloDashArray" pointer-events="none" />
+                        }
+                    }
+
+                    @if (isRectNode)
+                    {
+                        <rect x="@Fmt(cx - nodeSize)" y="@Fmt(cy - nodeSize)" width="@Fmt(nodeSize * 2)" height="@Fmt(nodeSize * 2)" rx="7"
                               fill="@fillColor" stroke="@strokeColor" stroke-width="@strokeW" />
                     }
                     else
                     {
-                        <circle cx="@Fmt(cx)" cy="@Fmt(cy)" r="16"
+                        <circle cx="@Fmt(cx)" cy="@Fmt(cy)" r="@Fmt(nodeSize)"
                                 fill="@fillColor" stroke="@strokeColor" stroke-width="@strokeW" />
                     }
 
-                    <text x="@Fmt(cx)" y="@Fmt(cy + 4)" text-anchor="middle" font-size="10" font-weight="bold" fill="@textColor" pointer-events="none">
-                        @(node.NodeType?.Substring(0, 1) ?? "?")
+                    <text x="@Fmt(cx)" y="@Fmt(cy + 4)" text-anchor="middle" font-size="10" font-weight="700" fill="@textColor" pointer-events="none">
+                        @symbol
                     </text>
 
-                    <text x="@Fmt(cx)" y="@Fmt(cy + 30)" text-anchor="middle" font-size="11" fill="#475569" pointer-events="none">
-                        @EscapeXml(node.Label ?? node.NodeKey)
+                    <rect x="@Fmt(labelBoxX)" y="@Fmt(cy - 8)" width="@Fmt(labelWidth + 8)" height="16" rx="6"
+                          fill="white" fill-opacity="0.88" stroke="#e2e8f0" stroke-width="1" pointer-events="none" opacity="@Fmt(labelOpacity)" />
+
+                    <text x="@Fmt(labelX)" y="@Fmt(labelY)" text-anchor="@labelAnchor" font-size="11" font-weight="@labelWeight" fill="@labelColor" pointer-events="none" opacity="@Fmt(labelOpacity)">
+                        @EscapeXml(labelText)
                     </text>
                 </g>
             }
@@ -135,7 +259,7 @@
 
             @foreach (var room in Floor.Rooms.Where(r => !r.IsDeleted))
             {
-                var isRoomSelected = SelectedElementId == room.Id;
+                var isRoomSelected = IsElementSelected(room.Id);
                 var roomIssues = ValidationIssues.Where(i => i.RoomId == room.Id).ToList();
                 var hasRoomError   = roomIssues.Any(i => i.Type == IssueType.Error);
                 var hasRoomWarning = roomIssues.Any(i => i.Type == IssueType.Warning);
@@ -168,7 +292,7 @@
                     @* Zařízení v místnosti *@
                     @foreach (var device in room.Devices.Where(d => !d.IsDeleted))
                     {
-                        var isDeviceSelected = SelectedElementId == device.Id;
+                        var isDeviceSelected = IsElementSelected(device.Id);
                         var deviceIssues = ValidationIssues.Where(i => i.DeviceId == device.Id).ToList();
                         var hasDeviceWarning = deviceIssues.Any();
 
@@ -223,6 +347,8 @@
     [Parameter] public FloorConfig? Floor { get; set; }
     [Parameter] public EditorTool ActiveTool { get; set; }
     [Parameter] public string? SelectedElementId { get; set; }
+    [Parameter] public IReadOnlySet<string> SelectedElementIds { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    [Parameter] public IReadOnlySet<string> SelectedSubtreeNodeKeys { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     [Parameter] public bool ShowGrid { get; set; }
     [Parameter] public IReadOnlyList<ValidationIssue> ValidationIssues { get; set; } = [];
     [Parameter] public IReadOnlyDictionary<string, NodeDeviationSeverity> FacilityNodeAlertSeverities { get; set; } = new Dictionary<string, NodeDeviationSeverity>();
@@ -368,6 +494,21 @@
         string.IsNullOrEmpty(s) ? "" :
         s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;");
 
+    private bool IsFocusElement(string elementId)
+    {
+        return !string.IsNullOrEmpty(SelectedElementId) && string.Equals(SelectedElementId, elementId, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsElementSelected(string elementId)
+    {
+        if (IsFocusElement(elementId))
+        {
+            return true;
+        }
+
+        return SelectedElementIds.Contains(elementId);
+    }
+
     private bool TryGetEnergyAlertSeverity(string nodeKey, out NodeDeviationSeverity severity)
     {
         severity = default;
@@ -400,6 +541,198 @@
             _ => ("#f1f5f9", "#475569", "#334155")
         };
     }
+
+    private static string GetFacilityRoleAccent(FacilityNodeRole role)
+    {
+        return role switch
+        {
+            FacilityNodeRole.GridTransformer => "#1d4ed8",
+            FacilityNodeRole.EnergyProduction => "#15803d",
+            FacilityNodeRole.HvacCoolingVentilation => "#0f766e",
+            FacilityNodeRole.TestingSimulation => "#c2410c",
+            FacilityNodeRole.PowerDistribution => "#475569",
+            FacilityNodeRole.ServersItCooling => "#111827",
+            _ => "#475569"
+        };
+    }
+
+    private Dictionary<string, List<SchematicNodeEntity>> BuildFacilityChildrenLookup(IEnumerable<SchematicNodeEntity> nodes)
+    {
+        var childrenByParent = new Dictionary<string, List<SchematicNodeEntity>>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var node in nodes)
+        {
+            if (string.IsNullOrWhiteSpace(node.ParentNodeKey))
+            {
+                continue;
+            }
+
+            if (!childrenByParent.TryGetValue(node.ParentNodeKey, out var children))
+            {
+                children = [];
+                childrenByParent[node.ParentNodeKey] = children;
+            }
+
+            children.Add(node);
+        }
+
+        foreach (var children in childrenByParent.Values)
+        {
+            children.Sort((left, right) => StringComparer.OrdinalIgnoreCase.Compare(left.NodeKey, right.NodeKey));
+        }
+
+        return childrenByParent;
+    }
+
+    private Dictionary<string, int> BuildFacilityDepthLookup(
+        IReadOnlyList<SchematicNodeEntity> nodes,
+        IReadOnlyDictionary<string, List<SchematicNodeEntity>> childrenByParent)
+    {
+        var depthByNodeKey = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var nodeByKey = nodes.ToDictionary(node => node.NodeKey, StringComparer.OrdinalIgnoreCase);
+
+        var rootNodes = nodes
+            .Where(node => string.IsNullOrWhiteSpace(node.ParentNodeKey) || !nodeByKey.ContainsKey(node.ParentNodeKey))
+            .OrderBy(node => node.NodeKey, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var queue = new Queue<(string NodeKey, int Depth)>();
+        foreach (var root in rootNodes)
+        {
+            queue.Enqueue((root.NodeKey, 0));
+        }
+
+        while (queue.Count > 0)
+        {
+            var (nodeKey, depth) = queue.Dequeue();
+            if (depthByNodeKey.TryGetValue(nodeKey, out var knownDepth) && knownDepth <= depth)
+            {
+                continue;
+            }
+
+            depthByNodeKey[nodeKey] = depth;
+
+            if (!childrenByParent.TryGetValue(nodeKey, out var children))
+            {
+                continue;
+            }
+
+            foreach (var child in children)
+            {
+                queue.Enqueue((child.NodeKey, depth + 1));
+            }
+        }
+
+        var maxDepth = depthByNodeKey.Values.DefaultIfEmpty(0).Max();
+        foreach (var node in nodes.OrderBy(node => node.NodeKey, StringComparer.OrdinalIgnoreCase))
+        {
+            if (!depthByNodeKey.ContainsKey(node.NodeKey))
+            {
+                maxDepth++;
+                depthByNodeKey[node.NodeKey] = maxDepth;
+            }
+        }
+
+        return depthByNodeKey;
+    }
+
+    private static int GetFacilityDepth(IReadOnlyDictionary<string, int> depthByNodeKey, string nodeKey)
+    {
+        return depthByNodeKey.TryGetValue(nodeKey, out var depth) ? depth : 0;
+    }
+
+    private SubtreeBounds? BuildSelectedSubtreeBounds(
+        IReadOnlyDictionary<string, SchematicNodeEntity> nodeByKey,
+        IReadOnlyDictionary<string, int> depthByNodeKey,
+        IReadOnlyDictionary<string, List<SchematicNodeEntity>> childrenByParent)
+    {
+        if (SelectedSubtreeNodeKeys.Count == 0)
+        {
+            return null;
+        }
+
+        var points = new List<(double X, double Y)>();
+        var maxDepth = 0;
+
+        foreach (var nodeKey in SelectedSubtreeNodeKeys)
+        {
+            if (!nodeByKey.TryGetValue(nodeKey, out var node) || !node.XHint.HasValue || !node.YHint.HasValue)
+            {
+                continue;
+            }
+
+            points.Add((node.XHint.Value * ViewBoxWidth, node.YHint.Value * ViewBoxHeight));
+            maxDepth = Math.Max(maxDepth, GetFacilityDepth(depthByNodeKey, nodeKey));
+        }
+
+        if (points.Count == 0)
+        {
+            return null;
+        }
+
+        var minX = points.Min(point => point.X);
+        var maxX = points.Max(point => point.X);
+        var minY = points.Min(point => point.Y);
+        var maxY = points.Max(point => point.Y);
+
+        var verticalPadding = 42d;
+        var rightPadding = maxDepth >= 2 ? 170d : 130d;
+        var leftPadding = 36d;
+
+        foreach (var nodeKey in SelectedSubtreeNodeKeys)
+        {
+            if (!childrenByParent.TryGetValue(nodeKey, out var children) || children.Count == 0)
+            {
+                continue;
+            }
+
+            rightPadding = Math.Max(rightPadding, 190d);
+            break;
+        }
+
+        minX = Math.Max(0, minX - leftPadding);
+        maxX = Math.Min(ViewBoxWidth, maxX + rightPadding);
+        minY = Math.Max(0, minY - verticalPadding);
+        maxY = Math.Min(ViewBoxHeight, maxY + verticalPadding);
+
+        return new SubtreeBounds(minX, minY, Math.Max(0, maxX - minX), Math.Max(0, maxY - minY));
+    }
+
+    private static bool IsRectFacilityNode(SchematicNodeEntity node, int depth, bool hasChildren)
+    {
+        if (depth == 0)
+        {
+            return true;
+        }
+
+        if (!hasChildren)
+        {
+            return false;
+        }
+
+        return string.Equals(node.NodeType, "site", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(node.NodeType, "building", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(node.NodeType, "grid", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(node.NodeType, "transformer", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string GetFacilityNodeSymbol(string? nodeType)
+    {
+        if (string.IsNullOrWhiteSpace(nodeType))
+        {
+            return "?";
+        }
+
+        return nodeType.Trim()[0].ToString().ToUpperInvariant();
+    }
+
+    private static double EstimateLabelWidth(string label)
+    {
+        var normalizedLength = Math.Clamp(label.Length, 5, 30);
+        return normalizedLength * 6.8;
+    }
+
+    private sealed record SubtreeBounds(double X, double Y, double Width, double Height);
 
     private static string GetDeviceSymbol(DeviceType type) => type switch
     {

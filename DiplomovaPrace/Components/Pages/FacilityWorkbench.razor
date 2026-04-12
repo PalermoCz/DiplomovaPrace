@@ -42,6 +42,440 @@
         overflow-y: auto;
         box-shadow: -2px 0 10px rgba(0,0,0,0.02);
     }
+
+    .overview-grid {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 0.65rem;
+        margin-bottom: 0.65rem;
+    }
+
+    .overview-widget {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.75rem;
+        padding: 0.7rem;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+        min-width: 0;
+    }
+
+    .overview-widget-soft {
+        background: #f8fafc;
+    }
+
+    .overview-widget h6 {
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #64748b;
+        margin-bottom: 0.45rem;
+    }
+
+    .metric-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #0f172a;
+        line-height: 1.1;
+    }
+
+    .metric-caption {
+        font-size: 0.72rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .micro-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.35rem 0.5rem;
+    }
+
+    .micro-kpi {
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        padding: 0.45rem 0.5rem;
+        background: #f8fafc;
+    }
+
+    .headline-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.3rem;
+    }
+
+    .headline-kpi-cell {
+        border: 1px solid #e2e8f0;
+        border-radius: 0.45rem;
+        padding: 0.35rem 0.45rem;
+        background: #f8fafc;
+    }
+
+    .aggregate-status-line {
+        font-size: 0.75rem;
+        color: #64748b;
+        line-height: 1.3;
+    }
+
+    .main-analytics-grid {
+        grid-template-columns: minmax(220px, 0.9fr) minmax(420px, 2.6fr);
+        align-items: stretch;
+    }
+
+    .main-kpi-widget {
+        grid-column: 1;
+    }
+
+    .main-chart-widget {
+        grid-column: 2;
+        min-width: 24rem;
+    }
+
+    .forecast-analytics-grid {
+        grid-template-columns: minmax(380px, 2.4fr) minmax(230px, 1fr);
+        align-items: stretch;
+    }
+
+    .forecast-compare-widget {
+        grid-column: 1;
+        min-width: 22rem;
+    }
+
+    .forecast-diagnostics-widget {
+        grid-column: 2;
+    }
+
+    .forecast-diagnostics-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .forecast-diagnostics-point {
+        font-size: 0.73rem;
+        color: #475569;
+        line-height: 1.3;
+    }
+
+    .operational-intelligence-grid {
+        grid-template-columns: minmax(320px, 1.6fr) minmax(280px, 1.2fr) minmax(280px, 1.2fr);
+        align-items: stretch;
+    }
+
+    .ems-evaluation-grid {
+        grid-template-columns: minmax(360px, 1.8fr) minmax(280px, 1.2fr) minmax(280px, 1.2fr);
+        align-items: stretch;
+    }
+
+    .ems-scorecard-list,
+    .ems-inefficiency-list,
+    .ems-opportunity-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    .ems-scorecard-item,
+    .ems-inefficiency-item,
+    .ems-opportunity-item {
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        padding: 0.42rem 0.5rem;
+        background: #ffffff;
+    }
+
+    .ems-item-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.4rem;
+        margin-bottom: 0.2rem;
+    }
+
+    .ems-item-title {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .ems-item-summary {
+        font-size: 0.73rem;
+        color: #475569;
+        line-height: 1.3;
+    }
+
+    .ems-item-meta {
+        font-size: 0.7rem;
+        color: #64748b;
+        line-height: 1.25;
+        margin-top: 0.16rem;
+    }
+
+    .profile-bucket-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+
+    .profile-bucket-row {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 0.45rem;
+        align-items: center;
+    }
+
+    .profile-bucket-label {
+        font-size: 0.72rem;
+        color: #334155;
+        min-width: 6.5rem;
+    }
+
+    .profile-bucket-track {
+        height: 0.3rem;
+        border-radius: 999px;
+        background: #e2e8f0;
+        overflow: hidden;
+    }
+
+    .profile-bucket-fill {
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #10b981 0%, #0284c7 100%);
+    }
+
+    .profile-bucket-value {
+        font-size: 0.72rem;
+        color: #334155;
+        white-space: nowrap;
+    }
+
+    .secondary-widgets-grid {
+        grid-template-columns: minmax(300px, 1.45fr) minmax(250px, 1.15fr) minmax(240px, 1.1fr) minmax(220px, 1fr) minmax(250px, 1.15fr);
+        align-items: stretch;
+    }
+
+    .secondary-breakdown-widget {
+        grid-column: 1;
+    }
+
+    .secondary-role-widget {
+        grid-column: 2;
+    }
+
+    .secondary-health-widget {
+        grid-column: 3;
+    }
+
+    .secondary-coverage-widget {
+        grid-column: 4;
+    }
+
+    .secondary-compare-widget {
+        grid-column: 5;
+    }
+
+    .operational-point-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    .operational-point {
+        font-size: 0.73rem;
+        color: #475569;
+        line-height: 1.3;
+    }
+
+    .interval-widget {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .interval-meta-row {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        margin-bottom: 0.4rem;
+        min-width: 0;
+    }
+
+    .interval-range-text {
+        font-size: 0.78rem;
+        color: #334155;
+        line-height: 1.3;
+        overflow-wrap: anywhere;
+    }
+
+    .interval-custom-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.45rem;
+        margin-top: 0.5rem;
+    }
+
+    .breakdown-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+    }
+
+    .breakdown-item {
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        padding: 0.4rem 0.5rem;
+        background: #ffffff;
+    }
+
+    .breakdown-item-nodata {
+        background: #f8fafc;
+    }
+
+    .breakdown-header-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+    }
+
+    .breakdown-node-label {
+        font-size: 0.78rem;
+        color: #1e293b;
+        font-weight: 600;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .breakdown-value-label {
+        font-size: 0.75rem;
+        color: #334155;
+        white-space: nowrap;
+    }
+
+    .breakdown-meta {
+        font-size: 0.72rem;
+        color: #64748b;
+        line-height: 1.3;
+    }
+
+    .breakdown-bar-track {
+        margin-top: 0.25rem;
+        height: 0.32rem;
+        border-radius: 999px;
+        background: #e2e8f0;
+        overflow: hidden;
+    }
+
+    .breakdown-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #0ea5e9 0%, #0284c7 100%);
+        border-radius: inherit;
+    }
+
+    .chart-widget {
+        min-height: 310px;
+    }
+
+    .main-chart-widget .card {
+        margin-bottom: 0;
+    }
+
+    .widget-col-2 { grid-column: span 2; }
+    .widget-col-3 { grid-column: span 3; }
+    .widget-col-4 { grid-column: span 4; }
+    .widget-col-6 { grid-column: span 6; }
+    .widget-col-8 { grid-column: span 8; }
+    .widget-col-12 { grid-column: span 12; }
+
+    @@media (max-width: 1400px) {
+        .main-analytics-grid {
+            grid-template-columns: minmax(210px, 1fr) minmax(360px, 2fr);
+        }
+
+        .forecast-analytics-grid {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .forecast-compare-widget,
+        .forecast-diagnostics-widget {
+            grid-column: 1;
+            min-width: 0;
+        }
+
+        .operational-intelligence-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .ems-evaluation-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .secondary-widgets-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .secondary-breakdown-widget,
+        .secondary-role-widget,
+        .secondary-health-widget,
+        .secondary-coverage-widget,
+        .secondary-compare-widget {
+            grid-column: span 2;
+        }
+
+        .interval-custom-grid {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .widget-col-2,
+        .widget-col-3,
+        .widget-col-4,
+        .widget-col-6 {
+            grid-column: span 6;
+        }
+
+        .widget-col-8,
+        .widget-col-12 {
+            grid-column: span 12;
+        }
+    }
+
+    @@media (max-width: 1100px) {
+        .main-analytics-grid,
+        .secondary-widgets-grid,
+        .forecast-analytics-grid,
+        .operational-intelligence-grid,
+        .ems-evaluation-grid {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .main-kpi-widget,
+        .main-chart-widget,
+        .forecast-compare-widget,
+        .forecast-diagnostics-widget,
+        .secondary-role-widget,
+        .secondary-health-widget,
+        .secondary-coverage-widget,
+        .secondary-compare-widget,
+        .secondary-breakdown-widget {
+            grid-column: 1;
+        }
+
+        .main-chart-widget {
+            min-width: 0;
+        }
+    }
+
+    @@media (max-width: 900px) {
+        .widget-col-2,
+        .widget-col-3,
+        .widget-col-4,
+        .widget-col-6,
+        .widget-col-8,
+        .widget-col-12 {
+            grid-column: span 12;
+        }
+    }
 </style>
 
 <div class="facility-workbench">
@@ -71,6 +505,8 @@
                                   Facility="_facility"
                                   ActiveTool="@SessionService.ActiveTool"
                                   SelectedElementId="@SessionService.SelectedElementId"
+                                  SelectedElementIds="@_selectionSet"
+                                  SelectedSubtreeNodeKeys="@SelectedSubtreeNodeKeysForCanvas"
                                   FacilityNodeAlertSeverities="@AlertSeverityByNodeKey"
                                   ShowGrid="false"
                                   OnElementSelected="HandleElementSelected"
@@ -79,465 +515,1043 @@
             </div>
         </div>
         
-        @* Pravá část: Detail & Analytika *@
-        @if (SessionService.SelectedElementType == EditorSelectionType.FacilityNode && _selectedFacilityNode is not null)
-        {
-            <div class="facility-properties">
-                <div class="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom">
-                    <h5 class="mb-0 fw-bold">Detail uzlu</h5>
-                    <div class="d-flex align-items-center gap-2">
-                        <button class="btn btn-sm btn-outline-secondary d-flex align-items-center bg-light px-3 text-nowrap fw-medium" @onclick="ToggleSchematic">
-                            <i class="bi @(_isSchematicHidden ? "bi-layout-split" : "bi-arrows-fullscreen") me-1"></i>
-                            @(_isSchematicHidden ? "Zobrazit schéma" : "Maximalizovat detail")
+        @* Pravá část: Widget-based overview panel *@
+        @{
+            var hasFocusNode = SessionService.SelectedElementType == EditorSelectionType.FacilityNode && _selectedFacilityNode is not null;
+            var weatherSummary = _curatedDeviationData?.WeatherExplanation;
+        }
+        <div class="facility-properties @(hasFocusNode ? string.Empty : "bg-light")">
+            <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
+                <h5 class="mb-0 fw-bold">Workspace Overview</h5>
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-sm btn-outline-secondary d-flex align-items-center bg-light px-3 text-nowrap fw-medium" @onclick="ToggleSchematic">
+                        <i class="bi @(_isSchematicHidden ? "bi-layout-split" : "bi-arrows-fullscreen") me-1"></i>
+                        @(_isSchematicHidden ? "Zobrazit schéma" : "Maximalizovat detail")
+                    </button>
+                    @if (hasFocusNode)
+                    {
+                        <button class="btn btn-sm btn-light border shadow-sm text-secondary px-3 text-nowrap fw-medium" @onclick="ClosePanel" title="Zavřít focus uzel">
+                            <i class="bi bi-x-lg me-1"></i> Zrušit focus
                         </button>
-                        <button class="btn btn-sm btn-light border shadow-sm text-secondary px-3 text-nowrap fw-medium" @onclick="ClosePanel" title="Zavřít detail uzlu">
-                            <i class="bi bi-x-lg me-1"></i> Zavřít
-                        </button>
-                    </div>
+                    }
                 </div>
-                
-                <div class="card border-0 bg-light mb-4">
-                    <div class="card-body p-3">
-                        <div class="mb-3">
-                            <label class="form-label text-muted mb-0" style="font-size: 0.8rem; text-transform: uppercase;">Název sub-systému</label>
-                            <div class="fw-bold fs-5 text-dark" style="line-height: 1.2;">@_selectedFacilityNode.Label</div>
-                        </div>
+            </div>
 
-                        <div class="mb-3">
-                            <label class="form-label text-muted mb-0" style="font-size: 0.8rem; text-transform: uppercase;">NodeKey</label>
-                            <div><code style="color: #475569; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem;">@_selectedFacilityNode.NodeKey</code></div>
-                        </div>
-
+            <div class="overview-grid">
+                <div class="overview-widget widget-col-3">
+                    <h6>Selection</h6>
+                    <div class="d-flex align-items-end justify-content-between mb-2">
                         <div>
-                            <label class="form-label text-muted mb-0" style="font-size: 0.8rem; text-transform: uppercase;">Typ Uzlu & Zóna</label>
-                            <div>
-                                <span class="badge border border-secondary text-secondary me-1">@(_selectedFacilityNode.NodeType ?? "Neznámý")</span>
-                                @if (!string.IsNullOrEmpty(_selectedFacilityNode.Zone))
-                                {
-                                    <span class="badge bg-secondary">@_selectedFacilityNode.Zone</span>
-                                }
-                            </div>
+                            <div class="metric-value">@SelectionCount</div>
+                            <div class="metric-caption">Vybrané uzly</div>
                         </div>
+                        @if (hasFocusNode)
+                        {
+                            <span class="badge bg-light text-secondary border">Focus: @_selectedFacilityNode!.Label</span>
+                        }
                     </div>
-                </div>
-
-                <h6 class="mb-3 fw-bold border-bottom pb-2">Vybrané uzly k porovnání</h6>
-                <div class="card border-0 shadow-sm mb-4">
-                    <div class="card-body p-3">
-                        <div class="small text-muted mb-2">
-                            Compare set foundation: podporuje výběr uzlů pro compare preview v detailu uzlu (actual-vs-actual multi-series).
-                        </div>
-
-                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                            @if (IsCurrentNodeInCompareSet)
+                    @if (HasSelectedNodes)
+                    {
+                        <div class="d-flex flex-wrap gap-2">
+                            @foreach (var selectedNode in SelectionSummaryItems.Take(4))
                             {
-                                <button class="btn btn-sm btn-outline-danger" @onclick="RemoveCurrentNodeFromCompareSet">
-                                    <i class="bi bi-dash-circle me-1"></i> Odebrat z porovnání
-                                </button>
+                                var selectedNodeRole = ResolveNodeRole(selectedNode);
+                                <span class="badge rounded-pill border @GetFacilityRoleBadgeClass(selectedNodeRole)">@selectedNode.Label · @GetFacilityRoleCompactLabel(selectedNodeRole)</span>
                             }
-                            else if (CanAddCurrentNodeToCompareSet)
+                            @if (SelectionCount > 4)
                             {
-                                <button class="btn btn-sm btn-outline-primary" @onclick="AddCurrentNodeToCompareSet">
-                                    <i class="bi bi-plus-circle me-1"></i> Přidat do porovnání
-                                </button>
-                            }
-                            else if (!IsCurrentNodeCompareSupported)
-                            {
-                                <span class="small text-muted">Tento uzel není v této verzi podporován pro compare set.</span>
-                            }
-                            else if (IsCompareSetAtCapacity)
-                            {
-                                <span class="small text-muted">Compare set je plný (@MaxCompareSetSize uzly).</span>
+                                <span class="badge rounded-pill border text-secondary-emphasis bg-light-subtle">+@(SelectionCount - 4)</span>
                             }
                         </div>
+                    }
+                    else
+                    {
+                        <div class="small text-muted">Výběr je prázdný.</div>
+                    }
 
-                        <div class="small text-muted mb-2">
-                            Podporované uzly v této verzi: <strong>@CompareSetSupportedNodeListText</strong>
-                        </div>
+                    <div class="mt-3 pt-2 border-top">
+                        <div class="small fw-semibold text-secondary mb-2">Semantic Selection</div>
 
-                        @if (!string.IsNullOrWhiteSpace(_compareSetStatusMessage))
-                        {
-                            <div class="small text-muted mb-2">@_compareSetStatusMessage</div>
-                        }
-
-                        <div class="small text-muted text-uppercase mb-2">Položky compare setu (@_compareSet.Count/@MaxCompareSetSize)</div>
-                        @if (_compareSet.Count == 0)
-                        {
-                            <div class="small text-muted">Zatím nejsou vybrány žádné uzly pro porovnání.</div>
-                        }
-                        else
-                        {
-                            <ul class="list-group list-group-flush mb-2">
-                                @foreach (var item in _compareSet)
+                        <div class="d-flex flex-wrap gap-1 mb-2">
+                            <select class="form-select form-select-sm bg-light" style="min-width: 8.5rem; max-width: 10.5rem;" @bind="_semanticPreset">
+                                @foreach (var preset in SemanticPresetOptions)
                                 {
-                                    <li class="list-group-item px-0 py-2 d-flex align-items-center justify-content-between">
-                                        <div>
-                                            <div class="fw-semibold">@item.Label</div>
-                                            <div class="small text-muted">@item.NodeKey</div>
-                                        </div>
-                                        <button class="btn btn-sm btn-link text-danger" @onclick="() => RemoveNodeFromCompareSet(item.NodeKey)">
-                                            Odebrat
-                                        </button>
-                                    </li>
+                                    <option value="@preset">@FacilityNodeSemantics.GetPresetLabel(preset)</option>
                                 }
-                            </ul>
+                            </select>
 
-                            <button class="btn btn-sm btn-outline-secondary" @onclick="ClearCompareSet">
-                                Vyčistit compare set
+                            <select class="form-select form-select-sm bg-light" style="min-width: 8rem; max-width: 10rem;" @bind="_semanticSelectionMutationMode">
+                                @foreach (var mode in SemanticSelectionMutationModeOptions)
+                                {
+                                    <option value="@mode">@GetSemanticMutationModeLabel(mode)</option>
+                                }
+                            </select>
+
+                            <button class="btn btn-sm btn-outline-primary" @onclick="ApplySemanticPresetAsync" disabled="@(_facility is null)">
+                                <i class="bi bi-magic me-1"></i>Preset
                             </button>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <input id="semantic-supported-only" class="form-check-input mt-0" type="checkbox" @bind="_semanticSelectionSupportedOnly" />
+                            <label class="small text-muted mb-0" for="semantic-supported-only">Pouze analyticky podporované</label>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-1 mb-2">
+                            <select class="form-select form-select-sm bg-light" style="min-width: 8rem; max-width: 10.5rem;" @bind="_semanticQueryRoleFilterValue">
+                                <option value="">Any role</option>
+                                @foreach (var role in SemanticRoleOptions)
+                                {
+                                    <option value="@role">@FacilityNodeSemantics.GetRoleLabel(role)</option>
+                                }
+                            </select>
+
+                            <select class="form-select form-select-sm bg-light" style="min-width: 8rem; max-width: 10.5rem;" @bind="_semanticQueryTypeFilterValue">
+                                <option value="">Any semantic type</option>
+                                @foreach (var semanticType in SemanticTypeOptions)
+                                {
+                                    <option value="@semanticType">@FacilityNodeSemantics.GetSemanticTypeLabel(semanticType)</option>
+                                }
+                            </select>
+                        </div>
+
+                        <input class="form-control form-control-sm bg-light" @bind="_semanticQueryTagInput" placeholder="Tagy (např. hvac, production, zone:workshop)" />
+
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="ApplySemanticQueryAsync" disabled="@(_facility is null)">
+                                <i class="bi bi-funnel me-1"></i>Použít query
+                            </button>
+
+                            <button class="btn btn-sm btn-link text-decoration-none p-0" @onclick="ClearSemanticQueryFilters">
+                                Reset filtrů
+                            </button>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(_semanticSelectionStatusMessage))
+                        {
+                            <div class="small text-muted mt-2">@_semanticSelectionStatusMessage</div>
                         }
                     </div>
                 </div>
 
-                <h6 class="mb-3 fw-bold border-bottom pb-2">Časový rozsah</h6>
-                <div class="mb-4">
-                    <select class="form-select bg-light fw-medium" @onchange="OnIntervalChanged" value="@_selectedInterval">
+                <div class="overview-widget widget-col-4 interval-widget">
+                    <h6>Interval</h6>
+                    <div class="interval-meta-row">
+                        <span class="badge bg-light text-secondary border">@SelectedIntervalLabel</span>
+                        <span class="interval-range-text">@DisplayIntervalFromTo</span>
+                    </div>
+                    <select class="form-select form-select-sm bg-light fw-medium" @onchange="OnIntervalChanged" value="@_selectedInterval">
                         <option value="last24h">Posledních 24 hodin</option>
                         <option value="last7d">Posledních 7 dní</option>
                         <option value="last30d">Posledních 30 dní</option>
                         <option value="thisMonth">Tento měsíc</option>
                         <option value="custom">Vlastní rozsah</option>
                     </select>
-
                     @if (_selectedInterval == "custom")
                     {
-                        <div class="row g-2 mt-2">
-                            <div class="col-6">
-                                <label class="form-label text-muted small mb-1">Od</label>
-                                <input type="date" class="form-control bg-light" value="@CustomFromDateValue" @onchange="OnCustomFromChanged" />
+                        <div class="interval-custom-grid">
+                            <div>
+                                <input type="date" class="form-control form-control-sm bg-light" value="@CustomFromDateValue" @onchange="OnCustomFromChanged" />
                             </div>
-                            <div class="col-6">
-                                <label class="form-label text-muted small mb-1">Do</label>
-                                <input type="date" class="form-control bg-light" value="@CustomToDateValue" @onchange="OnCustomToChanged" />
+                            <div>
+                                <input type="date" class="form-control form-control-sm bg-light" value="@CustomToDateValue" @onchange="OnCustomToChanged" />
                             </div>
                         </div>
                     }
+                    @if (!string.IsNullOrWhiteSpace(_customIntervalValidationMessage))
+                    {
+                        <div class="small text-danger mt-1">@_customIntervalValidationMessage</div>
+                    }
+                    @if (ShowPresetAnchorNote)
+                    {
+                        <div class="small text-muted mt-1">Anchor: poslední data focus uzlu</div>
+                    }
+                </div>
 
-                    <div class="mt-3 small text-muted">
+                <div class="overview-widget widget-col-3">
+                    <h6>Deviation Alerty</h6>
+                    <div class="d-flex align-items-end justify-content-between mb-2">
                         <div>
-                            <span class="fw-semibold text-dark">Vybraný interval:</span>
-                            @DisplayIntervalFromTo
+                            <div class="metric-value">@ActiveAlertCount</div>
+                            <div class="metric-caption">Aktivní deviation alerty</div>
                         </div>
-                        @if (ShowPresetAnchorNote)
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mb-2">
+                        <span class="badge bg-danger-subtle text-danger-emphasis">High: @GlobalAlertSummaryService.Current.HighCount</span>
+                        <span class="badge bg-warning-subtle text-warning-emphasis">Elevated: @GlobalAlertSummaryService.Current.ElevatedCount</span>
+                    </div>
+                    @if (ActiveAlertCount == 0)
+                    {
+                        <div class="small text-muted">Bez aktivních deviation alertů.</div>
+                    }
+                    else
+                    {
+                        <div class="small text-muted">Deviation-only signal pro aktuální interval.</div>
+                    }
+                </div>
+
+                <div class="overview-widget widget-col-2">
+                    <h6>Weather</h6>
+                    @if (SupportsWeatherExplanation(_selectedFacilityNode?.NodeKey) && weatherSummary?.IsAvailable == true)
+                    {
+                        <div class="fw-semibold small">@GetWeatherExplanationStatusText(weatherSummary.Status)</div>
+                        <div class="metric-value mt-1">@FormatSigned(weatherSummary.DeltaOutdoorTempC, "N1") °C</div>
+                        <div class="metric-caption">Delta teploty</div>
+                    }
+                    else
+                    {
+                        <div class="small text-muted">N/A pro aktuální focus.</div>
+                    }
+                </div>
+            </div>
+
+            <div class="overview-grid secondary-widgets-grid">
+                <div class="overview-widget overview-widget-soft secondary-breakdown-widget">
+                    <h6>Disaggregation / Top Contributors</h6>
+                    @if (_isPreviewLoading)
+                    {
+                        <div class="text-muted d-flex align-items-center">
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span> Připravuji disaggregation a contribution intelligence...
+                        </div>
+                    }
+                    else if (SelectionContributionIntelligence.TopContributors.Count > 0 || SelectionDisaggregation.MeasuredContributorCount > 0)
+                    {
+                        var disaggregation = SelectionDisaggregation;
+                        var contributionIntelligence = SelectionContributionIntelligence;
+
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <span class="badge bg-light text-secondary border">Measured included: @disaggregation.MeasuredContributorCount</span>
+                            <span class="badge bg-light text-secondary border">Load: @disaggregation.ConsumptionContributorCount</span>
+                            <span class="badge bg-light text-secondary border">Generation: @disaggregation.GenerationContributorCount</span>
+                            @if (disaggregation.HasMixedSigns)
+                            {
+                                <span class="badge bg-light text-secondary border">Mixed-sign selection</span>
+                            }
+                            @if (SelectionAggregateNoDataCount > 0)
+                            {
+                                <span class="badge bg-light text-secondary border">No-data: @SelectionAggregateNoDataCount</span>
+                            }
+                            @if (SelectionAggregateUnsupportedCount > 0)
+                            {
+                                <span class="badge bg-light text-secondary border">Unsupported ignored: @SelectionAggregateUnsupportedCount</span>
+                            }
+                            @if (SelectionAggregateContextOnlyCount > 0)
+                            {
+                                <span class="badge bg-light text-secondary border">Context-only excluded: @SelectionAggregateContextOnlyCount</span>
+                            }
+                        </div>
+
+                        <div class="small text-muted mb-2">@disaggregation.CompositionSummary</div>
+                        <div class="small text-muted mb-2">@contributionIntelligence.DominantSourceSummary</div>
+
+                        <div class="breakdown-list">
+                            @foreach (var contributor in contributionIntelligence.TopContributors)
+                            {
+                                var sharePercent = contributor.AbsoluteSharePercent > 0
+                                    ? Math.Clamp(contributor.AbsoluteSharePercent, 0.0, 100.0)
+                                    : 0.0;
+                                var contributionRoleLabel = GetContributionRoleText(contributor.ContributionRole);
+                                var contributionRoleBadgeClass = GetContributionRoleBadgeClass(contributor.ContributionRole);
+                                var directionLabel = GetContributionDirectionText(contributor.Direction);
+                                var directionBadgeClass = GetContributionDirectionBadgeClass(contributor.Direction);
+                                var nodeRoleBadgeClass = GetFacilityRoleBadgeClass(contributor.NodeRole);
+
+                                <div class="breakdown-item">
+                                    <div class="breakdown-header-row">
+                                        <div class="d-flex align-items-center gap-2 min-w-0">
+                                            <div class="breakdown-node-label">@contributor.Label</div>
+                                            <span class="badge @nodeRoleBadgeClass">@contributor.NodeRoleLabel</span>
+                                            <span class="badge @contributionRoleBadgeClass">@contributionRoleLabel</span>
+                                            <span class="badge @directionBadgeClass">@directionLabel</span>
+                                        </div>
+                                        <div class="breakdown-value-label">@FormatSigned(contributor.IntervalEnergyKwh, "N1") kWh</div>
+                                    </div>
+                                    <div class="breakdown-meta">
+                                        <span>@contributionRoleLabel · @directionLabel · share: @contributor.AbsoluteSharePercent.ToString("N1") %</span>
+                                    </div>
+                                    <div class="breakdown-bar-track">
+                                        <div class="breakdown-bar-fill" style="width: @(sharePercent.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture))%;"></div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        @if (contributionIntelligence.TopContributors.Count == 0)
                         {
-                            <div class="mt-1">
-                                Preset je ukotven k poslednímu dostupnému timestampu dat pro tento uzel.
+                            <div class="small text-muted mt-2">Top contributors nejsou dostupní, protože selection nemá measured contribution s daty.</div>
+                        }
+
+                        <div class="small text-muted mt-2">@contributionIntelligence.Methodology</div>
+
+                        @if (SelectionBreakdownItems.Count > contributionIntelligence.TopContributors.Count)
+                        {
+                            <div class="small text-muted mt-2">Plný node breakdown zůstává zachovaný v datové pipeline pro numerickou validaci aggregate a role breakdown.</div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="small text-muted">Disaggregation se zobrazí po výběru podporovaných energetických uzlů v selection setu.</div>
+                    }
+                </div>
+
+                <div class="overview-widget overview-widget-soft secondary-role-widget">
+                    <h6>Role Breakdown</h6>
+                    @if (_isPreviewLoading)
+                    {
+                        <div class="text-muted d-flex align-items-center">
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span> Agreguji contribution podle rolí...
+                        </div>
+                    }
+                    else if (SelectionRoleBreakdownItems.Count > 0)
+                    {
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <span class="badge bg-light text-secondary border">Roles: @SelectionRoleBreakdownItems.Count</span>
+                            <span class="badge bg-light text-secondary border">Included nodes: @SelectionAggregateIncludedCount</span>
+                        </div>
+
+                        <div class="breakdown-list">
+                            @foreach (var roleContribution in SelectionRoleBreakdownItems.Take(6))
+                            {
+                                var sharePercent = roleContribution.SharePercent.HasValue
+                                    ? Math.Clamp(roleContribution.SharePercent.Value, 0.0, 100.0)
+                                    : 0.0;
+                                var contributionRoleLabel = GetContributionRoleText(roleContribution.ContributionRole);
+                                var contributionRoleBadgeClass = GetContributionRoleBadgeClass(roleContribution.ContributionRole);
+
+                                <div class="breakdown-item @(roleContribution.HasData ? string.Empty : "breakdown-item-nodata")">
+                                    <div class="breakdown-header-row">
+                                        <div class="d-flex align-items-center gap-2 min-w-0">
+                                            <div class="breakdown-node-label">@roleContribution.RoleLabel</div>
+                                            @if (roleContribution.HasData)
+                                            {
+                                                <span class="badge @contributionRoleBadgeClass">@contributionRoleLabel</span>
+                                            }
+                                        </div>
+                                        <div class="breakdown-value-label">@FormatSigned(roleContribution.IntervalEnergyKwh, "N1") kWh</div>
+                                    </div>
+                                    <div class="breakdown-meta">
+                                        @if (roleContribution.HasData)
+                                        {
+                                            <span>@roleContribution.ContributingNodeCount/@roleContribution.NodeCount uzlů přispívá · share: @(roleContribution.SharePercent?.ToString("N1") ?? "0.0") %</span>
+                                            @if (roleContribution.HasMixedSigns)
+                                            {
+                                                <span> · mixed-sign role</span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span>Role je ve výběru, ale pro interval nemá použitelná data.</span>
+                                        }
+                                    </div>
+                                    @if (roleContribution.HasData)
+                                    {
+                                        <div class="breakdown-bar-track">
+                                            <div class="breakdown-bar-fill" style="width: @(sharePercent.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture))%;"></div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+
+                        @if (SelectionRoleBreakdownItems.Count > 6)
+                        {
+                            <div class="small text-muted mt-2">Zobrazeno top 6 rolí z @SelectionRoleBreakdownItems.Count.</div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="small text-muted">Role breakdown se zobrazí po výběru podporovaných uzlů s daty.</div>
+                    }
+                </div>
+
+                <div class="overview-widget overview-widget-soft secondary-health-widget">
+                    <h6>Operational Health</h6>
+                    @if (_isPreviewLoading)
+                    {
+                        <div class="text-muted d-flex align-items-center">
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span> Vyhodnocuji issue a anomaly signaly...
+                        </div>
+                    }
+                    else
+                    {
+                        var operationalHealth = SelectionOperationalHealth;
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="badge @GetOperationalStatusBadgeClass(operationalHealth.Status)">@GetOperationalStatusText(operationalHealth.Status)</span>
+                            <span class="badge bg-light text-secondary border">Signals: @operationalHealth.Signals.Count</span>
+                        </div>
+                        <div class="small text-muted mb-2">@operationalHealth.Summary</div>
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <span class="badge bg-light text-secondary border">Supported: @operationalHealth.SupportedNodeCount/@operationalHealth.SelectedNodeCount</span>
+                            <span class="badge bg-light text-secondary border">Included: @operationalHealth.IncludedNodeCount/@operationalHealth.SupportedNodeCount</span>
+                            <span class="badge bg-light text-secondary border">Deviation H/E: @operationalHealth.HighDeviationNodeCount/@operationalHealth.ElevatedDeviationNodeCount</span>
+                            <span class="badge bg-light text-secondary border">Issue U/C/ND: @operationalHealth.UnsupportedNodeCount/@operationalHealth.ContextOnlyNodeCount/@operationalHealth.NoDataNodeCount</span>
+                        </div>
+                        <div class="operational-point-list">
+                            @foreach (var point in BuildOperationalSignalPoints(operationalHealth).Take(4))
+                            {
+                                <div class="operational-point">@point</div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="overview-widget overview-widget-soft secondary-coverage-widget">
+                    <h6>Source Map</h6>
+                    @if (_isPreviewLoading)
+                    {
+                        <div class="text-muted d-flex align-items-center">
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span> Sestavuji mapu zahrnutých a vyloučených zdrojů...
+                        </div>
+                    }
+                    else
+                    {
+                        var sourceMap = SelectionSourceMap;
+
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <span class="badge bg-light text-secondary border">Included: @sourceMap.IncludedMeasuredCount</span>
+                            <span class="badge bg-light text-secondary border">Unsupported: @sourceMap.UnsupportedCount</span>
+                            <span class="badge bg-light text-secondary border">No-data: @sourceMap.NoDataCount</span>
+                            @if (sourceMap.ContextOnlyCount > 0)
+                            {
+                                <span class="badge bg-light text-secondary border">Context-only: @sourceMap.ContextOnlyCount</span>
+                            }
+                        </div>
+
+                        <div class="small text-muted mb-2">@sourceMap.Summary</div>
+
+                        @if (sourceMap.Items.Count > 0)
+                        {
+                            <div class="breakdown-list">
+                                @foreach (var item in sourceMap.Items.Take(6))
+                                {
+                                    var categoryBadgeClass = GetSourceMapCategoryBadgeClass(item.Category);
+                                    <div class="breakdown-item">
+                                        <div class="breakdown-header-row">
+                                            <div class="d-flex align-items-center gap-2 min-w-0">
+                                                <div class="breakdown-node-label">@item.Label</div>
+                                                <span class="badge @categoryBadgeClass">@item.CategoryLabel</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
                             </div>
+
+                            @if (sourceMap.Items.Count > 6)
+                            {
+                                <div class="small text-muted mt-2">Zobrazeno 6 položek ze source map (@sourceMap.Items.Count celkem).</div>
+                            }
+                        }
+
+                        <div class="aggregate-status-line mt-2">
+                            Coverage ratio: @((SelectionOperationalHealth.IncludedCoverageRatio * 100.0).ToString("N0")) % podporovaných uzlů je analyticky zahrnuto.
+                        </div>
+                    }
+                </div>
+
+                <div class="overview-widget overview-widget-soft secondary-compare-widget">
+                    <h6>Compare Set</h6>
+                    <div class="d-flex flex-wrap gap-2 mb-2">
+                        <span class="badge bg-light text-secondary border">@_compareSet.Count/@MaxCompareSetSize v compare</span>
+                        <span class="badge bg-light text-secondary border">@SelectionCompareSupportedCount kandidátů</span>
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                        <button class="btn btn-sm btn-outline-primary" @onclick="AddSelectionSetToCompareSet" disabled="@(!CanAddSelectionSetToCompareSet)">
+                            <i class="bi bi-plus-circle me-1"></i> Přidat selection set do porovnání
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="ClearCompareSet" disabled="@(_compareSet.Count == 0)">
+                            Vyčistit
+                        </button>
+                    </div>
+                    <div class="small text-muted mb-2">Volná kapacita: @CompareSetRemainingCapacity</div>
+                    @if (!string.IsNullOrWhiteSpace(_compareSetStatusMessage))
+                    {
+                        <div class="small text-muted mb-2">@_compareSetStatusMessage</div>
+                    }
+                    @if (_compareSet.Count == 0)
+                    {
+                        <div class="small text-muted">Compare set je prázdný.</div>
+                    }
+                    else
+                    {
+                        <div class="d-flex flex-wrap gap-2">
+                            @foreach (var item in _compareSet)
+                            {
+                                <span class="badge rounded-pill border text-secondary-emphasis bg-white">@item.Label</span>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @if (HasSelectedNodes)
+            {
+                <div class="overview-grid main-analytics-grid">
+                    <div class="overview-widget main-kpi-widget">
+                        <h6>Headline KPI</h6>
+                        @if (_isPreviewLoading)
+                        {
+                            <div class="text-muted d-flex align-items-center">
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Načítám aggregate KPI...
+                            </div>
+                        }
+                        else if (_selectionAggregateOverview?.Summary is not null)
+                        {
+                            <div class="metric-value">
+                                @if (_selectionAggregateOverview.IsNetHeadline)
+                                {
+                                    @FormatSigned(_selectionAggregateOverview.HeadlineValueKwh, "N1") <span class="fs-6 text-muted">kWh</span>
+                                }
+                                else
+                                {
+                                    @_selectionAggregateOverview.HeadlineValueKwh.ToString("N1") <span class="fs-6 text-muted">kWh</span>
+                                }
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="metric-caption">@_selectionAggregateOverview.HeadlineLabel</div>
+                                <span class="badge bg-light text-secondary border">@_selectionAggregateOverview.Summary.StatsUnit</span>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(_selectionAggregateOverview.HeadlineDescription))
+                            {
+                                <div class="small text-muted mb-2">@_selectionAggregateOverview.HeadlineDescription</div>
+                            }
+                            <div class="d-flex flex-wrap gap-2 mb-2">
+                                <span class="badge bg-light text-secondary border">Supported: @SelectionAggregateSupportedCount</span>
+                                <span class="badge bg-light text-secondary border">Included: @SelectionAggregateIncludedCount</span>
+                                @if (SelectionAggregateUnsupportedCount > 0)
+                                {
+                                    <span class="badge bg-light text-secondary border">Unsupported: @SelectionAggregateUnsupportedCount</span>
+                                }
+                                @if (SelectionAggregateNoDataCount > 0)
+                                {
+                                    <span class="badge bg-light text-secondary border">No-data: @SelectionAggregateNoDataCount</span>
+                                }
+                            </div>
+                            <div class="headline-kpi-grid">
+                                <div class="headline-kpi-cell"><div class="metric-caption">Spotřeba</div><div class="fw-semibold">@_selectionAggregateOverview.TotalConsumptionKwh.ToString("N1") kWh</div></div>
+                                <div class="headline-kpi-cell"><div class="metric-caption">Výroba</div><div class="fw-semibold">@_selectionAggregateOverview.TotalGenerationKwh.ToString("N1") kWh</div></div>
+                                <div class="headline-kpi-cell"><div class="metric-caption">Netto</div><div class="fw-semibold">@FormatSigned(_selectionAggregateOverview.NetEnergyKwh, "N1") kWh</div></div>
+                                <div class="headline-kpi-cell"><div class="metric-caption">Samples</div><div class="fw-semibold">@_selectionAggregateOverview.Summary.DataPoints.ToString("N0")</div></div>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(_selectionAggregateOverview.Message))
+                            {
+                                <div class="aggregate-status-line mt-2">@_selectionAggregateOverview.Message</div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="small text-muted">Pro aktuální selection set není aggregate KPI dostupné.</div>
+                            @if (!string.IsNullOrWhiteSpace(_selectionAggregateOverview?.Message))
+                            {
+                                <div class="aggregate-status-line mt-2">@_selectionAggregateOverview.Message</div>
+                            }
+                        }
+                    </div>
+
+                    <div class="overview-widget chart-widget main-chart-widget">
+                        <h6>Hlavní vizualizace</h6>
+                        @if (_isPreviewLoading)
+                        {
+                            <div class="text-muted d-flex align-items-center">
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Připravuji aggregate časovou řadu...
+                            </div>
+                        }
+                        else if (_selectionAggregateOverview?.TimeSeries is not null)
+                        {
+                            <FacilityTimeSeriesPanel Data="@_selectionAggregateOverview.TimeSeries"
+                                                    SelectedMode="@_timeSeriesMode"
+                                                    ShowBaselineOverlay="@_showBaselineOverlay"
+                                                    ShowBaselineOverlayChanged="OnShowBaselineOverlayChanged"
+                                                    SelectedModeChanged="OnTimeSeriesModeChanged" />
+                        }
+                        else
+                        {
+                            <div class="small text-muted">Selection set neobsahuje kompatibilní uzly s dostupnou časovou řadou.</div>
+                            @if (!string.IsNullOrWhiteSpace(_selectionAggregateOverview?.Message))
+                            {
+                                <div class="aggregate-status-line mt-2">@_selectionAggregateOverview.Message</div>
+                            }
                         }
                     </div>
                 </div>
 
-                <h6 class="mb-3 fw-bold border-bottom pb-2">Analytický souhrn</h6>
-                
-                @if (_isCuratedNode)
-                {
-                    <div class="mb-3">
-                        <span class="badge bg-primary px-2 py-1"><i class="bi bi-star-fill me-1"></i> Facility-level / High-Level Systém</span>
-                    </div>
-                    
-                    @if (_isPreviewLoading)
-                    {
-                        <div class="text-muted d-flex align-items-center">
-                            <span class="spinner-border spinner-border-sm me-2" role="status"></span> Načítám data pro vybraný interval...
-                        </div>
-                    }
-                    else if (_curatedPreviewData != null)
-                    {
-                        <div class="card border border-primary shadow-sm mb-3">
-                            <div class="card-body p-3">
-                                <div style="font-size: 0.85rem;" class="text-primary text-uppercase fw-bold mb-1">@_curatedPreviewData.Title</div>
-                                <div class="fs-3 fw-bold text-dark mb-1" style="letter-spacing: -1px;">
-                                    @if (_selectedFacilityNode?.NodeKey == "weather_main")
-                                    {
-                                        @(_curatedPreviewData.Average.ToString("N1")) <span style="font-size: 1.1rem; font-weight: normal; color: #64748b;">°C (průměr)</span>
-                                    }
-                                    else
-                                    {
-                                        @(_curatedPreviewData.TotalSum.ToString("N1")) <span style="font-size: 1.1rem; font-weight: normal; color: #64748b;">@_curatedPreviewData.Unit</span>
-                                    }
-                                </div>
-                                @if (_selectedFacilityNode?.NodeKey != "weather_main")
-                                {
-                                    <div style="font-size: 0.85rem;" class="text-muted">@_curatedPreviewData.SummaryLabel</div>
-                                }
-                                <hr class="my-2 border-primary border-opacity-25" />
-                                <div class="row text-center g-2 mt-1">
-                                    <div class="col-4">
-                                        <div class="text-muted small text-uppercase">Min</div>
-                                        <div class="fw-bold" style="color: #0284c7;">@(_curatedPreviewData.Min.ToString("N1")) @_curatedPreviewData.StatsUnit</div>
-                                    </div>
-                                    <div class="col-4 border-start border-end">
-                                        <div class="text-muted small text-uppercase">Průměr</div>
-                                        <div class="fw-bold">@(_curatedPreviewData.Average.ToString("N1")) @_curatedPreviewData.StatsUnit</div>
-                                    </div>
-                                    <div class="col-4">
-                                        <div class="text-muted small text-uppercase">Max</div>
-                                        <div class="fw-bold" style="color: #dc2626;">@(_curatedPreviewData.Max.ToString("N1")) @_curatedPreviewData.StatsUnit</div>
-                                    </div>
-                                </div>
-                                <div style="font-size: 0.8rem;" class="text-muted d-flex align-items-center mt-3 justify-content-center">
-                                    <i class="bi bi-info-circle me-1"></i> Vypočítáno ze @_curatedPreviewData.DataPoints.ToString("N0") vzorků
-                                </div>
-                            </div>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="alert alert-warning py-3 shadow-sm border-0 d-flex align-items-start" style="font-size: 0.9rem;">
-                            <i class="bi bi-exclamation-triangle-fill text-warning fs-5 me-2"></i>
-                            <div>
-                                Pro tento high-level systém (<strong>@_selectedFacilityNode?.NodeKey</strong>) nejsou ve zvoleném období k dispozici žádná data.
-                            </div>
-                        </div>
-                    }
-
-                    <h6 class="mb-3 mt-4 fw-bold border-bottom pb-2">Časová řada (v1)</h6>
-                    @if (_isPreviewLoading)
-                    {
-                        <div class="text-muted small mb-3 d-flex align-items-center">
-                            <span class="spinner-border spinner-border-sm me-2" role="status"></span> Připravuji časovou řadu pro vybraný interval...
-                        </div>
-                    }
-                    else
-                    {
-                        <FacilityTimeSeriesPanel Data="@_curatedTimeSeriesData"
-                                                SelectedMode="@_timeSeriesMode"
-                                                ShowBaselineOverlay="@_showBaselineOverlay"
-                                                ShowBaselineOverlayChanged="OnShowBaselineOverlayChanged"
-                                                SelectedModeChanged="OnTimeSeriesModeChanged" />
-
-                        @if (ShouldShowComparePreview)
+                <div class="overview-grid forecast-analytics-grid">
+                    <div class="overview-widget chart-widget forecast-compare-widget">
+                        <h6>Forecast vs Actual</h6>
+                        @if (_isPreviewLoading)
                         {
-                            <h6 class="mb-3 mt-4 fw-bold border-bottom pb-2">Compare chart preview (v1)</h6>
-                            <FacilityCompareTimeSeriesPanel Data="@_curatedCompareTimeSeriesData" />
+                            <div class="text-muted d-flex align-items-center">
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Připravuji forecast porovnání...
+                            </div>
                         }
-                    }
-
-                    <h6 class="mb-3 mt-4 fw-bold border-bottom pb-2">Deviation / Baseline</h6>
-
-                    @if (_isPreviewLoading)
-                    {
-                        <div class="text-muted d-flex align-items-center mb-3">
-                            <span class="spinner-border spinner-border-sm me-2" role="status"></span> Vyhodnocuji baseline a odchylku...
-                        </div>
-                    }
-                    else if (_curatedDeviationData?.IsAvailable == true)
-                    {
-                        <div class="card border-0 shadow-sm mb-3">
-                            <div class="card-body p-3">
-                                <div class="d-flex align-items-center justify-content-between mb-2">
-                                    <div class="text-muted text-uppercase fw-bold" style="font-size: 0.8rem;">Odchylka vůči baseline</div>
-                                    <span class="badge @GetDeviationBadgeClass(_curatedDeviationData.Severity)">@GetDeviationBadgeText(_curatedDeviationData.Severity)</span>
-                                </div>
-
-                                <div class="row g-2">
-                                    <div class="col-6">
-                                        <div class="small text-muted text-uppercase">Aktuální hodnota</div>
-                                        <div class="fw-bold">@(_curatedDeviationData.CurrentValue?.ToString("N1") ?? "N/A") @_curatedDeviationData.Unit</div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="small text-muted text-uppercase">Baseline</div>
-                                        <div class="fw-bold">@(_curatedDeviationData.BaselineValue?.ToString("N1") ?? "N/A") @_curatedDeviationData.Unit</div>
-                                    </div>
-                                    <div class="col-6 mt-2">
-                                        <div class="small text-muted text-uppercase">Absolutní odchylka</div>
-                                        <div class="fw-bold">@FormatSigned(_curatedDeviationData.DeltaAbsolute, "N1") @_curatedDeviationData.Unit</div>
-                                    </div>
-                                    <div class="col-6 mt-2">
-                                        <div class="small text-muted text-uppercase">Relativní odchylka</div>
-                                        <div class="fw-bold">@FormatSigned(_curatedDeviationData.DeltaPercent, "N1") %</div>
-                                    </div>
-                                </div>
-
-                                <div class="small text-muted mt-3">
-                                    <i class="bi bi-info-circle me-1"></i>
-                                    @_curatedDeviationData.Methodology
-                                </div>
-                                <div class="small text-muted mt-1">
-                                    Referenčních intervalů použito: @_curatedDeviationData.ReferenceIntervalsUsed
-                                </div>
-                            </div>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="alert alert-secondary py-3 border-0 shadow-sm d-flex align-items-start" style="font-size: 0.9rem;">
-                            <i class="bi bi-info-circle text-secondary fs-5 me-2"></i>
-                            <div>
-                                <div>@(_curatedDeviationData?.Message ?? "Baseline není pro tento uzel / interval zatím k dispozici.")</div>
-                                @if (!string.IsNullOrWhiteSpace(_curatedDeviationData?.Methodology))
-                                {
-                                    <div class="small text-muted mt-1">@_curatedDeviationData.Methodology</div>
-                                }
-                            </div>
-                        </div>
-                    }
-
-                    @if (SupportsWeatherExplanation(_selectedFacilityNode?.NodeKey))
-                    {
-                        <h6 class="mb-3 mt-4 fw-bold border-bottom pb-2">Weather explanatory (v1)</h6>
-
-                        var weatherExplanation = _curatedDeviationData?.WeatherExplanation;
-                        if (weatherExplanation?.IsAvailable == true)
+                        else if (SelectionForecastCompareTimeSeries is not null)
                         {
-                            <div class="card border-0 shadow-sm mb-3">
-                                <div class="card-body p-3">
-                                    <div class="d-flex align-items-center justify-content-between mb-2">
-                                        <div class="text-muted text-uppercase fw-bold" style="font-size: 0.8rem;">Počasí vs odchylka</div>
-                                        <span class="badge @GetWeatherExplanationBadgeClass(weatherExplanation.Status)">@GetWeatherExplanationStatusText(weatherExplanation.Status)</span>
-                                    </div>
+                            <FacilityCompareTimeSeriesPanel Data="@SelectionForecastCompareTimeSeries" />
+                        }
+                        else
+                        {
+                            <div class="small text-muted">@SelectionForecastDiagnostics.Summary</div>
+                        }
+                    </div>
 
-                                    <div class="row g-2">
-                                        <div class="col-6">
-                                            <div class="small text-muted text-uppercase">Aktuální venkovní teplota</div>
-                                            <div class="fw-bold">@weatherExplanation.CurrentAverageOutdoorTempC?.ToString("N1") °C</div>
-                                        </div>
-                                        <div class="col-6">
-                                            <div class="small text-muted text-uppercase">Referenční venkovní teplota</div>
-                                            <div class="fw-bold">@weatherExplanation.ReferenceAverageOutdoorTempC?.ToString("N1") °C</div>
-                                        </div>
-                                        <div class="col-6 mt-2">
-                                            <div class="small text-muted text-uppercase">Rozdíl teplot</div>
-                                            <div class="fw-bold">@FormatSigned(weatherExplanation.DeltaOutdoorTempC, "N1") °C</div>
-                                        </div>
-                                    </div>
-
-                                    <div class="small text-muted text-uppercase mt-3">Explanatory závěr</div>
-                                    <div class="fw-semibold mt-1">@weatherExplanation.Conclusion</div>
-
-                                    <div class="small text-muted mt-3">
-                                        <i class="bi bi-info-circle me-1"></i>
-                                        @weatherExplanation.Methodology
-                                    </div>
-                                </div>
+                    <div class="overview-widget overview-widget-soft forecast-diagnostics-widget">
+                        <h6>Forecast Diagnostics</h6>
+                        @if (_isPreviewLoading)
+                        {
+                            <div class="text-muted d-flex align-items-center">
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Počítám error metriky forecastu...
                             </div>
                         }
                         else
                         {
-                            <div class="alert alert-secondary py-3 border-0 shadow-sm d-flex align-items-start" style="font-size: 0.9rem;">
-                                <i class="bi bi-info-circle text-secondary fs-5 me-2"></i>
-                                <div>
-                                    <div>@(weatherExplanation?.Conclusion ?? "Vysvětlení počasím není pro vybraný uzel / interval dostupné.")</div>
-                                    @if (!string.IsNullOrWhiteSpace(weatherExplanation?.Methodology))
-                                    {
-                                        <div class="small text-muted mt-1">@weatherExplanation.Methodology</div>
-                                    }
-                                </div>
+                            var forecastDiagnostics = SelectionForecastDiagnostics;
+
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="badge @GetForecastStatusBadgeClass(forecastDiagnostics.Status)">@GetForecastStatusText(forecastDiagnostics.Status)</span>
+                                <span class="badge bg-light text-secondary border">Aligned: @forecastDiagnostics.AlignedPointCount/@forecastDiagnostics.ActualPointCount</span>
+                            </div>
+
+                            <div class="small text-muted mb-2">@forecastDiagnostics.Summary</div>
+
+                            <div class="d-flex flex-wrap gap-2 mb-2">
+                                <span class="badge bg-light text-secondary border">MAE: @FormatForecastMetric(forecastDiagnostics.MaeKw) kW</span>
+                                <span class="badge bg-light text-secondary border">RMSE: @FormatForecastMetric(forecastDiagnostics.RmseKw) kW</span>
+                                <span class="badge bg-light text-secondary border">Bias: @FormatSigned(forecastDiagnostics.BiasKw, "N2") kW</span>
+                                <span class="badge bg-light text-secondary border">WAPE: @(forecastDiagnostics.WapePercent?.ToString("N1") ?? "N/A") %</span>
+                            </div>
+
+                            <div class="forecast-diagnostics-list">
+                                @foreach (var point in BuildForecastDiagnosticsPoints(forecastDiagnostics).Take(4))
+                                {
+                                    <div class="forecast-diagnostics-point">@point</div>
+                                }
                             </div>
                         }
-                    }
+                    </div>
+                </div>
 
-                    <h6 class="mb-3 mt-4 fw-bold border-bottom pb-2">Alert Foundation (v1)</h6>
+                <div class="overview-grid operational-intelligence-grid">
+                    <div class="overview-widget overview-widget-soft">
+                        <h6>Load Profile</h6>
+                        @if (_isPreviewLoading)
+                        {
+                            <div class="text-muted d-flex align-items-center">
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Sestavuji load profile...
+                            </div>
+                        }
+                        else
+                        {
+                            var loadProfile = SelectionLoadProfile;
+                            if (loadProfile.IsAvailable && loadProfile.Buckets.Count > 0)
+                            {
+                                var maxAbsBucket = loadProfile.Buckets.Max(bucket => Math.Abs(bucket.AverageKw));
+                                var displayedBuckets = loadProfile.Buckets
+                                    .OrderByDescending(bucket => Math.Abs(bucket.AverageKw))
+                                    .ThenBy(bucket => bucket.BucketIndex)
+                                    .Take(8)
+                                    .ToList();
 
-                    @if (_isPreviewLoading)
+                                <div class="d-flex flex-wrap gap-2 mb-2">
+                                    <span class="badge @GetLoadProfileModeBadgeClass(loadProfile.Mode)">@loadProfile.ModeLabel</span>
+                                    <span class="badge bg-light text-secondary border">Body: @loadProfile.PointCount</span>
+                                    <span class="badge bg-light text-secondary border">Dny: @loadProfile.DistinctDayCount</span>
+                                    @if (loadProfile.HasMixedSigns)
+                                    {
+                                        <span class="badge bg-info-subtle text-info-emphasis border">Mixed-sign</span>
+                                    }
+                                </div>
+
+                                <div class="small text-muted mb-2">@loadProfile.Summary</div>
+
+                                <div class="profile-bucket-list mb-2">
+                                    @foreach (var bucket in displayedBuckets)
+                                    {
+                                        var fillPercent = maxAbsBucket > 0
+                                            ? (Math.Abs(bucket.AverageKw) / maxAbsBucket) * 100.0
+                                            : 0.0;
+
+                                        <div class="profile-bucket-row">
+                                            <div class="profile-bucket-label">@bucket.Label</div>
+                                            <div class="profile-bucket-track">
+                                                <div class="profile-bucket-fill" style="width: @(fillPercent.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture))%;"></div>
+                                            </div>
+                                            <div class="profile-bucket-value">@FormatSigned(bucket.AverageKw, "N2") kW</div>
+                                        </div>
+                                    }
+                                </div>
+
+                                <div class="small text-muted">@loadProfile.DifferenceFromMainChart</div>
+                            }
+                            else
+                            {
+                                <div class="small text-muted">@loadProfile.Summary</div>
+                            }
+                        }
+                    </div>
+
+                    <div class="overview-widget overview-widget-soft">
+                        <h6>Peak Analysis</h6>
+                        @if (_isPreviewLoading)
+                        {
+                            <div class="text-muted d-flex align-items-center">
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Vyhodnocuji peak eventy...
+                            </div>
+                        }
+                        else
+                        {
+                            var peakAnalysis = SelectionPeakAnalysis;
+                            if (peakAnalysis.IsAvailable)
+                            {
+                                var peakEvents = new[]
+                                {
+                                    peakAnalysis.DemandPeak,
+                                    peakAnalysis.GenerationPeak,
+                                    peakAnalysis.NetAbsolutePeak
+                                };
+
+                                <div class="d-flex flex-wrap gap-2 mb-2">
+                                    <span class="badge @GetPeakSignificanceBadgeClass(peakAnalysis.SignificanceLevel)">@GetPeakSignificanceText(peakAnalysis.SignificanceLevel)</span>
+                                    <span class="badge bg-light text-secondary border">Ratio: @(peakAnalysis.SignificanceRatio?.ToString("N2") ?? "N/A")x</span>
+                                    @if (peakAnalysis.HasMixedSigns)
+                                    {
+                                        <span class="badge bg-info-subtle text-info-emphasis border">Mixed-sign</span>
+                                    }
+                                </div>
+
+                                <div class="small text-muted mb-2">@peakAnalysis.Summary</div>
+
+                                <div class="breakdown-list mb-2">
+                                    @foreach (var peakEvent in peakEvents.Where(item => item.IsAvailable))
+                                    {
+                                        <div class="breakdown-item">
+                                            <div class="breakdown-header-row">
+                                                <div class="breakdown-node-label">@peakEvent.Label</div>
+                                                <div class="breakdown-value-label">@FormatSigned(peakEvent.ValueKw, "N2") kW</div>
+                                            </div>
+                                            <div class="breakdown-meta">@FormatPeakTimestamp(peakEvent.TimestampUtc)</div>
+                                        </div>
+                                    }
+                                </div>
+
+                                <div class="small text-muted">@peakAnalysis.Methodology</div>
+                            }
+                            else
+                            {
+                                <div class="small text-muted">@peakAnalysis.Summary</div>
+                            }
+                        }
+                    </div>
+
+                    <div class="overview-widget overview-widget-soft">
+                        <h6>Operating Regime</h6>
+                        @if (_isPreviewLoading)
+                        {
+                            <div class="text-muted d-flex align-items-center">
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Vyhodnocuji operating regime...
+                            </div>
+                        }
+                        else
+                        {
+                            var operatingRegime = SelectionOperatingRegime;
+                            if (operatingRegime.IsAvailable)
+                            {
+                                <div class="small text-muted mb-2">@operatingRegime.Summary</div>
+
+                                <div class="micro-grid mb-2">
+                                    <div class="micro-kpi"><div class="metric-caption">Baseload proxy</div><div class="fw-semibold">@FormatSigned(operatingRegime.BaseloadKw, "N2") kW</div></div>
+                                    <div class="micro-kpi"><div class="metric-caption">Peak / Avg</div><div class="fw-semibold">@(operatingRegime.PeakToAverageRatio?.ToString("N2") ?? "N/A")x</div></div>
+                                    <div class="micro-kpi"><div class="metric-caption">Variability (CV)</div><div class="fw-semibold">@(operatingRegime.VariabilityCoefficient?.ToString("N2") ?? "N/A")</div></div>
+                                    <div class="micro-kpi"><div class="metric-caption">Weekday vs Weekend</div><div class="fw-semibold">@FormatSigned(operatingRegime.WeekdayWeekendDeltaPercent, "N1") %</div></div>
+                                </div>
+
+                                <div class="operational-point-list mb-2">
+                                    @foreach (var point in BuildOperatingRegimeSignalPoints(operatingRegime).Take(4))
+                                    {
+                                        <div class="operational-point">@point</div>
+                                    }
+                                </div>
+
+                                <div class="small text-muted">@operatingRegime.Methodology</div>
+                            }
+                            else
+                            {
+                                <div class="small text-muted">@operatingRegime.Summary</div>
+                            }
+                        }
+                    </div>
+                </div>
+
+                <div class="overview-grid ems-evaluation-grid">
+                    <div class="overview-widget overview-widget-soft">
+                        <h6>EMS Operational Scorecards</h6>
+                        @if (_isPreviewLoading)
+                        {
+                            <div class="text-muted d-flex align-items-center">
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Vyhodnocuji EMS scorecards...
+                            </div>
+                        }
+                        else
+                        {
+                            var ems = SelectionEmsEvaluation;
+                            if (ems.IsAvailable && ems.Scorecards.Count > 0)
+                            {
+                                <div class="small text-muted mb-2">@ems.Summary</div>
+
+                                <div class="ems-scorecard-list mb-2">
+                                    @foreach (var card in ems.Scorecards)
+                                    {
+                                        <div class="ems-scorecard-item">
+                                            <div class="ems-item-header">
+                                                <div class="ems-item-title">@card.Label</div>
+                                                <span class="badge @GetScorecardStatusBadgeClass(card.Status)">@GetScorecardStatusText(card.Status)</span>
+                                            </div>
+                                            <div class="ems-item-summary">@card.Summary</div>
+                                            @if (!string.IsNullOrWhiteSpace(card.MetricLabel))
+                                            {
+                                                <div class="ems-item-meta">@card.MetricLabel: @card.MetricDisplay</div>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(card.Thresholds))
+                                            {
+                                                <div class="ems-item-meta">Thresholds: @card.Thresholds</div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+
+                                <div class="small text-muted">@ems.Methodology</div>
+                            }
+                            else
+                            {
+                                <div class="small text-muted">@ems.Summary</div>
+                            }
+                        }
+                    </div>
+
+                    <div class="overview-widget overview-widget-soft">
+                        <h6>Schedule Inefficiency</h6>
+                        @if (_isPreviewLoading)
+                        {
+                            <div class="text-muted d-flex align-items-center">
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Kontroluji schedule inefficiency signály...
+                            </div>
+                        }
+                        else
+                        {
+                            var ems = SelectionEmsEvaluation;
+                            if (ems.IsAvailable)
+                            {
+                                if (ems.Inefficiencies.Count > 0)
+                                {
+                                    <div class="ems-inefficiency-list mb-2">
+                                        @foreach (var inefficiency in ems.Inefficiencies.Take(4))
+                                        {
+                                            <div class="ems-inefficiency-item">
+                                                <div class="ems-item-header">
+                                                    <div class="ems-item-title">@inefficiency.Label</div>
+                                                    <span class="badge @GetInefficiencySeverityBadgeClass(inefficiency.Severity)">@GetInefficiencySeverityText(inefficiency.Severity)</span>
+                                                </div>
+                                                <div class="ems-item-summary">@inefficiency.Summary</div>
+                                                @if (!string.IsNullOrWhiteSpace(inefficiency.Evidence))
+                                                {
+                                                    <div class="ems-item-meta">Evidence: @inefficiency.Evidence</div>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="small text-muted mb-2">V aktuálním intervalu není detekována výrazná schedule inefficiency.</div>
+                                }
+
+                                <div class="small text-muted">@ems.DistinctionNote</div>
+                            }
+                            else
+                            {
+                                <div class="small text-muted">@ems.Summary</div>
+                            }
+                        }
+                    </div>
+
+                    <div class="overview-widget overview-widget-soft">
+                        <h6>Opportunity Summary</h6>
+                        @if (_isPreviewLoading)
+                        {
+                            <div class="text-muted d-flex align-items-center">
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Skládám opportunity kandidáty...
+                            </div>
+                        }
+                        else
+                        {
+                            var ems = SelectionEmsEvaluation;
+                            if (ems.IsAvailable && ems.Opportunities.Count > 0)
+                            {
+                                <div class="ems-opportunity-list mb-2">
+                                    @foreach (var opportunity in ems.Opportunities.Take(3))
+                                    {
+                                        <div class="ems-opportunity-item">
+                                            <div class="ems-item-summary">@opportunity</div>
+                                        </div>
+                                    }
+                                </div>
+
+                                <div class="d-flex flex-wrap gap-2">
+                                    @if (ems.HasMixedSigns)
+                                    {
+                                        <span class="badge bg-info-subtle text-info-emphasis border">Mixed-sign selection</span>
+                                    }
+                                    @if (ems.HasGeneration)
+                                    {
+                                        <span class="badge bg-success-subtle text-success-emphasis border">Generation-aware</span>
+                                    }
+                                    @if (ems.HasConsumption)
+                                    {
+                                        <span class="badge bg-warning-subtle text-warning-emphasis border">Load-aware</span>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="small text-muted">@ems.Summary</div>
+                            }
+                        }
+                    </div>
+                </div>
+
+                @if (hasFocusNode)
+                {
+                    @if (_isCuratedNode)
                     {
-                        <div class="text-muted d-flex align-items-center mb-3">
-                            <span class="spinner-border spinner-border-sm me-2" role="status"></span> Vyhodnocuji alert stav uzlu...
+                        <div class="overview-grid">
+                            <div class="overview-widget widget-col-6">
+                                <h6>Deviation / Baseline Detail</h6>
+                                @if (_isPreviewLoading)
+                                {
+                                    <div class="text-muted d-flex align-items-center">
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span> Vyhodnocuji baseline...
+                                    </div>
+                                }
+                                else if (_curatedDeviationData?.IsAvailable == true)
+                                {
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        <span class="badge @GetDeviationBadgeClass(_curatedDeviationData.Severity)">@GetDeviationBadgeText(_curatedDeviationData.Severity)</span>
+                                        <span class="small text-muted">Ref. intervaly: @_curatedDeviationData.ReferenceIntervalsUsed</span>
+                                    </div>
+                                    <div class="micro-grid">
+                                        <div class="micro-kpi"><div class="metric-caption">Aktuální</div><div class="fw-semibold">@(_curatedDeviationData.CurrentValue?.ToString("N1") ?? "N/A")</div></div>
+                                        <div class="micro-kpi"><div class="metric-caption">Baseline</div><div class="fw-semibold">@(_curatedDeviationData.BaselineValue?.ToString("N1") ?? "N/A")</div></div>
+                                        <div class="micro-kpi"><div class="metric-caption">Δ abs</div><div class="fw-semibold">@FormatSigned(_curatedDeviationData.DeltaAbsolute, "N1")</div></div>
+                                        <div class="micro-kpi"><div class="metric-caption">Δ %</div><div class="fw-semibold">@FormatSigned(_curatedDeviationData.DeltaPercent, "N1") %</div></div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="small text-muted">@(_curatedDeviationData?.Message ?? "Baseline není dostupná pro focus uzel.")</div>
+                                }
+                            </div>
+
+                            <div class="overview-widget widget-col-6">
+                                <h6>Alert Detail</h6>
+                                @if (_isPreviewLoading)
+                                {
+                                    <div class="text-muted d-flex align-items-center">
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span> Vyhodnocuji alert stav...
+                                    </div>
+                                }
+                                else
+                                {
+                                    var nodeKey = _selectedFacilityNode?.NodeKey;
+                                    var colorHint = GetSchematicAlertColorHint(nodeKey, _curatedDeviationData);
+                                    <div class="mb-1">
+                                        <span class="badge @GetAlertBadgeClass(nodeKey, _curatedDeviationData)">@GetAlertStatusText(nodeKey, _curatedDeviationData)</span>
+                                    </div>
+                                    <div class="small text-muted">@GetAlertReasonText(nodeKey, _curatedDeviationData)</div>
+                                    <div class="small text-muted mt-1">Barva uzlu: @colorHint.Token</div>
+                                }
+                            </div>
+
+                            <div class="overview-widget widget-col-6">
+                                <h6>Focus Metadata</h6>
+                                <div class="small text-muted">Název: @_selectedFacilityNode!.Label</div>
+                                <div class="small text-muted">NodeKey: @_selectedFacilityNode.NodeKey</div>
+                                <div class="small text-muted">Typ: @(_selectedFacilityNode.NodeType ?? "Neznámý")</div>
+                                <div class="small text-muted">Role: @FacilityNodeSemantics.GetRoleLabel(ResolveNodeRole(_selectedFacilityNode))</div>
+                                @if (!string.IsNullOrWhiteSpace(_selectedFacilityNode.Zone))
+                                {
+                                    <div class="small text-muted">Zóna: @_selectedFacilityNode.Zone</div>
+                                }
+                            </div>
+
+                            @if (ShouldShowComparePreview)
+                            {
+                                <div class="overview-widget widget-col-12">
+                                    <h6>Compare Preview</h6>
+                                    <FacilityCompareTimeSeriesPanel Data="@_curatedCompareTimeSeriesData" />
+                                </div>
+                            }
+                        </div>
+                    }
+                    else if (string.IsNullOrEmpty(_selectedFacilityNode?.MeterUrn))
+                    {
+                        <div class="overview-grid">
+                            <div class="overview-widget widget-col-12">
+                                <h6>Strukturální uzel</h6>
+                                <div class="small text-muted">Focus uzel je strukturální (site/building/zone) a slouží jako selector. Hlavní analytika běží nad aggregate Selection Setem.</div>
+                            </div>
                         </div>
                     }
                     else
                     {
-                        var nodeKey = _selectedFacilityNode?.NodeKey;
-                        var colorHint = GetSchematicAlertColorHint(nodeKey, _curatedDeviationData);
-
-                        <div class="card border-0 shadow-sm mb-3">
-                            <div class="card-body p-3">
-                                <div class="d-flex align-items-center justify-content-between mb-2">
-                                    <div class="text-muted text-uppercase fw-bold" style="font-size: 0.8rem;">Aktuální alert stav uzlu</div>
-                                    <span class="badge @GetAlertBadgeClass(nodeKey, _curatedDeviationData)">@GetAlertStatusText(nodeKey, _curatedDeviationData)</span>
-                                </div>
-
-                                <div class="small text-muted text-uppercase">Proč tento stav</div>
-                                <div class="fw-semibold mt-1">@GetAlertReasonText(nodeKey, _curatedDeviationData)</div>
-
-                                <div class="small text-muted text-uppercase mt-3">Zdroj logiky</div>
-                                <div class="small mt-1">@GetAlertSourceText(nodeKey, _curatedDeviationData)</div>
-
-                                <div class="small text-muted text-uppercase mt-3">Budoucí barva uzlu ve schématu (interní hint)</div>
-                                <div class="d-flex align-items-center gap-2 mt-1">
-                                    <span class="badge border text-dark" style="background-color: @colorHint.Hex;">@colorHint.Token</span>
-                                    <span class="small text-muted">@colorHint.Hex</span>
-                                </div>
-
-                                <div class="small text-muted mt-3">
-                                    <i class="bi bi-info-circle me-1"></i>
-                                    Jde o první alert foundation navázaný na deviation/baseline. Nejde ještě o finální business alert engine.
-                                </div>
+                        <div class="overview-grid">
+                            <div class="overview-widget widget-col-4">
+                                <h6>Měřitelný uzel</h6>
+                                <div class="small text-muted">Meter URN</div>
+                                <div class="fw-semibold text-break">@_selectedFacilityNode!.MeterUrn</div>
+                            </div>
+                            <div class="overview-widget widget-col-8">
+                                <h6>KPI Přehled</h6>
+                                @if (_isPreviewLoading)
+                                {
+                                    <div class="text-muted d-flex align-items-center">
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span> Načítám data...
+                                    </div>
+                                }
+                                else if (_nodePreviewData is not null)
+                                {
+                                    <div class="fs-4 fw-bold text-dark">@(_nodePreviewData.TotalConsumptionKWh?.ToString("N0") ?? "0") <span class="fs-6 text-muted">kWh</span></div>
+                                    <div class="small text-muted">Průměrný výkon: @(_nodePreviewData.AveragePowerKW?.ToString("N2") ?? "0") kW</div>
+                                }
+                                else
+                                {
+                                    <div class="small text-muted">Pro tento měřitelný uzel není v aktuálním intervalu dostupná časová řada.</div>
+                                }
                             </div>
                         </div>
                     }
-                }
-                else if (string.IsNullOrEmpty(_selectedFacilityNode.MeterUrn))
-                {
-                    <div class="alert alert-secondary py-3 border-0 d-flex align-items-start" style="font-size: 0.9rem;">
-                        <i class="bi bi-diagram-2 text-secondary fs-5 me-2"></i>
-                        <div>
-                            Tento uzel je čistě <strong>strukturální</strong> (např. budova, site, patro). Má pouze vizualizační / architektonickou roli a neměří žádná analytická data samotný.
-                        </div>
-                    </div>
                 }
                 else
                 {
-                    <div class="mb-3 mt-1">
-                        <label class="form-label text-muted mb-0" style="font-size: 0.8rem; text-transform: uppercase;">Měřitelný fyzický uzel</label>
-                        <div style="word-break: break-all; font-size: 0.85rem;"><code style="color: #0369a1; background: #e0f2fe; padding: 2px 6px; border-radius: 4px;">@_selectedFacilityNode.MeterUrn</code></div>
+                    <div class="overview-grid">
+                        <div class="overview-widget widget-col-12">
+                            <h6>Focus Detail</h6>
+                            <div class="small text-muted">Focus uzel není zvolen. Hlavní overview analytika běží nad Selection Setem.</div>
+                        </div>
                     </div>
-
-                    @if (_isPreviewLoading)
-                    {
-                        <div class="text-muted d-flex align-items-center">
-                            <span class="spinner-border spinner-border-sm me-2" role="status"></span> Načítám data pro zvolený interval...
-                        </div>
-                    }
-                    else if (_nodePreviewData is not null)
-                    {
-                        <div class="card border-0 shadow-sm mb-3">
-                            <div class="card-body p-3">
-                                <div style="font-size: 0.85rem;" class="text-muted text-uppercase mb-1 fw-bold">Spotřeba za interval</div>
-                                <div class="fs-3 fw-bold text-dark mb-1" style="letter-spacing: -1px;">
-                                    @(_nodePreviewData.TotalConsumptionKWh?.ToString("N0") ?? "0") <span style="font-size: 1.1rem; font-weight: normal; color: #64748b;">kWh</span>
-                                </div>
-                                <div style="font-size: 0.85rem;" class="text-muted">
-                                    Průměrný výkon: <strong class="text-dark">@(_nodePreviewData.AveragePowerKW?.ToString("N2") ?? "0") kW</strong>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="alert alert-info py-3 border-0 shadow-sm d-flex align-items-start" style="font-size: 0.9rem;">
-                            <i class="bi bi-info-circle-fill text-info fs-5 me-2"></i>
-                            <div>
-                                Tento uzel (<strong>@_selectedFacilityNode.MeterUrn</strong>) je měřitelný, ale momentálně pro něj není nahrána / namapována časová řada v reálné databázi pro zvolený interval.
-                            </div>
-                        </div>
-                    }
                 }
-            </div>
-        }
-        else
-        {
-            <div class="facility-properties bg-light d-flex flex-column position-relative">
-                <div class="d-flex align-items-center justify-content-end mb-4 pb-3 border-bottom">
-                    <button class="btn btn-sm btn-outline-secondary d-flex align-items-center bg-white" @onclick="ToggleSchematic">
-                        <i class="bi @(_isSchematicHidden ? "bi-layout-split" : "bi-arrows-fullscreen") me-1"></i>
-                        @(_isSchematicHidden ? "Zobrazit schéma" : "Maximalizovat detail")
-                    </button>
-                </div>
-                
-                <div class="flex-grow-1 d-flex flex-column align-items-center justify-content-center text-center">
-                    <i class="bi bi-cursor text-muted" style="font-size: 3rem; opacity: 0.5;"></i>
-                    <h6 class="mt-3 text-muted">Aplikace je v režimu @(_isSchematicHidden ? "100% Detail" : "50% Schematic / 50% Detail")</h6>
-                    <p class="text-muted small mb-0 px-3 mt-2">
-                        Vyberte uzel ve schématu vlevo k zobrazení analytických dat.<br/>
+            }
+            else
+            {
+                <div class="overview-grid">
+                    <div class="overview-widget widget-col-12">
+                        <h6>Selection Set je prázdný</h6>
+                        <div class="small text-muted">Vyberte uzly ve schématu pro aggregate overview KPI a časovou řadu.</div>
                         @if (_isSchematicHidden)
                         {
-                            <span class="text-primary mt-1 d-block"><i class="bi bi-info-circle me-1"></i>Schéma je aktuálně skryto. Použijte tlačítko 'Zobrazit schéma'.</span>
+                            <div class="small text-primary mt-2"><i class="bi bi-info-circle me-1"></i>Schéma je aktuálně skryto. Použijte Zobrazit schéma.</div>
                         }
-                    </p>
+                    </div>
                 </div>
-            </div>
-        }
+            }
+        </div>
     </div>
 </div>
 
@@ -553,14 +1567,24 @@
         "chp_main"
     ];
     private const string CompareSetSupportedNodeListText = "heating_main, cooling_main, pv_main, chp_main";
+    private static readonly FacilitySemanticPreset[] SemanticPresetOptions = Enum.GetValues<FacilitySemanticPreset>();
+    private static readonly FacilityNodeRole[] SemanticRoleOptions = Enum.GetValues<FacilityNodeRole>();
+    private static readonly FacilityNodeSemanticType[] SemanticTypeOptions = Enum.GetValues<FacilityNodeSemanticType>();
+    private static readonly SemanticSelectionMutationMode[] SemanticSelectionMutationModeOptions = Enum.GetValues<SemanticSelectionMutationMode>();
 
     private EditorCanvas? _canvas;
     private DiplomovaPrace.Persistence.Schematic.FacilityEntity? _facility;
+    private readonly HashSet<string> _selectionSet = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<string> _selectionOrder = [];
+    private readonly Dictionary<string, DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity> _nodesByKey = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, List<DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity>> _childrenByParentKey = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly IReadOnlySet<string> EmptyNodeKeySet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     
     // Facility Node State
     private DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity? _selectedFacilityNode;
     private DiplomovaPrace.Models.Kpi.MeterKpiResult? _nodePreviewData;
     private CuratedNodeSummary? _curatedPreviewData;
+    private CuratedSelectionAggregateOverviewResult? _selectionAggregateOverview;
     private CuratedNodeDeviationSummary? _curatedDeviationData;
     private CuratedNodeTimeSeriesResult? _curatedTimeSeriesData;
     private CuratedNodeCompareTimeSeriesResult? _curatedCompareTimeSeriesData;
@@ -568,6 +1592,13 @@
     private bool _showBaselineOverlay;
     private readonly List<CompareSetItem> _compareSet = [];
     private string? _compareSetStatusMessage;
+    private FacilitySemanticPreset _semanticPreset = FacilitySemanticPreset.Hvac;
+    private SemanticSelectionMutationMode _semanticSelectionMutationMode = SemanticSelectionMutationMode.Replace;
+    private bool _semanticSelectionSupportedOnly = true;
+    private string _semanticQueryRoleFilterValue = string.Empty;
+    private string _semanticQueryTypeFilterValue = string.Empty;
+    private string _semanticQueryTagInput = string.Empty;
+    private string? _semanticSelectionStatusMessage;
     private bool _isPreviewLoading;
     private bool _isCuratedNode;
     
@@ -633,18 +1664,57 @@
     {
         get
         {
+            if (_selectedInterval == "custom")
+            {
+                var fromDate = _customFromUtc.Date;
+                var toInclusiveDate = _customToUtcExclusive.AddDays(-1).Date;
+                return $"{fromDate:dd.MM.yyyy} - {toInclusiveDate:dd.MM.yyyy}";
+            }
+
             var interval = GetInterval();
             return $"{interval.From.ToLocalTime():dd.MM.yyyy HH:mm} - {interval.To.ToLocalTime():dd.MM.yyyy HH:mm}";
         }
     }
 
     private bool ShowPresetAnchorNote => _isCuratedNode && _selectedInterval != "custom";
-    private bool IsCurrentNodeCompareSupported => _selectedFacilityNode is not null && IsCompareSupportedNode(_selectedFacilityNode.NodeKey);
-    private bool IsCurrentNodeInCompareSet => _selectedFacilityNode is not null && _compareSet.Any(x => x.NodeKey.Equals(_selectedFacilityNode.NodeKey, StringComparison.OrdinalIgnoreCase));
+    private string SelectedIntervalLabel => _selectedInterval switch
+    {
+        "last24h" => "24h",
+        "last7d" => "7d",
+        "last30d" => "30d",
+        "thisMonth" => "Tento měsíc",
+        "custom" => "Custom",
+        _ => "7d"
+    };
+    private int ActiveAlertCount => GlobalAlertSummaryService.Current.HighCount + GlobalAlertSummaryService.Current.ElevatedCount;
+    private int SelectionCount => _selectionSet.Count;
+    private int SelectionAggregateSupportedCount => _selectionAggregateOverview?.SupportedNodeKeys.Count ?? 0;
+    private int SelectionAggregateUnsupportedCount => _selectionAggregateOverview?.UnsupportedNodeKeys.Count ?? 0;
+    private int SelectionAggregateContextOnlyCount => _selectionAggregateOverview?.ContextOnlyNodeKeys.Count ?? 0;
+    private int SelectionAggregateNoDataCount => _selectionAggregateOverview?.NoDataNodeKeys.Count ?? 0;
+    private int SelectionAggregateIncludedCount => _selectionAggregateOverview?.IncludedNodeKeys.Count ?? 0;
+    private CuratedSelectionCoverageSummary SelectionCoverage => _selectionAggregateOverview?.Coverage ?? new CuratedSelectionCoverageSummary();
+    private CuratedSelectionDisaggregationSummary SelectionDisaggregation => _selectionAggregateOverview?.Disaggregation ?? new CuratedSelectionDisaggregationSummary();
+    private CuratedSelectionContributionIntelligenceSummary SelectionContributionIntelligence => _selectionAggregateOverview?.ContributionIntelligence ?? new CuratedSelectionContributionIntelligenceSummary();
+    private CuratedSelectionSourceMapSummary SelectionSourceMap => _selectionAggregateOverview?.SourceMap ?? new CuratedSelectionSourceMapSummary();
+    private CuratedSelectionOperationalHealthSummary SelectionOperationalHealth => _selectionAggregateOverview?.OperationalHealth ?? new CuratedSelectionOperationalHealthSummary();
+    private CuratedNodeCompareTimeSeriesResult? SelectionForecastCompareTimeSeries => _selectionAggregateOverview?.ForecastCompareTimeSeries;
+    private CuratedSelectionForecastDiagnosticsSummary SelectionForecastDiagnostics => _selectionAggregateOverview?.ForecastDiagnostics ?? new CuratedSelectionForecastDiagnosticsSummary();
+    private CuratedSelectionLoadProfileSummary SelectionLoadProfile => _selectionAggregateOverview?.LoadProfile ?? new CuratedSelectionLoadProfileSummary();
+    private CuratedSelectionPeakAnalysisSummary SelectionPeakAnalysis => _selectionAggregateOverview?.PeakAnalysis ?? new CuratedSelectionPeakAnalysisSummary();
+    private CuratedSelectionOperatingRegimeSummary SelectionOperatingRegime => _selectionAggregateOverview?.OperatingRegime ?? new CuratedSelectionOperatingRegimeSummary();
+    private CuratedSelectionEmsEvaluationSummary SelectionEmsEvaluation => _selectionAggregateOverview?.EmsEvaluation ?? new CuratedSelectionEmsEvaluationSummary();
+    private IReadOnlyList<CuratedSelectionContributionItem> SelectionBreakdownItems => _selectionAggregateOverview?.Breakdown ?? [];
+    private IReadOnlyList<CuratedSelectionRoleContributionItem> SelectionRoleBreakdownItems => _selectionAggregateOverview?.RoleBreakdown ?? [];
+    private IReadOnlyList<DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity> SelectionSummaryItems => GetSelectionSummaryItems();
+    private bool HasSelectedNodes => SelectionCount > 0;
+    private int CompareSetRemainingCapacity => Math.Max(0, MaxCompareSetSize - _compareSet.Count);
+    private int SelectionCompareSupportedCount => GetSelectionCompareCandidates().Count;
+    private bool CanAddSelectionSetToCompareSet => GetSelectionCompareCandidates().Any(node => !_compareSet.Any(x => x.NodeKey.Equals(node.NodeKey, StringComparison.OrdinalIgnoreCase))) && !IsCompareSetAtCapacity;
     private bool IsCompareSetAtCapacity => _compareSet.Count >= MaxCompareSetSize;
-    private bool CanAddCurrentNodeToCompareSet => _selectedFacilityNode is not null && IsCurrentNodeCompareSupported && !IsCurrentNodeInCompareSet && !IsCompareSetAtCapacity;
     private bool IsSelectedNodeComparePreviewSupported => _selectedFacilityNode is not null && IsCompareSupportedNode(_selectedFacilityNode.NodeKey);
     private bool ShouldShowComparePreview => _isCuratedNode && IsSelectedNodeComparePreviewSupported && GetEffectiveCompareNodeKeysForSelectedNode().Count > 0;
+    private IReadOnlySet<string> SelectedSubtreeNodeKeysForCanvas => GetSelectedSubtreeNodeKeysForCanvas();
 
     private IReadOnlyDictionary<string, NodeDeviationSeverity> AlertSeverityByNodeKey =>
         GlobalAlertSummaryService.Current.AlertedNodes
@@ -657,6 +1727,18 @@
         public string? NodeType { get; init; }
     }
 
+    private enum SemanticSelectionMutationMode
+    {
+        Replace,
+        Add,
+        Remove
+    }
+
+    private readonly record struct SemanticSelectionMutationResult(int AddedCount, int RemovedCount)
+    {
+        public bool HasChanges => AddedCount > 0 || RemovedCount > 0;
+    }
+
     protected override async Task OnInitializedAsync()
     {
         await ReloadData();
@@ -667,7 +1749,11 @@
 
     private async Task ReloadData()
     {
-        _facility = await FacilityQueryService.GetMainFacilityAsync();
+        var facility = await FacilityQueryService.GetMainFacilityAsync();
+        _facility = BuildSchemaFacilityWithoutWeatherNode(facility);
+        RebuildFacilityNodeIndexes();
+        ClearSelectionSetState();
+        ClearFocusNodeState();
         SessionService.ClearSelection();
         await RefreshGlobalAlertSummaryAsync();
     }
@@ -677,20 +1763,23 @@
         if (SessionService.SelectedElementType == EditorSelectionType.FacilityNode && _facility != null)
         {
             var selectedNodeId = SessionService.SelectedElementId;
+            if (string.IsNullOrWhiteSpace(selectedNodeId) || !_nodesByKey.TryGetValue(selectedNodeId, out var focusedNode))
+            {
+                ClearFocusNodeState();
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
             if (_selectedFacilityNode?.NodeKey != selectedNodeId)
             {
-                _selectedFacilityNode = _facility.Nodes.FirstOrDefault(n => n.NodeKey == selectedNodeId);
-                _nodePreviewData = null;
-                _curatedPreviewData = null;
-                _curatedDeviationData = null;
-                _curatedTimeSeriesData = null;
-                _curatedCompareTimeSeriesData = null;
+                _selectedFacilityNode = focusedNode;
+                ClearPreviewState();
                 _compareSetStatusMessage = null;
-                _isCuratedNode = false;
+                EnsureFocusNodeInSelectionSetIfLeaf(_selectedFacilityNode);
                 
                 if (_selectedFacilityNode != null)
                 {
-                    _isCuratedNode = _selectedFacilityNode.NodeKey is "pv_main" or "chp_main" or "cooling_main" or "heating_main" or "weather_main";
+                    _isCuratedNode = _selectedFacilityNode.NodeKey is "pv_main" or "chp_main" or "cooling_main" or "heating_main";
                     await ReloadPreviewDataAsync();
                 }
                 else
@@ -701,12 +1790,8 @@
         }
         else
         {
-            _selectedFacilityNode = null;
-            _nodePreviewData = null;
-            _curatedPreviewData = null;
-            _curatedDeviationData = null;
-            _curatedTimeSeriesData = null;
-            _curatedCompareTimeSeriesData = null;
+            ClearSelectionSetState();
+            ClearFocusNodeState();
             _compareSetStatusMessage = null;
             await InvokeAsync(StateHasChanged);
         }
@@ -765,53 +1850,103 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task AddCurrentNodeToCompareSet()
+    private IReadOnlyList<DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity> GetSelectionCompareCandidates()
     {
-        if (_selectedFacilityNode is null)
+        var candidates = new List<DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity>();
+
+        foreach (var nodeKey in _selectionOrder)
         {
-            return;
+            if (!_selectionSet.Contains(nodeKey))
+            {
+                continue;
+            }
+
+            if (!_nodesByKey.TryGetValue(nodeKey, out var node))
+            {
+                continue;
+            }
+
+            if (!IsCompareSupportedNode(node.NodeKey))
+            {
+                continue;
+            }
+
+            candidates.Add(node);
         }
 
-        if (!IsCompareSupportedNode(_selectedFacilityNode.NodeKey))
-        {
-            _compareSetStatusMessage = "Vybraný uzel nelze v této verzi přidat do compare setu.";
-            await InvokeAsync(StateHasChanged);
-            return;
-        }
-
-        if (_compareSet.Any(x => x.NodeKey.Equals(_selectedFacilityNode.NodeKey, StringComparison.OrdinalIgnoreCase)))
-        {
-            _compareSetStatusMessage = "Uzel už je v compare setu.";
-            await InvokeAsync(StateHasChanged);
-            return;
-        }
-
-        if (_compareSet.Count >= MaxCompareSetSize)
-        {
-            _compareSetStatusMessage = $"Compare set má limit {MaxCompareSetSize} uzly.";
-            await InvokeAsync(StateHasChanged);
-            return;
-        }
-
-        _compareSet.Add(new CompareSetItem
-        {
-            NodeKey = _selectedFacilityNode.NodeKey,
-            Label = _selectedFacilityNode.Label,
-            NodeType = _selectedFacilityNode.NodeType
-        });
-
-        _compareSetStatusMessage = $"Uzel {_selectedFacilityNode.Label} byl přidán do compare setu.";
-        await RefreshComparePreviewAfterCompareSetChangedAsync();
+        return candidates;
     }
 
-    private async Task RemoveCurrentNodeFromCompareSet()
+    private async Task AddSelectionSetToCompareSet()
     {
-        if (_selectedFacilityNode is null)
+        if (_selectionSet.Count == 0)
         {
+            _compareSetStatusMessage = "Selection set je prázdný. Nejprve vyberte uzly ve schématu.";
+            await InvokeAsync(StateHasChanged);
             return;
         }
 
-        await RemoveNodeFromCompareSet(_selectedFacilityNode.NodeKey);
+        var candidates = GetSelectionCompareCandidates();
+        if (candidates.Count == 0)
+        {
+            _compareSetStatusMessage = "V aktuálním selection setu nejsou uzly podporované pro compare set.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var added = 0;
+        var duplicates = 0;
+        var skippedByCapacity = 0;
+
+        foreach (var node in candidates)
+        {
+            if (_compareSet.Any(x => x.NodeKey.Equals(node.NodeKey, StringComparison.OrdinalIgnoreCase)))
+            {
+                duplicates++;
+                continue;
+            }
+
+            if (_compareSet.Count >= MaxCompareSetSize)
+            {
+                skippedByCapacity++;
+                continue;
+            }
+
+            _compareSet.Add(new CompareSetItem
+            {
+                NodeKey = node.NodeKey,
+                Label = node.Label,
+                NodeType = node.NodeType
+            });
+
+            added++;
+        }
+
+        if (added > 0)
+        {
+            var statusParts = new List<string> { $"Přidáno {added} uzlů z selection setu." };
+            if (duplicates > 0)
+            {
+                statusParts.Add($"{duplicates} už bylo v compare setu");
+            }
+
+            if (skippedByCapacity > 0)
+            {
+                statusParts.Add($"{skippedByCapacity} se nevešlo kvůli limitu");
+            }
+
+            _compareSetStatusMessage = string.Join(" ", statusParts);
+        }
+        else if (duplicates > 0)
+        {
+            _compareSetStatusMessage = "Všechny podporované uzly ze selection setu už v compare setu jsou.";
+        }
+        else
+        {
+            _compareSetStatusMessage = "Compare set je plný. Pro přidání dalších uzlů nejprve některé odeberte.";
+        }
+
+        await RefreshComparePreviewAfterCompareSetChangedAsync();
     }
 
     private async Task RemoveNodeFromCompareSet(string nodeKey)
@@ -836,6 +1971,251 @@
         _compareSet.Clear();
         _compareSetStatusMessage = "Compare set byl vyčištěn.";
         await RefreshComparePreviewAfterCompareSetChangedAsync();
+    }
+
+    private async Task ApplySemanticPresetAsync()
+    {
+        var presetQuery = FacilityNodeSemantics.GetPresetQuery(_semanticPreset);
+        var query = new FacilityNodeSemanticQuery
+        {
+            Role = presetQuery.Role,
+            SemanticType = presetQuery.SemanticType,
+            Tags = presetQuery.Tags,
+            IncludeWeatherContext = false
+        };
+
+        await ApplySemanticSelectionAsync(query, $"Preset {FacilityNodeSemantics.GetPresetLabel(_semanticPreset)}");
+    }
+
+    private async Task ApplySemanticQueryAsync()
+    {
+        var query = BuildSemanticQueryFromFilters();
+        await ApplySemanticSelectionAsync(query, "Semantic query");
+    }
+
+    private void ClearSemanticQueryFilters()
+    {
+        _semanticQueryRoleFilterValue = string.Empty;
+        _semanticQueryTypeFilterValue = string.Empty;
+        _semanticQueryTagInput = string.Empty;
+        _semanticSelectionStatusMessage = "Filtry semantic query byly resetovány.";
+    }
+
+    private FacilityNodeSemanticQuery BuildSemanticQueryFromFilters()
+    {
+        FacilityNodeRole? roleFilter = null;
+        if (Enum.TryParse<FacilityNodeRole>(_semanticQueryRoleFilterValue, out var parsedRoleFilter))
+        {
+            roleFilter = parsedRoleFilter;
+        }
+
+        FacilityNodeSemanticType? semanticTypeFilter = null;
+        if (Enum.TryParse<FacilityNodeSemanticType>(_semanticQueryTypeFilterValue, out var parsedSemanticTypeFilter))
+        {
+            semanticTypeFilter = parsedSemanticTypeFilter;
+        }
+
+        return new FacilityNodeSemanticQuery
+        {
+            Role = roleFilter,
+            SemanticType = semanticTypeFilter,
+            Tags = FacilityNodeSemantics.ParseTagQuery(_semanticQueryTagInput),
+            IncludeWeatherContext = false
+        };
+    }
+
+    private async Task ApplySemanticSelectionAsync(FacilityNodeSemanticQuery query, string sourceLabel)
+    {
+        if (_facility is null || _facility.Nodes.Count == 0)
+        {
+            _semanticSelectionStatusMessage = "Facility data nejsou načtena. Semantic selection se nespustila.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var candidateNodes = _facility.Nodes
+            .Where(IsLeafOrAnalyticNode)
+            .ToList();
+        var candidateNodeKeys = FacilityNodeSemantics
+            .ResolveMatchingNodeKeys(candidateNodes, query)
+            .Where(_nodesByKey.ContainsKey)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        string? supportedFilterNotice = null;
+        if (_semanticSelectionSupportedOnly && candidateNodeKeys.Count > 0)
+        {
+            try
+            {
+                var supportedNodeKeys = await ResolveAnalyticsSupportedNodeKeysAsync(candidateNodeKeys);
+                candidateNodeKeys = candidateNodeKeys
+                    .Where(supportedNodeKeys.Contains)
+                    .ToList();
+            }
+            catch
+            {
+                supportedFilterNotice = "Supported filtr nebyl dostupný, použil se plný výsledek query.";
+            }
+        }
+
+        var mutationResult = MutateSelectionSet(candidateNodeKeys, _semanticSelectionMutationMode);
+        _semanticSelectionStatusMessage = BuildSemanticSelectionStatusMessage(sourceLabel, candidateNodeKeys.Count, mutationResult, supportedFilterNotice);
+
+        var nextFocusNodeKey = ResolveFocusNodeAfterSemanticMutation(_semanticSelectionMutationMode, mutationResult);
+        var focusChanged = ApplyFocusNode(nextFocusNodeKey);
+        if (!focusChanged)
+        {
+            await ReloadPreviewDataAsync();
+            return;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task<HashSet<string>> ResolveAnalyticsSupportedNodeKeysAsync(IReadOnlyList<string> candidateNodeKeys)
+    {
+        if (candidateNodeKeys.Count == 0)
+        {
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        var interval = GetInterval();
+        var aggregate = await AnalyticsPreview.GetCuratedSelectionAggregateOverviewAsync(
+            candidateNodeKeys,
+            interval.From,
+            interval.To,
+            _timeSeriesMode,
+            _showBaselineOverlay);
+
+        return aggregate.SupportedNodeKeys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private SemanticSelectionMutationResult MutateSelectionSet(
+        IReadOnlyList<string> nodeKeys,
+        SemanticSelectionMutationMode mutationMode)
+    {
+        var uniqueNodeKeys = nodeKeys
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var addedCount = 0;
+        var removedCount = 0;
+
+        if (mutationMode == SemanticSelectionMutationMode.Replace)
+        {
+            var previousSelection = _selectionSet.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            ClearSelectionSetState();
+
+            foreach (var nodeKey in uniqueNodeKeys)
+            {
+                AddNodeToSelectionSet(nodeKey);
+            }
+
+            var nextSelection = _selectionSet;
+            addedCount = nextSelection.Count(nodeKey => !previousSelection.Contains(nodeKey));
+            removedCount = previousSelection.Count(nodeKey => !nextSelection.Contains(nodeKey));
+            return new SemanticSelectionMutationResult(addedCount, removedCount);
+        }
+
+        if (mutationMode == SemanticSelectionMutationMode.Add)
+        {
+            foreach (var nodeKey in uniqueNodeKeys)
+            {
+                if (_selectionSet.Contains(nodeKey))
+                {
+                    continue;
+                }
+
+                AddNodeToSelectionSet(nodeKey);
+                addedCount++;
+            }
+
+            return new SemanticSelectionMutationResult(addedCount, 0);
+        }
+
+        foreach (var nodeKey in uniqueNodeKeys)
+        {
+            if (!_selectionSet.Contains(nodeKey))
+            {
+                continue;
+            }
+
+            RemoveNodeFromSelectionSet(nodeKey);
+            removedCount++;
+        }
+
+        return new SemanticSelectionMutationResult(0, removedCount);
+    }
+
+    private string? ResolveFocusNodeAfterSemanticMutation(
+        SemanticSelectionMutationMode mutationMode,
+        SemanticSelectionMutationResult mutationResult)
+    {
+        if (_selectionSet.Count == 0)
+        {
+            return null;
+        }
+
+        if (mutationMode is SemanticSelectionMutationMode.Replace)
+        {
+            return GetFallbackFocusNodeKey();
+        }
+
+        if (mutationMode is SemanticSelectionMutationMode.Add && mutationResult.AddedCount > 0)
+        {
+            return GetFallbackFocusNodeKey();
+        }
+
+        if (!string.IsNullOrWhiteSpace(SessionService.SelectedElementId)
+            && _selectionSet.Contains(SessionService.SelectedElementId))
+        {
+            return SessionService.SelectedElementId;
+        }
+
+        return GetFallbackFocusNodeKey();
+    }
+
+    private string BuildSemanticSelectionStatusMessage(
+        string sourceLabel,
+        int matchedCount,
+        SemanticSelectionMutationResult mutationResult,
+        string? note)
+    {
+        var scopeLabel = _semanticSelectionSupportedOnly ? "supported-only" : "full-scope";
+        var mutationLabel = GetSemanticMutationModeLabel(_semanticSelectionMutationMode).ToLowerInvariant();
+
+        string baseMessage;
+        if (matchedCount == 0)
+        {
+            baseMessage = $"{sourceLabel}: žádné uzly neodpovídají ({scopeLabel}).";
+        }
+        else if (!mutationResult.HasChanges)
+        {
+            baseMessage = $"{sourceLabel}: nalezeno {matchedCount} uzlů ({scopeLabel}), selection beze změny ({mutationLabel}).";
+        }
+        else
+        {
+            baseMessage = $"{sourceLabel}: nalezeno {matchedCount} uzlů ({scopeLabel}), změna selection {mutationLabel}: +{mutationResult.AddedCount} / -{mutationResult.RemovedCount}.";
+        }
+
+        if (string.IsNullOrWhiteSpace(note))
+        {
+            return baseMessage;
+        }
+
+        return $"{baseMessage} {note}";
+    }
+
+    private static string GetSemanticMutationModeLabel(SemanticSelectionMutationMode mode)
+    {
+        return mode switch
+        {
+            SemanticSelectionMutationMode.Replace => "Replace",
+            SemanticSelectionMutationMode.Add => "Add",
+            SemanticSelectionMutationMode.Remove => "Remove",
+            _ => "Replace"
+        };
     }
 
     private async Task OnIntervalChanged(ChangeEventArgs e)
@@ -898,7 +2278,7 @@
 
         _timeSeriesMode = mode;
 
-        if (_selectedFacilityNode is not null && _isCuratedNode)
+        if (HasSelectedNodes || (_selectedFacilityNode is not null && _isCuratedNode))
         {
             await ReloadPreviewDataAsync();
         }
@@ -913,7 +2293,7 @@
 
         _showBaselineOverlay = enabled;
 
-        if (_selectedFacilityNode is not null && _isCuratedNode)
+        if (HasSelectedNodes || (_selectedFacilityNode is not null && _isCuratedNode))
         {
             await ReloadPreviewDataAsync();
         }
@@ -921,57 +2301,85 @@
 
     private async Task ReloadPreviewDataAsync()
     {
-        if (_selectedFacilityNode != null && (_isCuratedNode || !string.IsNullOrEmpty(_selectedFacilityNode.MeterUrn)))
+        var hasSelectionContext = HasSelectedNodes;
+        var hasFocusAnalyticsContext = _selectedFacilityNode != null && (_isCuratedNode || !string.IsNullOrEmpty(_selectedFacilityNode.MeterUrn));
+
+        if (!hasSelectionContext && !hasFocusAnalyticsContext)
         {
-            _isPreviewLoading = true;
+            _selectionAggregateOverview = null;
+            await RefreshGlobalAlertSummaryAsync();
             await InvokeAsync(StateHasChanged);
-            var skipPostRefresh = false;
-            
-            try
+            return;
+        }
+
+        _isPreviewLoading = true;
+        await InvokeAsync(StateHasChanged);
+        var skipPostRefresh = false;
+
+        try
+        {
+            await RefreshPresetAnchorAsync();
+            var interval = GetInterval();
+            var aggregateNodeKeys = GetSelectionAggregateNodeKeys();
+            Task<CuratedSelectionAggregateOverviewResult>? aggregateTask = null;
+
+            if (_selectedInterval == "custom")
             {
-                await RefreshPresetAnchorAsync();
-                var interval = GetInterval();
-
-                if (_selectedInterval == "custom")
+                var customValidationMessage = await ValidateCustomIntervalForAnalyticsAsync();
+                if (!string.IsNullOrWhiteSpace(customValidationMessage))
                 {
-                    var customValidationMessage = await ValidateCustomIntervalForAnalyticsAsync();
-                    if (!string.IsNullOrWhiteSpace(customValidationMessage))
+                    _customIntervalValidationMessage = customValidationMessage;
+                    _nodePreviewData = null;
+                    _curatedPreviewData = null;
+                    _curatedTimeSeriesData = null;
+                    _curatedCompareTimeSeriesData = null;
+                    _selectionAggregateOverview = new CuratedSelectionAggregateOverviewResult
                     {
-                        _customIntervalValidationMessage = customValidationMessage;
-                        _nodePreviewData = null;
-                        _curatedPreviewData = null;
-                        _curatedTimeSeriesData = null;
-                        _curatedCompareTimeSeriesData = null;
+                        Message = customValidationMessage
+                    };
 
-                        if (_isCuratedNode)
+                    if (_isCuratedNode)
+                    {
+                        _curatedDeviationData = new CuratedNodeDeviationSummary
                         {
-                            _curatedDeviationData = new CuratedNodeDeviationSummary
-                            {
-                                IsAvailable = false,
-                                Message = customValidationMessage,
-                                Methodology = "Validace custom intervalu: analytika se spouští pouze pro validní a datově smysluplný rozsah."
-                            };
-                        }
-                        else
-                        {
-                            _curatedDeviationData = null;
-                        }
-
-                        skipPostRefresh = true;
+                            IsAvailable = false,
+                            Message = customValidationMessage,
+                            Methodology = "Validace custom intervalu: analytika se spouští pouze pro validní a datově smysluplný rozsah."
+                        };
+                    }
+                    else
+                    {
+                        _curatedDeviationData = null;
                     }
 
-                    if (!skipPostRefresh)
-                    {
-                        _customIntervalValidationMessage = null;
-                    }
+                    skipPostRefresh = true;
                 }
 
-                if (!skipPostRefresh && _isCuratedNode)
+                if (!skipPostRefresh)
                 {
-                    var summaryTask = AnalyticsPreview.GetCuratedSummaryAsync(_selectedFacilityNode.NodeKey, interval.From, interval.To);
-                    var deviationTask = AnalyticsPreview.GetCuratedDeviationSummaryAsync(_selectedFacilityNode.NodeKey, interval.From, interval.To);
+                    _customIntervalValidationMessage = null;
+                }
+            }
+
+            if (!skipPostRefresh && aggregateNodeKeys.Count > 0)
+            {
+                aggregateTask = AnalyticsPreview.GetCuratedSelectionAggregateOverviewAsync(
+                    aggregateNodeKeys,
+                    interval.From,
+                    interval.To,
+                    _timeSeriesMode,
+                    _showBaselineOverlay);
+            }
+
+            if (!skipPostRefresh && _isCuratedNode)
+            {
+                var focusNode = _selectedFacilityNode;
+                if (focusNode is not null)
+                {
+                    var summaryTask = AnalyticsPreview.GetCuratedSummaryAsync(focusNode.NodeKey, interval.From, interval.To);
+                    var deviationTask = AnalyticsPreview.GetCuratedDeviationSummaryAsync(focusNode.NodeKey, interval.From, interval.To);
                     var timeSeriesTask = AnalyticsPreview.GetCuratedTimeSeriesAsync(
-                        _selectedFacilityNode.NodeKey,
+                        focusNode.NodeKey,
                         interval.From,
                         interval.To,
                         _timeSeriesMode,
@@ -982,7 +2390,7 @@
                     if (IsSelectedNodeComparePreviewSupported && effectiveCompareNodeKeys.Count > 0)
                     {
                         compareTask = AnalyticsPreview.GetCuratedCompareTimeSeriesAsync(
-                            _selectedFacilityNode.NodeKey,
+                            focusNode.NodeKey,
                             effectiveCompareNodeKeys,
                             interval.From,
                             interval.To,
@@ -995,30 +2403,60 @@
                         loadTasks.Add(compareTask);
                     }
 
+                    if (aggregateTask is not null)
+                    {
+                        loadTasks.Add(aggregateTask);
+                    }
+
                     await Task.WhenAll(loadTasks);
                     _curatedPreviewData = summaryTask.Result;
                     _curatedDeviationData = deviationTask.Result;
                     _curatedTimeSeriesData = timeSeriesTask.Result;
                     _curatedCompareTimeSeriesData = compareTask?.Result;
+                    _selectionAggregateOverview = aggregateTask?.Result;
                 }
-                else if (!skipPostRefresh)
+                else
                 {
+                    _curatedPreviewData = null;
                     _curatedDeviationData = null;
                     _curatedTimeSeriesData = null;
                     _curatedCompareTimeSeriesData = null;
-                    _nodePreviewData = await AnalyticsPreview.GetPreviewDataAsync(_selectedFacilityNode.MeterUrn!, interval.From, interval.To);
+                    _selectionAggregateOverview = aggregateTask is not null
+                        ? await aggregateTask
+                        : null;
                 }
             }
-            finally
+            else if (!skipPostRefresh && _selectedFacilityNode is not null && !string.IsNullOrEmpty(_selectedFacilityNode.MeterUrn))
             {
-                _isPreviewLoading = false;
+                _curatedDeviationData = null;
+                _curatedTimeSeriesData = null;
+                _curatedCompareTimeSeriesData = null;
+                _nodePreviewData = await AnalyticsPreview.GetPreviewDataAsync(_selectedFacilityNode.MeterUrn!, interval.From, interval.To);
+                _selectionAggregateOverview = aggregateTask is not null
+                    ? await aggregateTask
+                    : null;
             }
+            else if (!skipPostRefresh)
+            {
+                _nodePreviewData = null;
+                _curatedPreviewData = null;
+                _curatedDeviationData = null;
+                _curatedTimeSeriesData = null;
+                _curatedCompareTimeSeriesData = null;
+                _selectionAggregateOverview = aggregateTask is not null
+                    ? await aggregateTask
+                    : null;
+            }
+        }
+        finally
+        {
+            _isPreviewLoading = false;
+        }
 
-            if (skipPostRefresh)
-            {
-                await InvokeAsync(StateHasChanged);
-                return;
-            }
+        if (skipPostRefresh)
+        {
+            await InvokeAsync(StateHasChanged);
+            return;
         }
 
         await RefreshGlobalAlertSummaryAsync();
@@ -1100,16 +2538,383 @@
 
     private void HandleElementSelected((string Id, EditorSelectionType Type) args)
     {
+        if (args.Type == EditorSelectionType.FacilityNode && !string.IsNullOrWhiteSpace(args.Id))
+        {
+            HandleFacilityNodeClicked(args.Id);
+            return;
+        }
+
         if (string.IsNullOrEmpty(args.Id))
-            SessionService.ClearSelection();
-        else
-            SessionService.SelectElement(args.Id, args.Type);
+        {
+            ClearWorkspaceSelection();
+            return;
+        }
+
+        SessionService.SelectElement(args.Id, args.Type);
     }
 
     private void HandleCanvasClicked((double X, double Y) pos)
     {
-        // Volitelně můžeme zrušit výběr při kliknutí mimo uzel
-        SessionService.ClearSelection();
+        ClearWorkspaceSelection();
+    }
+
+    private void HandleFacilityNodeClicked(string nodeKey)
+    {
+        if (!_nodesByKey.TryGetValue(nodeKey, out var node))
+        {
+            ClearWorkspaceSelection();
+            return;
+        }
+
+        string? nextFocusNodeKey;
+
+        if (IsStructuralNode(node.NodeKey))
+        {
+            ToggleStructuralSubtreeSelection(node);
+            nextFocusNodeKey = _selectionSet.Count == 0 ? null : node.NodeKey;
+        }
+        else
+        {
+            var wasRemoved = ToggleLeafSelection(node.NodeKey);
+            if (!wasRemoved)
+            {
+                nextFocusNodeKey = node.NodeKey;
+            }
+            else if (string.Equals(SessionService.SelectedElementId, node.NodeKey, StringComparison.OrdinalIgnoreCase))
+            {
+                nextFocusNodeKey = GetFallbackFocusNodeKey();
+            }
+            else
+            {
+                nextFocusNodeKey = SessionService.SelectedElementId;
+            }
+
+            if (_selectionSet.Count == 0)
+            {
+                nextFocusNodeKey = null;
+            }
+        }
+
+        var focusChanged = ApplyFocusNode(nextFocusNodeKey);
+        if (!focusChanged)
+        {
+            InvokeAsync(async () => await ReloadPreviewDataAsync());
+        }
+    }
+
+    private IReadOnlyList<string> GetSelectionAggregateNodeKeys()
+    {
+        var nodeKeys = new List<string>();
+
+        foreach (var nodeKey in _selectionOrder)
+        {
+            if (!_selectionSet.Contains(nodeKey))
+            {
+                continue;
+            }
+
+            if (IsWeatherNode(nodeKey))
+            {
+                continue;
+            }
+
+            nodeKeys.Add(nodeKey);
+        }
+
+        return nodeKeys;
+    }
+
+    private void ClearWorkspaceSelection()
+    {
+        ClearSelectionSetState();
+
+        var focusChanged = ApplyFocusNode(null);
+        if (!focusChanged)
+        {
+            ClearFocusNodeState();
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private bool ApplyFocusNode(string? nodeKey)
+    {
+        if (string.IsNullOrWhiteSpace(nodeKey))
+        {
+            if (SessionService.SelectedElementType == EditorSelectionType.None && string.IsNullOrWhiteSpace(SessionService.SelectedElementId))
+            {
+                return false;
+            }
+
+            SessionService.ClearSelection();
+            return true;
+        }
+
+        if (SessionService.SelectedElementType == EditorSelectionType.FacilityNode && string.Equals(SessionService.SelectedElementId, nodeKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        SessionService.SelectElement(nodeKey, EditorSelectionType.FacilityNode);
+        return true;
+    }
+
+    private bool ToggleLeafSelection(string nodeKey)
+    {
+        if (_selectionSet.Contains(nodeKey))
+        {
+            RemoveNodeFromSelectionSet(nodeKey);
+            return true;
+        }
+
+        AddNodeToSelectionSet(nodeKey);
+        return false;
+    }
+
+    private void ToggleStructuralSubtreeSelection(DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity structuralNode)
+    {
+        var descendantLeafNodes = GetDescendantLeafOrAnalyticNodes(structuralNode.NodeKey);
+        if (descendantLeafNodes.Count == 0)
+        {
+            return;
+        }
+
+        var areAllDescendantsSelected = descendantLeafNodes.All(node => _selectionSet.Contains(node.NodeKey));
+        foreach (var descendant in descendantLeafNodes)
+        {
+            if (areAllDescendantsSelected)
+            {
+                RemoveNodeFromSelectionSet(descendant.NodeKey);
+            }
+            else
+            {
+                AddNodeToSelectionSet(descendant.NodeKey);
+            }
+        }
+    }
+
+    private IReadOnlyList<DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity> GetDescendantLeafOrAnalyticNodes(string parentNodeKey)
+    {
+        if (!_childrenByParentKey.TryGetValue(parentNodeKey, out var directChildren) || directChildren.Count == 0)
+        {
+            return [];
+        }
+
+        var descendants = new List<DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity>();
+        var stack = new Stack<DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity>(directChildren);
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        while (stack.Count > 0)
+        {
+            var current = stack.Pop();
+            if (!visited.Add(current.NodeKey))
+            {
+                continue;
+            }
+
+            if (IsLeafOrAnalyticNode(current))
+            {
+                descendants.Add(current);
+            }
+
+            if (_childrenByParentKey.TryGetValue(current.NodeKey, out var children) && children.Count > 0)
+            {
+                foreach (var child in children)
+                {
+                    stack.Push(child);
+                }
+            }
+        }
+
+        return descendants
+            .OrderBy(node => node.Label ?? node.NodeKey, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(node => node.NodeKey, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private bool IsLeafOrAnalyticNode(DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity node)
+    {
+        return !IsStructuralNode(node.NodeKey) || !string.IsNullOrWhiteSpace(node.MeterUrn);
+    }
+
+    private bool IsStructuralNode(string nodeKey)
+    {
+        return _childrenByParentKey.TryGetValue(nodeKey, out var children) && children.Count > 0;
+    }
+
+    private string? GetFallbackFocusNodeKey()
+    {
+        if (_selectionOrder.Count == 0)
+        {
+            return null;
+        }
+
+        return _selectionOrder[^1];
+    }
+
+    private void AddNodeToSelectionSet(string nodeKey)
+    {
+        if (!_selectionSet.Add(nodeKey))
+        {
+            _selectionOrder.RemoveAll(item => item.Equals(nodeKey, StringComparison.OrdinalIgnoreCase));
+            _selectionOrder.Add(nodeKey);
+            return;
+        }
+
+        _selectionOrder.Add(nodeKey);
+    }
+
+    private void RemoveNodeFromSelectionSet(string nodeKey)
+    {
+        if (!_selectionSet.Remove(nodeKey))
+        {
+            return;
+        }
+
+        _selectionOrder.RemoveAll(item => item.Equals(nodeKey, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void ClearSelectionSetState()
+    {
+        _selectionSet.Clear();
+        _selectionOrder.Clear();
+    }
+
+    private IReadOnlyList<DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity> GetSelectionSummaryItems()
+    {
+        var items = new List<DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity>();
+
+        foreach (var nodeKey in _selectionOrder)
+        {
+            if (_nodesByKey.TryGetValue(nodeKey, out var node))
+            {
+                items.Add(node);
+            }
+        }
+
+        return items;
+    }
+
+    private void EnsureFocusNodeInSelectionSetIfLeaf(DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity focusedNode)
+    {
+        if (!IsStructuralNode(focusedNode.NodeKey))
+        {
+            AddNodeToSelectionSet(focusedNode.NodeKey);
+        }
+    }
+
+    private void RebuildFacilityNodeIndexes()
+    {
+        _nodesByKey.Clear();
+        _childrenByParentKey.Clear();
+
+        if (_facility is null)
+        {
+            return;
+        }
+
+        foreach (var node in _facility.Nodes)
+        {
+            _nodesByKey[node.NodeKey] = node;
+        }
+
+        foreach (var node in _facility.Nodes)
+        {
+            if (string.IsNullOrWhiteSpace(node.ParentNodeKey))
+            {
+                continue;
+            }
+
+            if (!_childrenByParentKey.TryGetValue(node.ParentNodeKey, out var children))
+            {
+                children = [];
+                _childrenByParentKey[node.ParentNodeKey] = children;
+            }
+
+            children.Add(node);
+        }
+    }
+
+    private static DiplomovaPrace.Persistence.Schematic.FacilityEntity? BuildSchemaFacilityWithoutWeatherNode(
+        DiplomovaPrace.Persistence.Schematic.FacilityEntity? facility)
+    {
+        if (facility is null)
+        {
+            return null;
+        }
+
+        var filteredNodes = facility.Nodes
+            .Where(node => !IsWeatherNode(node.NodeKey))
+            .ToList();
+        var allowedNodeKeys = filteredNodes
+            .Select(node => node.NodeKey)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var filteredEdges = facility.Edges
+            .Where(edge => allowedNodeKeys.Contains(edge.SourceNodeKey) && allowedNodeKeys.Contains(edge.TargetNodeKey))
+            .ToList();
+
+        var weatherFilteredFacility = new DiplomovaPrace.Persistence.Schematic.FacilityEntity
+        {
+            Id = facility.Id,
+            Name = facility.Name,
+            Description = facility.Description,
+            TimeZone = facility.TimeZone,
+            Nodes = filteredNodes,
+            Edges = filteredEdges
+        };
+
+        return FacilitySchematicLayoutService.BuildReadableLayout(weatherFilteredFacility);
+    }
+
+    private IReadOnlySet<string> GetSelectedSubtreeNodeKeysForCanvas()
+    {
+        if (_selectionSet.Count == 0 || _selectedFacilityNode is null || !IsStructuralNode(_selectedFacilityNode.NodeKey))
+        {
+            return EmptyNodeKeySet;
+        }
+
+        var subtreeNodeKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            _selectedFacilityNode.NodeKey
+        };
+
+        var stack = new Stack<string>();
+        stack.Push(_selectedFacilityNode.NodeKey);
+
+        while (stack.Count > 0)
+        {
+            var currentNodeKey = stack.Pop();
+            if (!_childrenByParentKey.TryGetValue(currentNodeKey, out var children) || children.Count == 0)
+            {
+                continue;
+            }
+
+            foreach (var child in children)
+            {
+                if (subtreeNodeKeys.Add(child.NodeKey))
+                {
+                    stack.Push(child.NodeKey);
+                }
+            }
+        }
+
+        return subtreeNodeKeys;
+    }
+
+    private void ClearFocusNodeState()
+    {
+        _selectedFacilityNode = null;
+        ClearPreviewState();
+    }
+
+    private void ClearPreviewState()
+    {
+        _nodePreviewData = null;
+        _curatedPreviewData = null;
+        _selectionAggregateOverview = null;
+        _curatedDeviationData = null;
+        _curatedTimeSeriesData = null;
+        _curatedCompareTimeSeriesData = null;
+        _isCuratedNode = false;
     }
     
     private void ToggleSchematic()
@@ -1130,7 +2935,7 @@
 
     private void ClosePanel()
     {
-        SessionService.ClearSelection();
+        ClearWorkspaceSelection();
     }
 
     private static string FormatSigned(double? value, string format)
@@ -1142,6 +2947,337 @@
 
         var number = value.Value.ToString(format);
         return value.Value > 0 ? $"+{number}" : number;
+    }
+
+    private static string GetContributionRoleText(CuratedEnergyContributionRole role)
+    {
+        return role switch
+        {
+            CuratedEnergyContributionRole.Consumption => "spotřeba",
+            CuratedEnergyContributionRole.Generation => "výroba",
+            CuratedEnergyContributionRole.MixedSigned => "mixed-sign",
+            _ => "neutrální"
+        };
+    }
+
+    private static string GetContributionRoleBadgeClass(CuratedEnergyContributionRole role)
+    {
+        return role switch
+        {
+            CuratedEnergyContributionRole.Consumption => "bg-warning-subtle text-warning-emphasis border",
+            CuratedEnergyContributionRole.Generation => "bg-success-subtle text-success-emphasis border",
+            CuratedEnergyContributionRole.MixedSigned => "bg-info-subtle text-info-emphasis border",
+            _ => "bg-light text-secondary border"
+        };
+    }
+
+    private static string GetContributionDirectionText(CuratedContributionDirection direction)
+    {
+        return direction switch
+        {
+            CuratedContributionDirection.IncreasesLoad => "zvyšuje load",
+            CuratedContributionDirection.ReducesNetBalance => "snižuje netto",
+            _ => "neutrální"
+        };
+    }
+
+    private static string GetContributionDirectionBadgeClass(CuratedContributionDirection direction)
+    {
+        return direction switch
+        {
+            CuratedContributionDirection.IncreasesLoad => "bg-warning-subtle text-warning-emphasis border",
+            CuratedContributionDirection.ReducesNetBalance => "bg-success-subtle text-success-emphasis border",
+            _ => "bg-light text-secondary border"
+        };
+    }
+
+    private static string GetSourceMapCategoryBadgeClass(CuratedSelectionSourceMapCategory category)
+    {
+        return category switch
+        {
+            CuratedSelectionSourceMapCategory.IncludedMeasured => "bg-success-subtle text-success-emphasis border",
+            CuratedSelectionSourceMapCategory.NoData => "bg-warning-subtle text-warning-emphasis border",
+            CuratedSelectionSourceMapCategory.ContextOnlyExcluded => "bg-info-subtle text-info-emphasis border",
+            _ => "bg-light text-secondary border"
+        };
+    }
+
+    private static FacilityNodeRole ResolveNodeRole(DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity? node)
+    {
+        if (node is null)
+        {
+            return FacilityNodeRole.OtherUnclassified;
+        }
+
+        return FacilityNodeSemantics.ResolveRole(node.NodeKey, node.NodeType, node.Label);
+    }
+
+    private static string GetFacilityRoleCompactLabel(FacilityNodeRole role)
+    {
+        return role switch
+        {
+            FacilityNodeRole.GridTransformer => "Grid",
+            FacilityNodeRole.EnergyProduction => "Production",
+            FacilityNodeRole.HvacCoolingVentilation => "HVAC",
+            FacilityNodeRole.TestingSimulation => "Testing",
+            FacilityNodeRole.PowerDistribution => "Distribution",
+            FacilityNodeRole.ServersItCooling => "Servers",
+            _ => "Other"
+        };
+    }
+
+    private static string GetFacilityRoleBadgeClass(FacilityNodeRole role)
+    {
+        return role switch
+        {
+            FacilityNodeRole.GridTransformer => "bg-primary-subtle text-primary-emphasis border",
+            FacilityNodeRole.EnergyProduction => "bg-success-subtle text-success-emphasis border",
+            FacilityNodeRole.HvacCoolingVentilation => "bg-info-subtle text-info-emphasis border",
+            FacilityNodeRole.TestingSimulation => "bg-warning-subtle text-warning-emphasis border",
+            FacilityNodeRole.PowerDistribution => "bg-secondary-subtle text-secondary-emphasis border",
+            FacilityNodeRole.ServersItCooling => "bg-dark-subtle text-dark-emphasis border",
+            _ => "bg-light text-secondary border"
+        };
+    }
+
+    private static string GetOperationalStatusText(CuratedSelectionAnomalyStatus status)
+    {
+        return status switch
+        {
+            CuratedSelectionAnomalyStatus.DataIssue => "Data issue",
+            CuratedSelectionAnomalyStatus.Suspicious => "Suspicious",
+            CuratedSelectionAnomalyStatus.Attention => "Attention",
+            _ => "Normal"
+        };
+    }
+
+    private static string GetOperationalStatusBadgeClass(CuratedSelectionAnomalyStatus status)
+    {
+        return status switch
+        {
+            CuratedSelectionAnomalyStatus.DataIssue => "bg-danger-subtle text-danger-emphasis border",
+            CuratedSelectionAnomalyStatus.Suspicious => "bg-warning-subtle text-warning-emphasis border",
+            CuratedSelectionAnomalyStatus.Attention => "bg-info-subtle text-info-emphasis border",
+            _ => "bg-success-subtle text-success-emphasis border"
+        };
+    }
+
+    private static string GetForecastStatusText(CuratedSelectionForecastStatus status)
+    {
+        return status switch
+        {
+            CuratedSelectionForecastStatus.Stable => "Stable",
+            CuratedSelectionForecastStatus.Watch => "Watch",
+            CuratedSelectionForecastStatus.PoorFit => "Poor fit",
+            CuratedSelectionForecastStatus.LimitedData => "Limited data",
+            _ => "Unavailable"
+        };
+    }
+
+    private static string GetForecastStatusBadgeClass(CuratedSelectionForecastStatus status)
+    {
+        return status switch
+        {
+            CuratedSelectionForecastStatus.Stable => "bg-success-subtle text-success-emphasis border",
+            CuratedSelectionForecastStatus.Watch => "bg-warning-subtle text-warning-emphasis border",
+            CuratedSelectionForecastStatus.PoorFit => "bg-danger-subtle text-danger-emphasis border",
+            CuratedSelectionForecastStatus.LimitedData => "bg-info-subtle text-info-emphasis border",
+            _ => "bg-light text-secondary border"
+        };
+    }
+
+    private static string GetLoadProfileModeBadgeClass(CuratedSelectionLoadProfileMode mode)
+    {
+        return mode switch
+        {
+            CuratedSelectionLoadProfileMode.IntervalSnapshotFallback => "bg-warning-subtle text-warning-emphasis border",
+            _ => "bg-success-subtle text-success-emphasis border"
+        };
+    }
+
+    private static string GetPeakSignificanceText(CuratedPeakSignificanceLevel level)
+    {
+        return level switch
+        {
+            CuratedPeakSignificanceLevel.High => "Peak significance: High",
+            CuratedPeakSignificanceLevel.Medium => "Peak significance: Medium",
+            _ => "Peak significance: Low"
+        };
+    }
+
+    private static string GetPeakSignificanceBadgeClass(CuratedPeakSignificanceLevel level)
+    {
+        return level switch
+        {
+            CuratedPeakSignificanceLevel.High => "bg-danger-subtle text-danger-emphasis border",
+            CuratedPeakSignificanceLevel.Medium => "bg-warning-subtle text-warning-emphasis border",
+            _ => "bg-success-subtle text-success-emphasis border"
+        };
+    }
+
+    private static string GetScorecardStatusText(CuratedOperationalScorecardStatus status)
+    {
+        return status switch
+        {
+            CuratedOperationalScorecardStatus.Issue => "Issue",
+            CuratedOperationalScorecardStatus.Watch => "Watch",
+            CuratedOperationalScorecardStatus.Good => "Good",
+            _ => "N/A"
+        };
+    }
+
+    private static string GetScorecardStatusBadgeClass(CuratedOperationalScorecardStatus status)
+    {
+        return status switch
+        {
+            CuratedOperationalScorecardStatus.Issue => "bg-danger-subtle text-danger-emphasis border",
+            CuratedOperationalScorecardStatus.Watch => "bg-warning-subtle text-warning-emphasis border",
+            CuratedOperationalScorecardStatus.Good => "bg-success-subtle text-success-emphasis border",
+            _ => "bg-light text-secondary border"
+        };
+    }
+
+    private static string GetInefficiencySeverityText(CuratedSelectionInefficiencySeverity severity)
+    {
+        return severity switch
+        {
+            CuratedSelectionInefficiencySeverity.Issue => "Issue",
+            CuratedSelectionInefficiencySeverity.Watch => "Watch",
+            _ => "Info"
+        };
+    }
+
+    private static string GetInefficiencySeverityBadgeClass(CuratedSelectionInefficiencySeverity severity)
+    {
+        return severity switch
+        {
+            CuratedSelectionInefficiencySeverity.Issue => "bg-danger-subtle text-danger-emphasis border",
+            CuratedSelectionInefficiencySeverity.Watch => "bg-warning-subtle text-warning-emphasis border",
+            _ => "bg-light text-secondary border"
+        };
+    }
+
+    private static string FormatForecastMetric(double? value)
+    {
+        return value?.ToString("N2") ?? "N/A";
+    }
+
+    private static string FormatPeakTimestamp(DateTime? timestampUtc)
+    {
+        return timestampUtc.HasValue
+            ? timestampUtc.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+            : "Timestamp není dostupný";
+    }
+
+    private static IReadOnlyList<string> BuildForecastDiagnosticsPoints(CuratedSelectionForecastDiagnosticsSummary diagnostics)
+    {
+        var points = new List<string>();
+
+        points.Add($"Forecast principle: {diagnostics.ForecastPrinciple}.");
+        points.Add($"Coverage aligned bodu: {(diagnostics.AlignmentCoverageRatio * 100.0).ToString("N0")} % actual rady.");
+
+        if (diagnostics.ForecastMissingNodeCount > 0)
+        {
+            points.Add($"Forecast reference chybi pro {diagnostics.ForecastMissingNodeCount}/{Math.Max(1, diagnostics.IncludedNodeCount)} analyticky zahrnutych uzlu.");
+        }
+
+        if (diagnostics.HasMixedSignedSelection)
+        {
+            points.Add("Mixed-sign selection: SMAPE neni pouzito, metriky jsou MAE/RMSE/Bias + WAPE nad |actual|.");
+        }
+        else
+        {
+            points.Add("Consumption/generation-only selection: MAE/RMSE/Bias + WAPE pro rychle cteni shody.");
+        }
+
+        if (points.Count == 0)
+        {
+            points.Add("Forecast diagnostika je zatim nedostupna.");
+        }
+
+        return points;
+    }
+
+    private static IReadOnlyList<string> BuildOperationalSignalPoints(CuratedSelectionOperationalHealthSummary health)
+    {
+        var points = new List<string>();
+
+        if (health.HighDeviationNodeCount > 0)
+        {
+            points.Add($"Silna deviation: {health.HighDeviationNodeCount} uzlu.");
+        }
+
+        if (health.ElevatedDeviationNodeCount > 0)
+        {
+            points.Add($"Elevated deviation: {health.ElevatedDeviationNodeCount} uzlu.");
+        }
+
+        if (health.HasWeakCoverage)
+        {
+            points.Add($"Slabe coverage: {(health.IncludedCoverageRatio * 100.0).ToString("N0")} % podporovanych uzlu je zahrnuto.");
+        }
+
+        if (health.HasMixedSignedSelection)
+        {
+            points.Add("Mixed-sign selection: netto zahrnuje spotrebu i vyrobu.");
+        }
+
+        if (health.HasAbruptAggregateShift)
+        {
+            var abruptRatioText = health.AbruptShiftRatio.HasValue
+                ? health.AbruptShiftRatio.Value.ToString("N1")
+                : "N/A";
+            points.Add($"Nahly skok aggregate rady (ratio {abruptRatioText}).");
+        }
+
+        if (health.UnsupportedNodeCount > 0 || health.ContextOnlyNodeCount > 0 || health.NoDataNodeCount > 0)
+        {
+            points.Add($"Datove omezeni: unsupported {health.UnsupportedNodeCount}, context-only {health.ContextOnlyNodeCount}, no-data {health.NoDataNodeCount}.");
+        }
+
+        if (points.Count == 0)
+        {
+            points.Add("Bez aktivnich issue signalu v aktualnim intervalu.");
+        }
+
+        return points;
+    }
+
+    private static IReadOnlyList<string> BuildOperatingRegimeSignalPoints(CuratedSelectionOperatingRegimeSummary regime)
+    {
+        var points = new List<string>();
+
+        foreach (var signal in regime.Signals)
+        {
+            switch (signal)
+            {
+                case "high_peak_to_average":
+                    points.Add("Peak-to-average ratio je vysoký: režim je špičkový.");
+                    break;
+                case "high_variability":
+                    points.Add("Variabilita je vysoká i po převedení na |kW|.");
+                    break;
+                case "elevated_variability":
+                    points.Add("Variabilita je zvýšená a mění denní provozní režim.");
+                    break;
+                case "stable_baseload_shape":
+                    points.Add("Baseload proxy je relativně vysoká vůči průměru.");
+                    break;
+                case "weekday_weekend_split":
+                    points.Add("Rozdíl mezi weekday a weekend profilem je významný.");
+                    break;
+                case "mixed_sign_selection":
+                    points.Add("Mixed-sign selection: režim počítá metriky nad absolutní magnitudou.");
+                    break;
+            }
+        }
+
+        if (points.Count == 0)
+        {
+            points.Add("Bez výrazného provozního signálu mimo běžné pásmo.");
+        }
+
+        return points;
     }
 
     private static string GetDeviationBadgeText(NodeDeviationSeverity? severity)
@@ -1288,7 +3424,7 @@
 
     private static bool IsWeatherNode(string? nodeKey)
     {
-        return string.Equals(nodeKey, "weather_main", StringComparison.Ordinal);
+        return string.Equals(nodeKey, "weather_main", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool TryParseHtmlDate(string raw, out DateTime parsedDateUtc)

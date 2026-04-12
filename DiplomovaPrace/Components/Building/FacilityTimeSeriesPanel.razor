@@ -3,28 +3,88 @@
 @inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
 
+<style>
+    .ts-panel-header {
+        display: flex;
+        flex-direction: column;
+        gap: 0.55rem;
+    }
+
+    .ts-panel-title-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .ts-panel-title {
+        font-size: 0.8rem;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+    }
+
+    .ts-panel-controls-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+    }
+
+    .ts-mode-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        min-width: 0;
+    }
+
+    .ts-mode-buttons .btn {
+        min-width: 4.65rem;
+        white-space: nowrap;
+    }
+
+    .ts-baseline-toggle {
+        white-space: nowrap;
+    }
+
+    .ts-chart-host {
+        height: 320px;
+        width: 100%;
+        min-width: 0;
+    }
+
+    @@media (max-width: 900px) {
+        .ts-mode-buttons .btn {
+            min-width: 4.25rem;
+        }
+    }
+</style>
+
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body p-3">
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-            <div class="text-muted text-uppercase fw-bold" style="font-size: 0.8rem;">Single-node časová řada</div>
-            <div class="d-flex align-items-center gap-2">
+        <div class="ts-panel-header mb-2">
+            <div class="ts-panel-title-row">
+                <div class="text-muted text-uppercase fw-bold ts-panel-title">@PanelTitle</div>
                 @if (Data?.Points.Count > 0)
                 {
                     <span class="badge bg-light text-dark border">@Data.Points.Count.ToString("N0") bodů</span>
                 }
+            </div>
 
-                <div class="btn-group btn-group-sm" role="group" aria-label="Režim granularit časové řady">
+            <div class="ts-panel-controls-row">
+                <div class="ts-mode-buttons" role="group" aria-label="Režim granularit časové řady">
                     @foreach (var mode in _availableModes)
                     {
                         <button type="button"
-                                class="btn @(SelectedMode == mode ? "btn-primary" : "btn-outline-secondary")"
+                                class="btn btn-sm @(SelectedMode == mode ? "btn-primary" : "btn-outline-secondary")"
                                 @onclick="() => SelectModeAsync(mode)">
                             @GetModeShortLabel(mode)
                         </button>
                     }
                 </div>
 
-                <div class="form-check form-switch m-0">
+                <div class="form-check form-switch m-0 ts-baseline-toggle">
                     <input class="form-check-input"
                            type="checkbox"
                            id="@_baselineToggleId"
@@ -37,22 +97,19 @@
             </div>
         </div>
 
-        <div class="small text-muted mb-2">
-            Režim zobrazení: <strong>@GetModeLabel(SelectedMode)</strong>
+        <div class="d-flex flex-wrap align-items-center gap-3 small text-muted mb-2">
+            <span>Režim zobrazení: <strong>@GetModeLabel(SelectedMode)</strong></span>
+            @if (ShowBaselineOverlay)
+            {
+                <span>Baseline: <strong>@(Data?.BaselineOverlayAvailable == true ? "dostupný" : "nedostupný")</strong></span>
+            }
         </div>
 
-        @if (ShowBaselineOverlay)
+        @if (ShowBaselineOverlay && !string.IsNullOrWhiteSpace(Data?.BaselineOverlayMessage))
         {
             <div class="small text-muted mb-2">
-                Overlay baseline: <strong>@(Data?.BaselineOverlayAvailable == true ? "dostupný" : "nedostupný")</strong>
+                @Data.BaselineOverlayMessage
             </div>
-
-            @if (!string.IsNullOrWhiteSpace(Data?.BaselineOverlayMessage))
-            {
-                <div class="small text-muted mb-2">
-                    @Data.BaselineOverlayMessage
-                </div>
-            }
         }
 
         @if (_jsInteropUnavailable)
@@ -88,7 +145,7 @@
         }
         else
         {
-            <div id="@_chartElementId" style="height: 300px; width: 100%;"></div>
+            <div id="@_chartElementId" class="ts-chart-host"></div>
             <div class="small text-muted mt-2">
                 Tip: kolečko myši zoomuje časovou osu, tažením v grafu můžete interval posouvat; spodní slider slouží pro přesný výběr části období.
             </div>
@@ -134,6 +191,10 @@
     private readonly string _baselineToggleId = $"facility-baseline-toggle-{Guid.NewGuid():N}";
     private string? _lastRenderedSignature;
     private bool _jsInteropUnavailable;
+
+    private string PanelTitle => string.Equals(Data?.NodeKey, "selection_set", StringComparison.OrdinalIgnoreCase)
+        ? "Aggregate časová řada"
+        : "Single-node časová řada";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
