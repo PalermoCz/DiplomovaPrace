@@ -24,6 +24,7 @@ window.editorCanvas = (function () {
     var _floorBounds = { w: 8000, h: 3000 }; // velké výchozí — neomezuje dokud nenastaven
     var _gridEnabled = false;
     var _gridSize    = 20;
+    var _facilityNodeDragEnabled = false;
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -132,6 +133,29 @@ window.editorCanvas = (function () {
                 };
                 return;
             }
+
+            if (_facilityNodeDragEnabled) {
+                var nodeEl = findWithData(e.target, 'nodeKey');
+                if (nodeEl) {
+                    e.stopPropagation();
+                    var origNodeX = parseFloat(nodeEl.dataset.nodeX);
+                    var origNodeY = parseFloat(nodeEl.dataset.nodeY);
+
+                    if (Number.isNaN(origNodeX) || Number.isNaN(origNodeY)) {
+                        origNodeX = pos.x;
+                        origNodeY = pos.y;
+                    }
+
+                    _state = {
+                        type: 'dragFacilityNode',
+                        nodeKey: nodeEl.dataset.nodeKey,
+                        startCX: pos.x, startCY: pos.y,
+                        origX: origNodeX, origY: origNodeY,
+                        el: nodeEl, moved: false
+                    };
+                    return;
+                }
+            }
         }
     }
 
@@ -171,6 +195,16 @@ window.editorCanvas = (function () {
             if (_state.moved) {
                 _state.el.setAttribute('transform', 'translate(' + ddx + ' ' + ddy + ')');
             }
+            return;
+        }
+
+        if (_state.type === 'dragFacilityNode') {
+            var ndx = pos.x - _state.startCX;
+            var ndy = pos.y - _state.startCY;
+            if (Math.abs(ndx) > 2 || Math.abs(ndy) > 2) _state.moved = true;
+            if (_state.moved) {
+                _state.el.setAttribute('transform', 'translate(' + ndx + ' ' + ndy + ')');
+            }
         }
     }
 
@@ -205,6 +239,17 @@ window.editorCanvas = (function () {
                 var finalX = Math.max(0, Math.min(_floorBounds.w, s.origCx + (pos.x - s.startCX)));
                 var finalY = Math.max(0, Math.min(_floorBounds.h, s.origCy + (pos.y - s.startCY)));
                 if (_dotNet) _dotNet.invokeMethodAsync('JsOnDeviceDragEnd', s.deviceId, finalX, finalY);
+            }
+            return;
+        }
+
+        if (s.type === 'dragFacilityNode') {
+            s.el.removeAttribute('transform');
+            if (s.moved) {
+                var nodePos = clientToContent(e.clientX, e.clientY);
+                var finalNodeX = Math.max(0, Math.min(_floorBounds.w, s.origX + (nodePos.x - s.startCX)));
+                var finalNodeY = Math.max(0, Math.min(_floorBounds.h, s.origY + (nodePos.y - s.startCY)));
+                if (_dotNet) _dotNet.invokeMethodAsync('JsOnFacilityNodeDragEnd', s.nodeKey, finalNodeX, finalNodeY);
             }
         }
     }
@@ -316,6 +361,8 @@ window.editorCanvas = (function () {
                     if (_state && _state.type === 'draw') removePreview();
                     if (_state && _state.type === 'drag' && _state.el)
                         _state.el.removeAttribute('transform');
+                    if (_state && _state.type === 'dragFacilityNode' && _state.el)
+                        _state.el.removeAttribute('transform');
                     if (_state && _state.type === 'pan') svg.style.cursor = cursorForTool(_tool);
                     _state = null;
                 },
@@ -365,6 +412,10 @@ window.editorCanvas = (function () {
         setGrid: function (enabled, size) {
             _gridEnabled = !!enabled;
             _gridSize = size || 20;
+        },
+
+        setFacilityNodeDragEnabled: function (enabled) {
+            _facilityNodeDragEnabled = !!enabled;
         },
 
         dispose: function (svgId) {

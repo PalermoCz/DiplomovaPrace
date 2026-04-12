@@ -32,6 +32,7 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<MeasurementPersist
 builder.Services.AddScoped<ICsvMeasurementImportService, CsvMeasurementImportService>();
 builder.Services.AddScoped<IKpiService, KpiService>();
 builder.Services.AddScoped<IBaselineService, BaselineService>();
+builder.Services.AddSingleton<FacilityEditorStateService>();
 builder.Services.AddScoped<FacilityImportService>();
 builder.Services.AddScoped<FacilityQueryService>();
 builder.Services.AddScoped<NodeAnalyticsPreviewService>();

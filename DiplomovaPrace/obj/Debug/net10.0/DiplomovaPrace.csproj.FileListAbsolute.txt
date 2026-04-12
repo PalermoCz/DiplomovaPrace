@@ -92,7 +92,6 @@ C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\wb34hdfdov-{0}-khy4lop6wu-khy4lop6wu.gz
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\wqp8zzzo8b-{0}-n4rvgmhl10-n4rvgmhl10.gz
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\4rxuglimrs-{0}-dnjtu2x5jt-dnjtu2x5jt.gz
-C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\qcxho35633-{0}-xnymjk4qmy-xnymjk4qmy.gz
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\us1v9g6brm-{0}-t1cqhe9u97-t1cqhe9u97.gz
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\05doesu5t9-{0}-c2jlpeoesf-c2jlpeoesf.gz
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\z8m5ajzah9-{0}-sejl45xvog-sejl45xvog.gz
@@ -155,3 +154,4 @@ C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\DiplomovaPrace.genruntimeconfig.cache
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\ref\DiplomovaPrace.dll
 C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\175qrgmdcy-{0}-dcw8730chq-dcw8730chq.gz
+C:\Users\Matthew\Desktop\Diplomova_Prace\Code\DiplomovaPrace\DiplomovaPrace\obj\Debug\net10.0\compressed\qcxho35633-{0}-kvljqq2iz2-kvljqq2iz2.gz

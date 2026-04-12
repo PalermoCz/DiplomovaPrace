@@ -187,7 +187,10 @@
                 var labelAnchor = placeLabelRight ? "start" : "end";
                 var labelBoxX = placeLabelRight ? labelX - 4 : labelX - labelWidth - 4;
 
-                <g data-node-key="@node.NodeKey" opacity="@Fmt(nodeOpacity)">
+                     <g data-node-key="@node.NodeKey"
+                         data-node-x="@Fmt(cx)"
+                         data-node-y="@Fmt(cy)"
+                         opacity="@Fmt(nodeOpacity)">
                     <title>@($"{labelText} - {nodeRoleLabel}")</title>
                     @if (haloStrokeWidth != "0")
                     {
@@ -350,11 +353,13 @@
     [Parameter] public IReadOnlySet<string> SelectedElementIds { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     [Parameter] public IReadOnlySet<string> SelectedSubtreeNodeKeys { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     [Parameter] public bool ShowGrid { get; set; }
+    [Parameter] public bool EnableFacilityNodeDrag { get; set; }
     [Parameter] public IReadOnlyList<ValidationIssue> ValidationIssues { get; set; } = [];
     [Parameter] public IReadOnlyDictionary<string, NodeDeviationSeverity> FacilityNodeAlertSeverities { get; set; } = new Dictionary<string, NodeDeviationSeverity>();
 
     [Parameter] public EventCallback<RoomGeometry> OnRoomCreated { get; set; }
     [Parameter] public EventCallback<(string DeviceId, DevicePosition Pos)> OnDeviceMoved { get; set; }
+    [Parameter] public EventCallback<(string NodeKey, double XHint, double YHint)> OnFacilityNodeMoved { get; set; }
     [Parameter] public EventCallback<(string Id, EditorSelectionType Type)> OnElementSelected { get; set; }
     [Parameter] public EventCallback<(double X, double Y)> OnCanvasClicked { get; set; }
     [Parameter] public EventCallback<(string Id, EditorSelectionType Type)> OnDeleteRequested { get; set; }
@@ -370,6 +375,7 @@
     private double _prevWidth;
     private double _prevHeight;
     private bool _prevShowGrid;
+    private bool _prevFacilityNodeDragEnabled;
 
     private double ViewBoxWidth  { get {
         if (Facility != null) return 1200;
@@ -401,6 +407,7 @@
                 await JSRuntime.InvokeVoidAsync("editorCanvas.setTool", ActiveTool.ToString());
                 await JSRuntime.InvokeVoidAsync("editorCanvas.setFloorBounds", ViewBoxWidth, ViewBoxHeight);
                 await JSRuntime.InvokeVoidAsync("editorCanvas.setGrid", ShowGrid, 20);
+                await JSRuntime.InvokeVoidAsync("editorCanvas.setFacilityNodeDragEnabled", EnableFacilityNodeDrag);
                 
                 _prevTool     = ActiveTool;
                 _prevFloorId  = Floor?.Id;
@@ -408,6 +415,7 @@
                 _prevWidth    = ViewBoxWidth;
                 _prevHeight   = ViewBoxHeight;
                 _prevShowGrid = ShowGrid;
+                _prevFacilityNodeDragEnabled = EnableFacilityNodeDrag;
                 _jsInitialized = true;
             }
             catch { /* ignorujeme případné chyby padající z odpojené stránky */ }
@@ -444,6 +452,12 @@
             await JSRuntime.InvokeVoidAsync("editorCanvas.setGrid", ShowGrid, 20);
         }
 
+        if (EnableFacilityNodeDrag != _prevFacilityNodeDragEnabled)
+        {
+            _prevFacilityNodeDragEnabled = EnableFacilityNodeDrag;
+            await JSRuntime.InvokeVoidAsync("editorCanvas.setFacilityNodeDragEnabled", EnableFacilityNodeDrag);
+        }
+
         await JSRuntime.InvokeVoidAsync("editorCanvas.reapplyTransform");
     }
 
@@ -456,6 +470,19 @@
     [JSInvokable]
     public async Task JsOnDeviceDragEnd(string deviceId, double x, double y) =>
         await OnDeviceMoved.InvokeAsync((deviceId, new DevicePosition(x, y)));
+
+    [JSInvokable]
+    public async Task JsOnFacilityNodeDragEnd(string nodeKey, double x, double y)
+    {
+        if (string.IsNullOrWhiteSpace(nodeKey) || ViewBoxWidth <= 0 || ViewBoxHeight <= 0)
+        {
+            return;
+        }
+
+        var xHint = Math.Clamp(x / ViewBoxWidth, 0.0, 1.0);
+        var yHint = Math.Clamp(y / ViewBoxHeight, 0.0, 1.0);
+        await OnFacilityNodeMoved.InvokeAsync((nodeKey, xHint, yHint));
+    }
 
     [JSInvokable]
     public async Task JsOnElementClicked(string id, string typeName)

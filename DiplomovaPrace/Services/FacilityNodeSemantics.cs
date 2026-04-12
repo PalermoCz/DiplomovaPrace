@@ -113,16 +113,22 @@ public static class FacilityNodeSemantics
         return BuildMetadata(node.NodeKey, node.NodeType, node.Label, node.Zone, node.MeterUrn);
     }
 
+    public static FacilityNodeMetadata BuildMetadata(SchematicNodeEntity node, IReadOnlyList<string>? extraTags)
+    {
+        return BuildMetadata(node.NodeKey, node.NodeType, node.Label, node.Zone, node.MeterUrn, extraTags);
+    }
+
     public static FacilityNodeMetadata BuildMetadata(
         string nodeKey,
         string? nodeType,
         string? label,
         string? zone,
-        string? meterUrn)
+        string? meterUrn,
+        IReadOnlyList<string>? extraTags = null)
     {
         var role = ResolveRole(nodeKey, nodeType, label);
         var semanticType = ResolveSemanticType(nodeKey, nodeType, label, role);
-        var tags = DeriveTags(nodeKey, nodeType, label, zone, meterUrn, role, semanticType);
+        var tags = DeriveTags(nodeKey, nodeType, label, zone, meterUrn, role, semanticType, extraTags);
 
         return new FacilityNodeMetadata
         {
@@ -195,7 +201,8 @@ public static class FacilityNodeSemantics
         string? zone,
         string? meterUrn,
         FacilityNodeRole? role = null,
-        FacilityNodeSemanticType? semanticType = null)
+        FacilityNodeSemanticType? semanticType = null,
+        IReadOnlyList<string>? extraTags = null)
     {
         var tags = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var effectiveRole = role ?? ResolveRole(nodeKey, nodeType, label);
@@ -244,6 +251,17 @@ public static class FacilityNodeSemantics
             tags.Add("context-only");
         }
 
+        if (extraTags is not null && extraTags.Count > 0)
+        {
+            foreach (var extraTag in extraTags)
+            {
+                foreach (var normalizedTag in ParseTagQuery(extraTag))
+                {
+                    tags.Add(normalizedTag);
+                }
+            }
+        }
+
         return tags
             .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -266,13 +284,14 @@ public static class FacilityNodeSemantics
 
     public static IReadOnlyList<string> ResolveMatchingNodeKeys(
         IEnumerable<SchematicNodeEntity> nodes,
-        FacilityNodeSemanticQuery query)
+        FacilityNodeSemanticQuery query,
+        Func<SchematicNodeEntity, IReadOnlyList<string>?>? extraTagsAccessor = null)
     {
         var matchingNodeKeys = new List<string>();
 
         foreach (var node in nodes)
         {
-            var metadata = BuildMetadata(node);
+            var metadata = BuildMetadata(node, extraTagsAccessor?.Invoke(node));
             if (MatchesQuery(metadata, query))
             {
                 matchingNodeKeys.Add(node.NodeKey);

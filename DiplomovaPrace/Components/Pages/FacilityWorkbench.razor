@@ -4,6 +4,7 @@
 @using DiplomovaPrace.Components.Editor
 @rendermode InteractiveServer
 @inject FacilityQueryService FacilityQueryService
+@inject FacilityEditorStateService FacilityEditorStateService
 @inject NodeAnalyticsPreviewService AnalyticsPreview
 @inject FacilityAlertSummaryService GlobalAlertSummaryService
 @inject IEditorSessionService SessionService
@@ -508,9 +509,11 @@
                                   SelectedElementIds="@_selectionSet"
                                   SelectedSubtreeNodeKeys="@SelectedSubtreeNodeKeysForCanvas"
                                   FacilityNodeAlertSeverities="@AlertSeverityByNodeKey"
+                                  EnableFacilityNodeDrag="@_isSchematicEditorEnabled"
                                   ShowGrid="false"
                                   OnElementSelected="HandleElementSelected"
-                                  OnCanvasClicked="HandleCanvasClicked" />
+                                  OnCanvasClicked="HandleCanvasClicked"
+                                  OnFacilityNodeMoved="HandleFacilityNodeMovedAsync" />
                 }
             </div>
         </div>
@@ -527,6 +530,12 @@
                     <button class="btn btn-sm btn-outline-secondary d-flex align-items-center bg-light px-3 text-nowrap fw-medium" @onclick="ToggleSchematic">
                         <i class="bi @(_isSchematicHidden ? "bi-layout-split" : "bi-arrows-fullscreen") me-1"></i>
                         @(_isSchematicHidden ? "Zobrazit schéma" : "Maximalizovat detail")
+                    </button>
+                    <button class="btn btn-sm d-flex align-items-center text-nowrap fw-medium @(_isSchematicEditorEnabled ? "btn-primary" : "btn-outline-primary")"
+                            @onclick="ToggleSchematicEditorMode"
+                            disabled="@(_facility is null)">
+                        <i class="bi @(_isSchematicEditorEnabled ? "bi-pencil-square" : "bi-pencil") me-1"></i>
+                        @(_isSchematicEditorEnabled ? "Editor zapnut" : "Zapnout editor")
                     </button>
                     @if (hasFocusNode)
                     {
@@ -630,6 +639,97 @@
                         @if (!string.IsNullOrWhiteSpace(_semanticSelectionStatusMessage))
                         {
                             <div class="small text-muted mt-2">@_semanticSelectionStatusMessage</div>
+                        }
+                    </div>
+
+                    <div class="mt-3 pt-2 border-top">
+                        <div class="small fw-semibold text-secondary mb-2">Schema Editor</div>
+                        @if (!hasFocusNode)
+                        {
+                            <div class="small text-muted">Vyberte focus uzel ve schématu pro editaci metadata.</div>
+                        }
+                        else if (!CanEditFocusedNode)
+                        {
+                            <div class="small text-muted">Uzel @_selectedFacilityNode!.NodeKey je pouze kontextový a v editoru se neupravuje.</div>
+                        }
+                        else
+                        {
+                            <div class="mb-2">
+                                <label class="form-label form-label-sm mb-1">Název uzlu</label>
+                                <input class="form-control form-control-sm bg-light" @bind="_editorLabelInput" maxlength="200" />
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label form-label-sm mb-1">Tagy</label>
+                                <input class="form-control form-control-sm bg-light" @bind="_editorTagsInput" placeholder="např. hvac, maintenance, zone:workshop" />
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label form-label-sm mb-1">Poznámka</label>
+                                <textarea class="form-control form-control-sm bg-light" rows="2" maxlength="500" @bind="_editorNoteInput"></textarea>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <button class="btn btn-sm btn-primary" @onclick="SaveFocusedNodeMetadataAsync" disabled="@(!_isSchematicEditorEnabled)">
+                                    <i class="bi bi-save me-1"></i>Uložit metadata
+                                </button>
+                                <button class="btn btn-sm btn-link text-decoration-none p-0" @onclick="RestoreFocusedNodeEditorDraft">
+                                    Obnovit draft
+                                </button>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(_editorStatusMessage))
+                        {
+                            <div class="small text-muted mt-2">@_editorStatusMessage</div>
+                        }
+                    </div>
+
+                    <div class="mt-3 pt-2 border-top">
+                        <div class="small fw-semibold text-secondary mb-2">Saved Working Sets</div>
+                        <div class="mb-2">
+                            <input class="form-control form-control-sm bg-light" @bind="_workingSetNameInput" maxlength="80" placeholder="Název working setu" />
+                        </div>
+                        <div class="mb-2">
+                            <input class="form-control form-control-sm bg-light" @bind="_workingSetDescriptionInput" maxlength="180" placeholder="Popis (volitelné)" />
+                        </div>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="SaveCurrentWorkingSetAsync" disabled="@(_facility is null)">
+                            <i class="bi bi-bookmark-plus me-1"></i>Uložit aktuální selection set
+                        </button>
+
+                        @if (_savedWorkingSets.Count == 0)
+                        {
+                            <div class="small text-muted mt-2">Zatím není uložen žádný working set.</div>
+                        }
+                        else
+                        {
+                            <div class="d-flex flex-column gap-1 mt-2">
+                                @foreach (var workingSet in _savedWorkingSets)
+                                {
+                                    <div class="border rounded p-2 bg-light-subtle">
+                                        <div class="d-flex justify-content-between align-items-start gap-2">
+                                            <div class="small">
+                                                <div class="fw-semibold text-dark">@workingSet.Name</div>
+                                                @if (!string.IsNullOrWhiteSpace(workingSet.Description))
+                                                {
+                                                    <div class="text-muted">@workingSet.Description</div>
+                                                }
+                                                <div class="text-muted">Uzly: @workingSet.NodeKeys.Count · aktualizováno @workingSet.UpdatedUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</div>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-1">
+                                                <button class="btn btn-sm btn-outline-primary" title="Aplikovat working set" @onclick="() => ApplyWorkingSetAsync(workingSet.Name)">
+                                                    <i class="bi bi-check2-circle"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" title="Smazat working set" @onclick="() => DeleteWorkingSetAsync(workingSet.Name)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(_workingSetStatusMessage))
+                        {
+                            <div class="small text-muted mt-2">@_workingSetStatusMessage</div>
                         }
                     </div>
                 </div>
@@ -1599,8 +1699,19 @@
     private string _semanticQueryTypeFilterValue = string.Empty;
     private string _semanticQueryTagInput = string.Empty;
     private string? _semanticSelectionStatusMessage;
+    private readonly Dictionary<string, FacilityNodeEditorState> _editorNodeStatesByKey = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<FacilitySavedWorkingSet> _savedWorkingSets = [];
+    private bool _isSchematicEditorEnabled;
+    private string _editorLabelInput = string.Empty;
+    private string _editorTagsInput = string.Empty;
+    private string _editorNoteInput = string.Empty;
+    private string? _editorStatusMessage;
+    private string _workingSetNameInput = string.Empty;
+    private string _workingSetDescriptionInput = string.Empty;
+    private string? _workingSetStatusMessage;
     private bool _isPreviewLoading;
     private bool _isCuratedNode;
+    private bool CanEditFocusedNode => _selectedFacilityNode is not null && !FacilityNodeSemantics.IsWeatherContextNode(_selectedFacilityNode.NodeKey);
     
     // UI State
     private bool _isSchematicHidden = false;
@@ -1749,8 +1860,15 @@
 
     private async Task ReloadData()
     {
-        var facility = await FacilityQueryService.GetMainFacilityAsync();
-        _facility = BuildSchemaFacilityWithoutWeatherNode(facility);
+        var facilityTask = FacilityQueryService.GetMainFacilityAsync();
+        var editorStateTask = FacilityEditorStateService.GetNodeStatesByKeyAsync();
+        var workingSetsTask = FacilityEditorStateService.GetWorkingSetsAsync();
+
+        await Task.WhenAll(facilityTask, editorStateTask, workingSetsTask);
+
+        _facility = BuildSchemaFacilityWithoutWeatherNode(facilityTask.Result);
+        SyncEditorNodeStateCache(editorStateTask.Result);
+        SyncWorkingSetCache(workingSetsTask.Result);
         RebuildFacilityNodeIndexes();
         ClearSelectionSetState();
         ClearFocusNodeState();
@@ -1775,7 +1893,9 @@
                 _selectedFacilityNode = focusedNode;
                 ClearPreviewState();
                 _compareSetStatusMessage = null;
+                _editorStatusMessage = null;
                 EnsureFocusNodeInSelectionSetIfLeaf(_selectedFacilityNode);
+                RestoreFocusedNodeEditorDraft();
                 
                 if (_selectedFacilityNode != null)
                 {
@@ -1973,6 +2093,337 @@
         await RefreshComparePreviewAfterCompareSetChangedAsync();
     }
 
+    private void ToggleSchematicEditorMode()
+    {
+        _isSchematicEditorEnabled = !_isSchematicEditorEnabled;
+        _editorStatusMessage = _isSchematicEditorEnabled
+            ? "Schema editor je zapnutý. Drag uzlů a metadata změny se budou ukládat."
+            : "Schema editor je vypnutý.";
+    }
+
+    private void RestoreFocusedNodeEditorDraft()
+    {
+        if (_selectedFacilityNode is null)
+        {
+            _editorLabelInput = string.Empty;
+            _editorTagsInput = string.Empty;
+            _editorNoteInput = string.Empty;
+            return;
+        }
+
+        _editorLabelInput = _selectedFacilityNode.Label ?? string.Empty;
+
+        if (_editorNodeStatesByKey.TryGetValue(_selectedFacilityNode.NodeKey, out var nodeState))
+        {
+            if (!string.IsNullOrWhiteSpace(nodeState.Label))
+            {
+                _editorLabelInput = nodeState.Label;
+            }
+
+            _editorTagsInput = string.Join(", ", nodeState.Tags);
+            _editorNoteInput = nodeState.Note ?? string.Empty;
+            return;
+        }
+
+        _editorTagsInput = string.Empty;
+        _editorNoteInput = string.Empty;
+    }
+
+    private async Task SaveFocusedNodeMetadataAsync()
+    {
+        if (!_isSchematicEditorEnabled)
+        {
+            _editorStatusMessage = "Schema editor je vypnutý. Zapněte editor před uložením.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (_selectedFacilityNode is null)
+        {
+            _editorStatusMessage = "Nejprve vyberte focus uzel.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (!CanEditFocusedNode)
+        {
+            _editorStatusMessage = "Tento uzel je kontextový a jeho metadata se v editoru nemění.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var nodeKey = _selectedFacilityNode.NodeKey;
+        var label = NormalizeOptionalText(_editorLabelInput) ?? _selectedFacilityNode.Label;
+        var tags = FacilityNodeSemantics.ParseTagQuery(_editorTagsInput);
+        var note = NormalizeOptionalText(_editorNoteInput);
+
+        _editorNodeStatesByKey.TryGetValue(nodeKey, out var existingState);
+
+        var nextState = new FacilityNodeEditorState
+        {
+            NodeKey = nodeKey,
+            Label = label,
+            Tags = tags,
+            Note = note,
+            XHint = existingState?.XHint ?? _selectedFacilityNode.XHint,
+            YHint = existingState?.YHint ?? _selectedFacilityNode.YHint,
+            UpdatedUtc = DateTime.UtcNow
+        };
+
+        await FacilityEditorStateService.SaveNodeStatesAsync([nextState]);
+
+        if (HasNodeStatePayload(nextState))
+        {
+            _editorNodeStatesByKey[nodeKey] = nextState;
+        }
+        else
+        {
+            _editorNodeStatesByKey.Remove(nodeKey);
+        }
+
+        if (!string.IsNullOrWhiteSpace(label))
+        {
+            _selectedFacilityNode.Label = label;
+            if (_nodesByKey.TryGetValue(nodeKey, out var indexedNode))
+            {
+                indexedNode.Label = label;
+            }
+
+            _editorLabelInput = label;
+        }
+
+        _editorStatusMessage = $"Metadata uzlu {nodeKey} byla uložena.";
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleFacilityNodeMovedAsync((string NodeKey, double XHint, double YHint) move)
+    {
+        if (!_isSchematicEditorEnabled || IsWeatherNode(move.NodeKey))
+        {
+            return;
+        }
+
+        if (!_nodesByKey.TryGetValue(move.NodeKey, out var node))
+        {
+            return;
+        }
+
+        var xHint = Math.Clamp(move.XHint, 0.0, 1.0);
+        var yHint = Math.Clamp(move.YHint, 0.0, 1.0);
+
+        node.XHint = xHint;
+        node.YHint = yHint;
+
+        if (_selectedFacilityNode is not null && _selectedFacilityNode.NodeKey.Equals(move.NodeKey, StringComparison.OrdinalIgnoreCase))
+        {
+            _selectedFacilityNode.XHint = xHint;
+            _selectedFacilityNode.YHint = yHint;
+        }
+
+        _editorNodeStatesByKey.TryGetValue(move.NodeKey, out var existingState);
+        var nextState = new FacilityNodeEditorState
+        {
+            NodeKey = move.NodeKey,
+            Label = existingState?.Label,
+            Tags = existingState?.Tags ?? [],
+            Note = existingState?.Note,
+            XHint = xHint,
+            YHint = yHint,
+            UpdatedUtc = DateTime.UtcNow
+        };
+
+        await FacilityEditorStateService.SaveNodeStatesAsync([nextState]);
+
+        if (HasNodeStatePayload(nextState))
+        {
+            _editorNodeStatesByKey[move.NodeKey] = nextState;
+        }
+        else
+        {
+            _editorNodeStatesByKey.Remove(move.NodeKey);
+        }
+
+        _editorStatusMessage = $"Pozice uzlu {move.NodeKey} byla uložena.";
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SaveCurrentWorkingSetAsync()
+    {
+        var workingSetName = NormalizeOptionalText(_workingSetNameInput);
+        if (string.IsNullOrWhiteSpace(workingSetName))
+        {
+            _workingSetStatusMessage = "Zadejte název working setu.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var nodeKeys = _selectionOrder
+            .Where(_selectionSet.Contains)
+            .Where(_nodesByKey.ContainsKey)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (nodeKeys.Count == 0)
+        {
+            _workingSetStatusMessage = "Selection set je prázdný. Nejprve vyberte uzly ve schématu.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var workingSet = new FacilitySavedWorkingSet
+        {
+            Name = workingSetName,
+            Description = NormalizeOptionalText(_workingSetDescriptionInput),
+            NodeKeys = nodeKeys,
+            SemanticQuery = BuildWorkingSetSemanticSnapshot(),
+            UpdatedUtc = DateTime.UtcNow
+        };
+
+        await FacilityEditorStateService.SaveWorkingSetAsync(workingSet);
+        await ReloadWorkingSetsAsync();
+
+        _workingSetNameInput = workingSet.Name;
+        _workingSetStatusMessage = $"Working set {workingSet.Name} byl uložen ({workingSet.NodeKeys.Count} uzlů).";
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ApplyWorkingSetAsync(string workingSetName)
+    {
+        if (string.IsNullOrWhiteSpace(workingSetName))
+        {
+            return;
+        }
+
+        var workingSet = _savedWorkingSets.FirstOrDefault(item => item.Name.Equals(workingSetName, StringComparison.OrdinalIgnoreCase));
+        if (workingSet is null)
+        {
+            _workingSetStatusMessage = "Working set nebyl nalezen.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var nodeKeys = workingSet.NodeKeys
+            .Where(_nodesByKey.ContainsKey)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (nodeKeys.Count == 0)
+        {
+            _workingSetStatusMessage = "Working set neobsahuje žádné aktuálně dostupné uzly.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (workingSet.SemanticQuery is not null)
+        {
+            ApplySemanticFiltersFromQuery(workingSet.SemanticQuery);
+        }
+
+        var mutationResult = MutateSelectionSet(nodeKeys, SemanticSelectionMutationMode.Replace);
+        var nextFocusNodeKey = ResolveFocusNodeAfterSemanticMutation(SemanticSelectionMutationMode.Replace, mutationResult);
+        var focusChanged = ApplyFocusNode(nextFocusNodeKey);
+
+        var unavailableCount = Math.Max(0, workingSet.NodeKeys.Count - nodeKeys.Count);
+        _workingSetStatusMessage = unavailableCount > 0
+            ? $"Working set {workingSet.Name} aplikován. {unavailableCount} uzlů už není ve schématu dostupných."
+            : $"Working set {workingSet.Name} aplikován ({nodeKeys.Count} uzlů).";
+
+        if (!focusChanged)
+        {
+            await ReloadPreviewDataAsync();
+            return;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task DeleteWorkingSetAsync(string workingSetName)
+    {
+        var removed = await FacilityEditorStateService.DeleteWorkingSetAsync(workingSetName);
+        if (!removed)
+        {
+            _workingSetStatusMessage = "Working set se nepodařilo odstranit (nenalezen).";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        await ReloadWorkingSetsAsync();
+        _workingSetStatusMessage = $"Working set {workingSetName} byl smazán.";
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ReloadWorkingSetsAsync()
+    {
+        var workingSets = await FacilityEditorStateService.GetWorkingSetsAsync();
+        SyncWorkingSetCache(workingSets);
+    }
+
+    private FacilityNodeSemanticQuery? BuildWorkingSetSemanticSnapshot()
+    {
+        var hasRoleFilter = !string.IsNullOrWhiteSpace(_semanticQueryRoleFilterValue);
+        var hasTypeFilter = !string.IsNullOrWhiteSpace(_semanticQueryTypeFilterValue);
+        var hasTagFilter = !string.IsNullOrWhiteSpace(_semanticQueryTagInput);
+
+        if (!hasRoleFilter && !hasTypeFilter && !hasTagFilter)
+        {
+            return null;
+        }
+
+        return BuildSemanticQueryFromFilters();
+    }
+
+    private void ApplySemanticFiltersFromQuery(FacilityNodeSemanticQuery query)
+    {
+        _semanticQueryRoleFilterValue = query.Role?.ToString() ?? string.Empty;
+        _semanticQueryTypeFilterValue = query.SemanticType?.ToString() ?? string.Empty;
+        _semanticQueryTagInput = string.Join(", ", query.Tags);
+    }
+
+    private IReadOnlyList<string> GetEditorTags(string nodeKey)
+    {
+        if (_editorNodeStatesByKey.TryGetValue(nodeKey, out var nodeState))
+        {
+            return nodeState.Tags;
+        }
+
+        return [];
+    }
+
+    private void SyncEditorNodeStateCache(IReadOnlyDictionary<string, FacilityNodeEditorState> states)
+    {
+        _editorNodeStatesByKey.Clear();
+
+        foreach (var pair in states)
+        {
+            _editorNodeStatesByKey[pair.Key] = pair.Value;
+        }
+    }
+
+    private void SyncWorkingSetCache(IReadOnlyList<FacilitySavedWorkingSet> workingSets)
+    {
+        _savedWorkingSets.Clear();
+        _savedWorkingSets.AddRange(workingSets.OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase));
+    }
+
+    private static string? NormalizeOptionalText(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return value.Trim();
+    }
+
+    private static bool HasNodeStatePayload(FacilityNodeEditorState nodeState)
+    {
+        return !string.IsNullOrWhiteSpace(nodeState.Label)
+            || nodeState.XHint.HasValue
+            || nodeState.YHint.HasValue
+            || !string.IsNullOrWhiteSpace(nodeState.Note)
+            || nodeState.Tags.Count > 0;
+    }
+
     private async Task ApplySemanticPresetAsync()
     {
         var presetQuery = FacilityNodeSemantics.GetPresetQuery(_semanticPreset);
@@ -2037,7 +2488,7 @@
             .Where(IsLeafOrAnalyticNode)
             .ToList();
         var candidateNodeKeys = FacilityNodeSemantics
-            .ResolveMatchingNodeKeys(candidateNodes, query)
+            .ResolveMatchingNodeKeys(candidateNodes, query, node => GetEditorTags(node.NodeKey))
             .Where(_nodesByKey.ContainsKey)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -2904,6 +3355,8 @@
     {
         _selectedFacilityNode = null;
         ClearPreviewState();
+        _editorStatusMessage = null;
+        RestoreFocusedNodeEditorDraft();
     }
 
     private void ClearPreviewState()
