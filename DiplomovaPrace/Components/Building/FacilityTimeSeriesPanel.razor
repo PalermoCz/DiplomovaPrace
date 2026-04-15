@@ -105,13 +105,6 @@
             }
         </div>
 
-        @if (ShowBaselineOverlay && !string.IsNullOrWhiteSpace(Data?.BaselineOverlayMessage))
-        {
-            <div class="small text-muted mb-2">
-                @Data.BaselineOverlayMessage
-            </div>
-        }
-
         @if (_jsInteropUnavailable)
         {
             <div class="alert alert-secondary py-2 mb-0 border-0">
@@ -130,44 +123,14 @@
                 <i class="bi bi-info-circle-fill text-info me-2"></i>
                 <div>@(Data.NoDataMessage ?? "Pro vybraný interval nejsou dostupná data časové řady.")</div>
             </div>
-            <div class="small text-muted mt-2">
-                Použitá granularita: <strong>@Data.GranularityLabel</strong>
-            </div>
-            <div class="small text-muted mt-1">
-                @Data.AggregationMethod
-            </div>
-            @if (ShowBaselineOverlay)
-            {
-                <div class="small text-muted mt-1">
-                    Referenční série: <strong>@(Data.BaselineOverlayAvailable ? "zobrazená" : "nezobrazená")</strong>
-                </div>
-            }
+            <div class="small text-muted mt-2">Status: bez dat pro zvolený interval.</div>
         }
         else
         {
             <div id="@_chartElementId" class="ts-chart-host"></div>
             <div class="small text-muted mt-2">
-                Tip: kolečko myši zoomuje časovou osu, tažením v grafu můžete interval posouvat; spodní slider slouží pro přesný výběr části období.
+                Status: <strong>@Data.GranularityLabel</strong> · Osa Y: <strong>@Data.YAxisLabel</strong>@(ShowBaselineOverlay ? $" · Baseline: {(Data.BaselineOverlayAvailable ? "aktivní" : "nedostupná")}" : string.Empty)
             </div>
-            <div class="small text-muted mt-2">
-                <i class="bi bi-info-circle me-1"></i>
-                @Data.InterpretationNote
-            </div>
-            <div class="small text-muted mt-1">
-                Použitá granularita: <strong>@Data.GranularityLabel</strong>
-            </div>
-            <div class="small text-muted mt-1">
-                @Data.AggregationMethod
-            </div>
-            <div class="small text-muted mt-1">
-                Osa Y: <strong>@Data.YAxisLabel</strong>
-            </div>
-            @if (ShowBaselineOverlay)
-            {
-                <div class="small text-muted mt-1">
-                    Referenční série: <strong>@(Data.BaselineOverlayAvailable ? "aktivní" : "nedostupná")</strong>
-                </div>
-            }
         }
     </div>
 </div>

@@ -20,44 +20,61 @@
         display: flex;
         flex-direction: column;
         height: 100%;
+        min-width: 0;
+        overflow-x: hidden;
         background-color: #f8fafc;
     }
     
     .facility-main {
         display: flex;
         flex: 1;
+        min-width: 0;
+        overflow-x: hidden;
         overflow: hidden;
     }
     
     .facility-canvas-wrapper {
-        flex: 1;
+        flex: 1.35 1 0;
+        min-width: 0;
         position: relative;
         overflow: hidden;
     }
     
     .facility-properties {
-        flex: 1;
+        flex: 0.95 1 0;
         min-width: 0;
+        max-width: 47rem;
         background-color: #ffffff;
-        padding: 1.5rem;
+        padding: 1.1rem 1rem;
+        overflow-x: hidden;
         overflow-y: auto;
         box-shadow: -2px 0 10px rgba(0,0,0,0.02);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .facility-properties > * {
+        min-width: 0;
     }
 
     .overview-grid {
         display: grid;
         grid-template-columns: repeat(12, minmax(0, 1fr));
-        gap: 0.65rem;
-        margin-bottom: 0.65rem;
+        gap: 0.55rem;
+        width: 100%;
+        min-width: 0;
+        align-items: start;
+        margin-bottom: 0.55rem;
     }
 
     .overview-widget {
         background: #ffffff;
         border: 1px solid #e2e8f0;
         border-radius: 0.75rem;
-        padding: 0.7rem;
+        padding: 0.64rem;
         box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
         min-width: 0;
+        overflow: hidden;
     }
 
     .overview-widget-soft {
@@ -119,7 +136,7 @@
     }
 
     .main-analytics-grid {
-        grid-template-columns: minmax(220px, 0.9fr) minmax(420px, 2.6fr);
+        grid-template-columns: minmax(0, 1fr) minmax(0, 2.3fr);
         align-items: stretch;
     }
 
@@ -129,17 +146,17 @@
 
     .main-chart-widget {
         grid-column: 2;
-        min-width: 24rem;
+        min-width: 0;
     }
 
     .forecast-analytics-grid {
-        grid-template-columns: minmax(380px, 2.4fr) minmax(230px, 1fr);
+        grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr);
         align-items: stretch;
     }
 
     .forecast-compare-widget {
         grid-column: 1;
-        min-width: 22rem;
+        min-width: 0;
     }
 
     .forecast-diagnostics-widget {
@@ -159,12 +176,12 @@
     }
 
     .operational-intelligence-grid {
-        grid-template-columns: minmax(320px, 1.6fr) minmax(280px, 1.2fr) minmax(280px, 1.2fr);
+        grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
         align-items: stretch;
     }
 
     .ems-evaluation-grid {
-        grid-template-columns: minmax(360px, 1.8fr) minmax(280px, 1.2fr) minmax(280px, 1.2fr);
+        grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr);
         align-items: stretch;
     }
 
@@ -251,28 +268,62 @@
     }
 
     .secondary-widgets-grid {
-        grid-template-columns: minmax(300px, 1.45fr) minmax(250px, 1.15fr) minmax(240px, 1.1fr) minmax(220px, 1fr) minmax(250px, 1.15fr);
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         align-items: stretch;
     }
 
+    .secondary-widgets-grid .overview-widget {
+        padding: 0.58rem;
+    }
+
+    .tools-widgets-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        order: 90;
+        margin-top: 0.7rem;
+    }
+
+    .tools-widget {
+        max-height: 20rem;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    .tools-widgets-grid-empty .tools-widget {
+        max-height: 14.5rem;
+    }
+
+    .tools-widget .form-select,
+    .tools-widget .form-control,
+    .tools-widget textarea {
+        min-width: 0;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .tools-widget-section {
+        margin-top: 0.65rem;
+        padding-top: 0.55rem;
+        border-top: 1px solid #e2e8f0;
+    }
+
     .secondary-breakdown-widget {
-        grid-column: 1;
+        grid-column: span 2;
     }
 
     .secondary-role-widget {
-        grid-column: 2;
+        grid-column: span 1;
     }
 
     .secondary-health-widget {
-        grid-column: 3;
+        grid-column: span 1;
     }
 
     .secondary-coverage-widget {
-        grid-column: 4;
+        grid-column: span 1;
     }
 
     .secondary-compare-widget {
-        grid-column: 5;
+        grid-column: span 1;
     }
 
     .operational-point-list {
@@ -336,6 +387,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 0.5rem;
+        min-width: 0;
     }
 
     .breakdown-node-label {
@@ -352,6 +404,101 @@
         font-size: 0.75rem;
         color: #334155;
         white-space: nowrap;
+    }
+
+    .role-breakdown-item .breakdown-header-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .role-breakdown-main {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+    }
+
+    .role-breakdown-main .breakdown-node-label {
+        white-space: normal;
+        overflow-wrap: break-word;
+        word-break: normal;
+        line-height: 1.2;
+        max-height: none;
+    }
+
+    .role-breakdown-item .breakdown-value-label {
+        text-align: right;
+        white-space: nowrap;
+        line-height: 1.2;
+        font-size: 0.74rem;
+    }
+
+    .contributor-item {
+        padding: 0.38rem 0.46rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.24rem;
+    }
+
+    .contributor-top-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.42rem;
+        align-items: start;
+    }
+
+    .contributor-main-col {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.22rem;
+    }
+
+    .contributor-badges {
+        font-size: 0.69rem;
+        color: #64748b;
+        line-height: 1.25;
+        min-width: 0;
+    }
+
+    .contributor-values {
+        min-width: 0;
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .contributor-signed-value {
+        font-size: 0.76rem;
+        font-weight: 650;
+        color: #1e293b;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+
+    .contributor-share {
+        font-size: 0.7rem;
+        color: #64748b;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+
+    .role-breakdown-item .breakdown-meta {
+        overflow-wrap: anywhere;
+    }
+
+    .contributor-more-list {
+        margin-top: 0.35rem;
+        max-height: 10rem;
+        overflow-y: auto;
+    }
+
+    .secondary-breakdown-widget .breakdown-list,
+    .secondary-role-widget .breakdown-list {
+        max-height: 20rem;
+        overflow-y: auto;
+        padding-right: 0.18rem;
     }
 
     .breakdown-meta {
@@ -375,7 +522,34 @@
     }
 
     .chart-widget {
-        min-height: 310px;
+        min-height: 280px;
+    }
+
+    .min-w-0 {
+        min-width: 0;
+    }
+
+    .empty-selection-callout {
+        border: 1px dashed #94a3b8;
+        background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+        border-radius: 0.75rem;
+        padding: 0.9rem 1rem;
+    }
+
+    .empty-selection-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 0.3rem;
+    }
+
+    .empty-selection-hints {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.35rem 0.7rem;
+        margin-top: 0.45rem;
+        color: #334155;
+        font-size: 0.78rem;
     }
 
     .main-chart-widget .card {
@@ -391,7 +565,7 @@
 
     @@media (max-width: 1400px) {
         .main-analytics-grid {
-            grid-template-columns: minmax(210px, 1fr) minmax(360px, 2fr);
+            grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
         }
 
         .forecast-analytics-grid {
@@ -416,12 +590,23 @@
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
+        .tools-widgets-grid {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .tools-widget {
+            max-height: none;
+        }
+
         .secondary-breakdown-widget,
+        .secondary-coverage-widget {
+            grid-column: span 2;
+        }
+
         .secondary-role-widget,
         .secondary-health-widget,
-        .secondary-coverage-widget,
         .secondary-compare-widget {
-            grid-column: span 2;
+            grid-column: span 1;
         }
 
         .interval-custom-grid {
@@ -442,8 +627,15 @@
     }
 
     @@media (max-width: 1100px) {
+        .facility-canvas-wrapper,
+        .facility-properties {
+            flex: 1 1 0;
+            max-width: none;
+        }
+
         .main-analytics-grid,
         .secondary-widgets-grid,
+        .tools-widgets-grid,
         .forecast-analytics-grid,
         .operational-intelligence-grid,
         .ems-evaluation-grid {
@@ -468,6 +660,10 @@
     }
 
     @@media (max-width: 900px) {
+        .empty-selection-hints {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
         .widget-col-2,
         .widget-col-3,
         .widget-col-4,
@@ -524,14 +720,14 @@
             var weatherSummary = _curatedDeviationData?.WeatherExplanation;
         }
         <div class="facility-properties @(hasFocusNode ? string.Empty : "bg-light")">
-            <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-3 border-bottom">
                 <h5 class="mb-0 fw-bold">Workspace Overview</h5>
-                <div class="d-flex align-items-center gap-2">
-                    <button class="btn btn-sm btn-outline-secondary d-flex align-items-center bg-light px-3 text-nowrap fw-medium" @onclick="ToggleSchematic">
+                <div class="d-flex flex-wrap align-items-center justify-content-end gap-2">
+                    <button class="btn btn-sm btn-outline-secondary d-flex align-items-center bg-light px-3 fw-medium" @onclick="ToggleSchematic">
                         <i class="bi @(_isSchematicHidden ? "bi-layout-split" : "bi-arrows-fullscreen") me-1"></i>
                         @(_isSchematicHidden ? "Zobrazit schéma" : "Maximalizovat detail")
                     </button>
-                    <button class="btn btn-sm d-flex align-items-center text-nowrap fw-medium @(_isSchematicEditorEnabled ? "btn-primary" : "btn-outline-primary")"
+                    <button class="btn btn-sm d-flex align-items-center fw-medium @(_isSchematicEditorEnabled ? "btn-primary" : "btn-outline-primary")"
                             @onclick="ToggleSchematicEditorMode"
                             disabled="@(_facility is null)">
                         <i class="bi @(_isSchematicEditorEnabled ? "bi-pencil-square" : "bi-pencil") me-1"></i>
@@ -539,7 +735,7 @@
                     </button>
                     @if (hasFocusNode)
                     {
-                        <button class="btn btn-sm btn-light border shadow-sm text-secondary px-3 text-nowrap fw-medium" @onclick="ClosePanel" title="Zavřít focus uzel">
+                        <button class="btn btn-sm btn-light border shadow-sm text-secondary px-3 fw-medium" @onclick="ClosePanel" title="Zavřít focus uzel">
                             <i class="bi bi-x-lg me-1"></i> Zrušit focus
                         </button>
                     }
@@ -578,223 +774,8 @@
                         <div class="small text-muted">Výběr je prázdný.</div>
                     }
 
-                    <div class="mt-3 pt-2 border-top">
-                        <div class="small fw-semibold text-secondary mb-2">Semantic Selection</div>
-
-                        <div class="d-flex flex-wrap gap-1 mb-2">
-                            <select class="form-select form-select-sm bg-light" style="min-width: 8.5rem; max-width: 10.5rem;" @bind="_semanticPreset">
-                                @foreach (var preset in SemanticPresetOptions)
-                                {
-                                    <option value="@preset">@FacilityNodeSemantics.GetPresetLabel(preset)</option>
-                                }
-                            </select>
-
-                            <select class="form-select form-select-sm bg-light" style="min-width: 8rem; max-width: 10rem;" @bind="_semanticSelectionMutationMode">
-                                @foreach (var mode in SemanticSelectionMutationModeOptions)
-                                {
-                                    <option value="@mode">@GetSemanticMutationModeLabel(mode)</option>
-                                }
-                            </select>
-
-                            <button class="btn btn-sm btn-outline-primary" @onclick="ApplySemanticPresetAsync" disabled="@(_facility is null)">
-                                <i class="bi bi-magic me-1"></i>Preset
-                            </button>
-                        </div>
-
-                        <div class="d-flex align-items-center gap-2 mb-2">
-                            <input id="semantic-supported-only" class="form-check-input mt-0" type="checkbox" @bind="_semanticSelectionSupportedOnly" />
-                            <label class="small text-muted mb-0" for="semantic-supported-only">Pouze analyticky podporované</label>
-                        </div>
-
-                        <div class="d-flex flex-wrap gap-1 mb-2">
-                            <select class="form-select form-select-sm bg-light" style="min-width: 8rem; max-width: 10.5rem;" @bind="_semanticQueryRoleFilterValue">
-                                <option value="">Any role</option>
-                                @foreach (var role in SemanticRoleOptions)
-                                {
-                                    <option value="@role">@FacilityNodeSemantics.GetRoleLabel(role)</option>
-                                }
-                            </select>
-
-                            <select class="form-select form-select-sm bg-light" style="min-width: 8rem; max-width: 10.5rem;" @bind="_semanticQueryTypeFilterValue">
-                                <option value="">Any semantic type</option>
-                                @foreach (var semanticType in SemanticTypeOptions)
-                                {
-                                    <option value="@semanticType">@FacilityNodeSemantics.GetSemanticTypeLabel(semanticType)</option>
-                                }
-                            </select>
-                        </div>
-
-                        <input class="form-control form-control-sm bg-light" @bind="_semanticQueryTagInput" placeholder="Tagy (např. hvac, production, zone:workshop)" />
-
-                        <div class="d-flex justify-content-between align-items-center mt-2">
-                            <button class="btn btn-sm btn-outline-secondary" @onclick="ApplySemanticQueryAsync" disabled="@(_facility is null)">
-                                <i class="bi bi-funnel me-1"></i>Použít query
-                            </button>
-
-                            <button class="btn btn-sm btn-link text-decoration-none p-0" @onclick="ClearSemanticQueryFilters">
-                                Reset filtrů
-                            </button>
-                        </div>
-
-                        @if (!string.IsNullOrWhiteSpace(_semanticSelectionStatusMessage))
-                        {
-                            <div class="small text-muted mt-2">@_semanticSelectionStatusMessage</div>
-                        }
-                    </div>
-
-                    <div class="mt-3 pt-2 border-top">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <div class="small fw-semibold text-secondary">Schema Editor</div>
-                            <span class="badge @(_isSchematicEditorEnabled ? "bg-primary" : "bg-secondary")">@(_isSchematicEditorEnabled ? "edit mode" : "read mode")</span>
-                        </div>
-
-                        <div class="mb-2 d-flex flex-wrap gap-1">
-                            <button class="btn btn-sm @(_isReconnectMode ? "btn-primary" : "btn-outline-primary")" @onclick="ToggleReconnectMode" disabled="@(!_isSchematicEditorEnabled || !CanEditFocusedNode)">
-                                <i class="bi bi-diagram-3 me-1"></i>Reconnect
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger" @onclick="RemoveFocusedLeafNodeAsync" disabled="@(!_isSchematicEditorEnabled || !CanRemoveFocusedLeafNode)">
-                                <i class="bi bi-node-minus me-1"></i>Remove leaf
-                            </button>
-                        </div>
-
-                        @if (_isReconnectMode && _selectedFacilityNode is not null && CanEditFocusedNode)
-                        {
-                            <div class="mb-2 p-2 border rounded bg-light-subtle">
-                                <div class="small text-muted mb-1">Reconnect node @_selectedFacilityNode.NodeKey na nový parent</div>
-                                <select class="form-select form-select-sm bg-light mb-2" @bind="_reconnectParentNodeKeyInput">
-                                    <option value="">root (bez parentu)</option>
-                                    @foreach (var parentCandidate in GetReconnectParentCandidates(_selectedFacilityNode.NodeKey))
-                                    {
-                                        <option value="@parentCandidate.NodeKey">@parentCandidate.Label (@parentCandidate.NodeKey)</option>
-                                    }
-                                </select>
-                                <button class="btn btn-sm btn-outline-primary" @onclick="ReconnectFocusedNodeAsync">
-                                    <i class="bi bi-check2-circle me-1"></i>Potvrdit reconnect
-                                </button>
-                            </div>
-                        }
-
-                        <div class="mb-2 p-2 border rounded bg-light-subtle">
-                            <div class="small text-muted mb-1">Add node</div>
-                            <div class="mb-1">
-                                <input class="form-control form-control-sm bg-light" @bind="_newNodeKeyInput" maxlength="100" placeholder="NodeKey (např. workshop_aux_1)" />
-                            </div>
-                            <div class="mb-1">
-                                <input class="form-control form-control-sm bg-light" @bind="_newNodeLabelInput" maxlength="200" placeholder="Label" />
-                            </div>
-                            <div class="mb-1 d-flex gap-1">
-                                <input class="form-control form-control-sm bg-light" @bind="_newNodeTypeInput" maxlength="100" placeholder="Typ (např. subzone)" />
-                                <input class="form-control form-control-sm bg-light" @bind="_newNodeZoneInput" maxlength="100" placeholder="Zóna (volitelně)" />
-                            </div>
-                            <div class="mb-2">
-                                <select class="form-select form-select-sm bg-light" @bind="_newNodeParentNodeKeyInput">
-                                    <option value="">root (bez parentu)</option>
-                                    @foreach (var parentCandidate in GetReconnectParentCandidates(null))
-                                    {
-                                        <option value="@parentCandidate.NodeKey">@parentCandidate.Label (@parentCandidate.NodeKey)</option>
-                                    }
-                                </select>
-                            </div>
-                            <div class="mb-2">
-                                <input class="form-control form-control-sm bg-light" @bind="_newNodeMeterUrnInput" maxlength="200" placeholder="Meter URN (volitelně)" />
-                            </div>
-                            <button class="btn btn-sm btn-outline-secondary" @onclick="AddNodeAsync" disabled="@(!_isSchematicEditorEnabled)">
-                                <i class="bi bi-node-plus me-1"></i>Přidat node
-                            </button>
-                        </div>
-
-                        @if (!hasFocusNode)
-                        {
-                            <div class="small text-muted">Vyberte focus uzel ve schématu pro editaci metadata.</div>
-                        }
-                        else if (!CanEditFocusedNode)
-                        {
-                            <div class="small text-muted">Uzel @_selectedFacilityNode!.NodeKey je pouze kontextový a v editoru se neupravuje.</div>
-                        }
-                        else
-                        {
-                            <div class="mb-2">
-                                <label class="form-label form-label-sm mb-1">Název uzlu</label>
-                                <input class="form-control form-control-sm bg-light" @bind="_editorLabelInput" maxlength="200" />
-                            </div>
-                            <div class="mb-2">
-                                <label class="form-label form-label-sm mb-1">Tagy</label>
-                                <input class="form-control form-control-sm bg-light" @bind="_editorTagsInput" placeholder="např. hvac, maintenance, zone:workshop" />
-                            </div>
-                            <div class="mb-2">
-                                <label class="form-label form-label-sm mb-1">Poznámka</label>
-                                <textarea class="form-control form-control-sm bg-light" rows="2" maxlength="500" @bind="_editorNoteInput"></textarea>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <button class="btn btn-sm btn-primary" @onclick="SaveFocusedNodeMetadataAsync" disabled="@(!_isSchematicEditorEnabled)">
-                                    <i class="bi bi-save me-1"></i>Uložit metadata
-                                </button>
-                                <button class="btn btn-sm btn-link text-decoration-none p-0" @onclick="RestoreFocusedNodeEditorDraft">
-                                    Obnovit draft
-                                </button>
-                            </div>
-                        }
-
-                        @if (!string.IsNullOrWhiteSpace(_editorStatusMessage))
-                        {
-                            <div class="small text-muted mt-2">@_editorStatusMessage</div>
-                        }
-
-                        @if (!string.IsNullOrWhiteSpace(_structureStatusMessage))
-                        {
-                            <div class="small text-muted mt-2">@_structureStatusMessage</div>
-                        }
-                    </div>
-
-                    <div class="mt-3 pt-2 border-top">
-                        <div class="small fw-semibold text-secondary mb-2">Saved Working Sets</div>
-                        <div class="mb-2">
-                            <input class="form-control form-control-sm bg-light" @bind="_workingSetNameInput" maxlength="80" placeholder="Název working setu" />
-                        </div>
-                        <div class="mb-2">
-                            <input class="form-control form-control-sm bg-light" @bind="_workingSetDescriptionInput" maxlength="180" placeholder="Popis (volitelné)" />
-                        </div>
-                        <button class="btn btn-sm btn-outline-secondary" @onclick="SaveCurrentWorkingSetAsync" disabled="@(_facility is null)">
-                            <i class="bi bi-bookmark-plus me-1"></i>Uložit aktuální selection set
-                        </button>
-
-                        @if (_savedWorkingSets.Count == 0)
-                        {
-                            <div class="small text-muted mt-2">Zatím není uložen žádný working set.</div>
-                        }
-                        else
-                        {
-                            <div class="d-flex flex-column gap-1 mt-2">
-                                @foreach (var workingSet in _savedWorkingSets)
-                                {
-                                    <div class="border rounded p-2 bg-light-subtle">
-                                        <div class="d-flex justify-content-between align-items-start gap-2">
-                                            <div class="small">
-                                                <div class="fw-semibold text-dark">@workingSet.Name</div>
-                                                @if (!string.IsNullOrWhiteSpace(workingSet.Description))
-                                                {
-                                                    <div class="text-muted">@workingSet.Description</div>
-                                                }
-                                                <div class="text-muted">Uzly: @workingSet.NodeKeys.Count · aktualizováno @workingSet.UpdatedUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</div>
-                                            </div>
-                                            <div class="d-flex align-items-center gap-1">
-                                                <button class="btn btn-sm btn-outline-primary" title="Aplikovat working set" @onclick="() => ApplyWorkingSetAsync(workingSet.Name)">
-                                                    <i class="bi bi-check2-circle"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-danger" title="Smazat working set" @onclick="() => DeleteWorkingSetAsync(workingSet.Name)">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                }
-                            </div>
-                        }
-
-                        @if (!string.IsNullOrWhiteSpace(_workingSetStatusMessage))
-                        {
-                            <div class="small text-muted mt-2">@_workingSetStatusMessage</div>
-                        }
+                    <div class="mt-3 pt-2 border-top small text-muted">
+                        Selection summary zůstává nahoře; semantic a editor nástroje jsou v sekci Selection Tools.
                     </div>
                 </div>
 
@@ -869,6 +850,234 @@
                 </div>
             </div>
 
+            <div class="overview-grid tools-widgets-grid @(HasSelectedNodes ? string.Empty : "tools-widgets-grid-empty")">
+                <div class="overview-widget overview-widget-soft tools-widget">
+                    <h6>Selection Tools</h6>
+                    <div class="small fw-semibold text-secondary mb-2">Semantic Selection</div>
+
+                    <div class="d-flex flex-wrap gap-1 mb-2">
+                        <select class="form-select form-select-sm bg-light" style="min-width: 8.5rem; max-width: 10.5rem;" @bind="_semanticPreset">
+                            @foreach (var preset in SemanticPresetOptions)
+                            {
+                                <option value="@preset">@FacilityNodeSemantics.GetPresetLabel(preset)</option>
+                            }
+                        </select>
+
+                        <select class="form-select form-select-sm bg-light" style="min-width: 8rem; max-width: 10rem;" @bind="_semanticSelectionMutationMode">
+                            @foreach (var mode in SemanticSelectionMutationModeOptions)
+                            {
+                                <option value="@mode">@GetSemanticMutationModeLabel(mode)</option>
+                            }
+                        </select>
+
+                        <button class="btn btn-sm btn-outline-primary" @onclick="ApplySemanticPresetAsync" disabled="@(_facility is null)">
+                            <i class="bi bi-magic me-1"></i>Preset
+                        </button>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <input id="semantic-supported-only" class="form-check-input mt-0" type="checkbox" @bind="_semanticSelectionSupportedOnly" />
+                        <label class="small text-muted mb-0" for="semantic-supported-only">Pouze analyticky podporované</label>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-1 mb-2">
+                        <select class="form-select form-select-sm bg-light" style="min-width: 8rem; max-width: 10.5rem;" @bind="_semanticQueryRoleFilterValue">
+                            <option value="">Any role</option>
+                            @foreach (var role in SemanticRoleOptions)
+                            {
+                                <option value="@role">@FacilityNodeSemantics.GetRoleLabel(role)</option>
+                            }
+                        </select>
+
+                        <select class="form-select form-select-sm bg-light" style="min-width: 8rem; max-width: 10.5rem;" @bind="_semanticQueryTypeFilterValue">
+                            <option value="">Any semantic type</option>
+                            @foreach (var semanticType in SemanticTypeOptions)
+                            {
+                                <option value="@semanticType">@FacilityNodeSemantics.GetSemanticTypeLabel(semanticType)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <input class="form-control form-control-sm bg-light" @bind="_semanticQueryTagInput" placeholder="Tagy (např. hvac, production, zone:workshop)" />
+
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="ApplySemanticQueryAsync" disabled="@(_facility is null)">
+                            <i class="bi bi-funnel me-1"></i>Použít query
+                        </button>
+
+                        <button class="btn btn-sm btn-link text-decoration-none p-0" @onclick="ClearSemanticQueryFilters">
+                            Reset filtrů
+                        </button>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(_semanticSelectionStatusMessage))
+                    {
+                        <div class="small text-muted mt-2">@_semanticSelectionStatusMessage</div>
+                    }
+                </div>
+
+                <div class="overview-widget overview-widget-soft tools-widget">
+                    <h6>Editor Tools</h6>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="small fw-semibold text-secondary">Schema Editor</div>
+                        <span class="badge @(_isSchematicEditorEnabled ? "bg-primary" : "bg-secondary")">@(_isSchematicEditorEnabled ? "edit mode" : "read mode")</span>
+                    </div>
+
+                    <div class="mb-2 d-flex flex-wrap gap-1">
+                        <button class="btn btn-sm @(_isReconnectMode ? "btn-primary" : "btn-outline-primary")" @onclick="ToggleReconnectMode" disabled="@(!_isSchematicEditorEnabled || !CanEditFocusedNode)">
+                            <i class="bi bi-diagram-3 me-1"></i>Reconnect
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="RemoveFocusedLeafNodeAsync" disabled="@(!_isSchematicEditorEnabled || !CanRemoveFocusedLeafNode)">
+                            <i class="bi bi-node-minus me-1"></i>Remove leaf
+                        </button>
+                    </div>
+
+                    @if (_isReconnectMode && _selectedFacilityNode is not null && CanEditFocusedNode)
+                    {
+                        <div class="mb-2 p-2 border rounded bg-light-subtle">
+                            <div class="small text-muted mb-1">Reconnect node @_selectedFacilityNode.NodeKey na nový parent</div>
+                            <select class="form-select form-select-sm bg-light mb-2" @bind="_reconnectParentNodeKeyInput">
+                                <option value="">root (bez parentu)</option>
+                                @foreach (var parentCandidate in GetReconnectParentCandidates(_selectedFacilityNode.NodeKey))
+                                {
+                                    <option value="@parentCandidate.NodeKey">@parentCandidate.Label (@parentCandidate.NodeKey)</option>
+                                }
+                            </select>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="ReconnectFocusedNodeAsync">
+                                <i class="bi bi-check2-circle me-1"></i>Potvrdit reconnect
+                            </button>
+                        </div>
+                    }
+
+                    <div class="tools-widget-section">
+                        <div class="small text-muted mb-1">Add node</div>
+                        <div class="mb-1">
+                            <input class="form-control form-control-sm bg-light" @bind="_newNodeKeyInput" maxlength="100" placeholder="NodeKey (např. workshop_aux_1)" />
+                        </div>
+                        <div class="mb-1">
+                            <input class="form-control form-control-sm bg-light" @bind="_newNodeLabelInput" maxlength="200" placeholder="Label" />
+                        </div>
+                        <div class="mb-1 d-flex gap-1">
+                            <input class="form-control form-control-sm bg-light" @bind="_newNodeTypeInput" maxlength="100" placeholder="Typ (např. subzone)" />
+                            <input class="form-control form-control-sm bg-light" @bind="_newNodeZoneInput" maxlength="100" placeholder="Zóna (volitelně)" />
+                        </div>
+                        <div class="mb-2">
+                            <select class="form-select form-select-sm bg-light" @bind="_newNodeParentNodeKeyInput">
+                                <option value="">root (bez parentu)</option>
+                                @foreach (var parentCandidate in GetReconnectParentCandidates(null))
+                                {
+                                    <option value="@parentCandidate.NodeKey">@parentCandidate.Label (@parentCandidate.NodeKey)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <input class="form-control form-control-sm bg-light" @bind="_newNodeMeterUrnInput" maxlength="200" placeholder="Meter URN (volitelně)" />
+                        </div>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="AddNodeAsync" disabled="@(!_isSchematicEditorEnabled)">
+                            <i class="bi bi-node-plus me-1"></i>Přidat node
+                        </button>
+                    </div>
+
+                    <div class="tools-widget-section">
+                        @if (!hasFocusNode)
+                        {
+                            <div class="small text-muted">Vyberte focus uzel ve schématu pro editaci metadata.</div>
+                        }
+                        else if (!CanEditFocusedNode)
+                        {
+                            <div class="small text-muted">Uzel @_selectedFacilityNode!.NodeKey je pouze kontextový a v editoru se neupravuje.</div>
+                        }
+                        else
+                        {
+                            <div class="mb-2">
+                                <label class="form-label form-label-sm mb-1">Název uzlu</label>
+                                <input class="form-control form-control-sm bg-light" @bind="_editorLabelInput" maxlength="200" />
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label form-label-sm mb-1">Tagy</label>
+                                <input class="form-control form-control-sm bg-light" @bind="_editorTagsInput" placeholder="např. hvac, maintenance, zone:workshop" />
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label form-label-sm mb-1">Poznámka</label>
+                                <textarea class="form-control form-control-sm bg-light" rows="2" maxlength="500" @bind="_editorNoteInput"></textarea>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <button class="btn btn-sm btn-primary" @onclick="SaveFocusedNodeMetadataAsync" disabled="@(!_isSchematicEditorEnabled)">
+                                    <i class="bi bi-save me-1"></i>Uložit metadata
+                                </button>
+                                <button class="btn btn-sm btn-link text-decoration-none p-0" @onclick="RestoreFocusedNodeEditorDraft">
+                                    Obnovit draft
+                                </button>
+                            </div>
+                        }
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(_editorStatusMessage))
+                    {
+                        <div class="small text-muted mt-2">@_editorStatusMessage</div>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(_structureStatusMessage))
+                    {
+                        <div class="small text-muted mt-2">@_structureStatusMessage</div>
+                    }
+                </div>
+
+                <div class="overview-widget overview-widget-soft tools-widget">
+                    <h6>Working Sets</h6>
+                    <div class="small fw-semibold text-secondary mb-2">Saved Working Sets</div>
+                    <div class="mb-2">
+                        <input class="form-control form-control-sm bg-light" @bind="_workingSetNameInput" maxlength="80" placeholder="Název working setu" />
+                    </div>
+                    <div class="mb-2">
+                        <input class="form-control form-control-sm bg-light" @bind="_workingSetDescriptionInput" maxlength="180" placeholder="Popis (volitelné)" />
+                    </div>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="SaveCurrentWorkingSetAsync" disabled="@(_facility is null)">
+                        <i class="bi bi-bookmark-plus me-1"></i>Uložit aktuální selection set
+                    </button>
+
+                    @if (_savedWorkingSets.Count == 0)
+                    {
+                        <div class="small text-muted mt-2">Zatím není uložen žádný working set.</div>
+                    }
+                    else
+                    {
+                        <div class="d-flex flex-column gap-1 mt-2">
+                            @foreach (var workingSet in _savedWorkingSets)
+                            {
+                                <div class="border rounded p-2 bg-light-subtle">
+                                    <div class="d-flex justify-content-between align-items-start gap-2">
+                                        <div class="small">
+                                            <div class="fw-semibold text-dark">@workingSet.Name</div>
+                                            @if (!string.IsNullOrWhiteSpace(workingSet.Description))
+                                            {
+                                                <div class="text-muted">@workingSet.Description</div>
+                                            }
+                                            <div class="text-muted">Uzly: @workingSet.NodeKeys.Count · aktualizováno @workingSet.UpdatedUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</div>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <button class="btn btn-sm btn-outline-primary" title="Aplikovat working set" @onclick="() => ApplyWorkingSetAsync(workingSet.Name)">
+                                                <i class="bi bi-check2-circle"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" title="Smazat working set" @onclick="() => DeleteWorkingSetAsync(workingSet.Name)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(_workingSetStatusMessage))
+                    {
+                        <div class="small text-muted mt-2">@_workingSetStatusMessage</div>
+                    }
+                </div>
+            </div>
+
+            @if (HasSelectedNodes)
+            {
             <div class="overview-grid secondary-widgets-grid">
                 <div class="overview-widget overview-widget-soft secondary-breakdown-widget">
                     <h6>Disaggregation / Top Contributors</h6>
@@ -882,6 +1091,8 @@
                     {
                         var disaggregation = SelectionDisaggregation;
                         var contributionIntelligence = SelectionContributionIntelligence;
+                        var displayedContributors = contributionIntelligence.TopContributors.Take(3).ToList();
+                        var extraContributors = contributionIntelligence.TopContributors.Skip(3).Take(8).ToList();
 
                         <div class="d-flex flex-wrap gap-2 mb-2">
                             <span class="badge bg-light text-secondary border">Measured included: @disaggregation.MeasuredContributorCount</span>
@@ -906,32 +1117,29 @@
                         </div>
 
                         <div class="small text-muted mb-2">@disaggregation.CompositionSummary</div>
-                        <div class="small text-muted mb-2">@contributionIntelligence.DominantSourceSummary</div>
+                        <div class="aggregate-status-line mb-2">@contributionIntelligence.DominantSourceSummary</div>
 
                         <div class="breakdown-list">
-                            @foreach (var contributor in contributionIntelligence.TopContributors)
+                            @foreach (var contributor in displayedContributors)
                             {
                                 var sharePercent = contributor.AbsoluteSharePercent > 0
                                     ? Math.Clamp(contributor.AbsoluteSharePercent, 0.0, 100.0)
                                     : 0.0;
                                 var contributionRoleLabel = GetContributionRoleText(contributor.ContributionRole);
-                                var contributionRoleBadgeClass = GetContributionRoleBadgeClass(contributor.ContributionRole);
                                 var directionLabel = GetContributionDirectionText(contributor.Direction);
-                                var directionBadgeClass = GetContributionDirectionBadgeClass(contributor.Direction);
-                                var nodeRoleBadgeClass = GetFacilityRoleBadgeClass(contributor.NodeRole);
 
-                                <div class="breakdown-item">
-                                    <div class="breakdown-header-row">
-                                        <div class="d-flex align-items-center gap-2 min-w-0">
+                                <div class="breakdown-item contributor-item">
+                                    <div class="contributor-top-row">
+                                        <div class="contributor-main-col">
                                             <div class="breakdown-node-label">@contributor.Label</div>
-                                            <span class="badge @nodeRoleBadgeClass">@contributor.NodeRoleLabel</span>
-                                            <span class="badge @contributionRoleBadgeClass">@contributionRoleLabel</span>
-                                            <span class="badge @directionBadgeClass">@directionLabel</span>
+                                            <div class="contributor-badges">
+                                                @contributor.NodeRoleLabel · @contributionRoleLabel · @directionLabel
+                                            </div>
                                         </div>
-                                        <div class="breakdown-value-label">@FormatSigned(contributor.IntervalEnergyKwh, "N1") kWh</div>
-                                    </div>
-                                    <div class="breakdown-meta">
-                                        <span>@contributionRoleLabel · @directionLabel · share: @contributor.AbsoluteSharePercent.ToString("N1") %</span>
+                                        <div class="contributor-values">
+                                            <div class="contributor-signed-value">@FormatSigned(contributor.IntervalEnergyKwh, "N1") kWh</div>
+                                            <div class="contributor-share">share: @contributor.AbsoluteSharePercent.ToString("N1") %</div>
+                                        </div>
                                     </div>
                                     <div class="breakdown-bar-track">
                                         <div class="breakdown-bar-fill" style="width: @(sharePercent.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture))%;"></div>
@@ -945,11 +1153,44 @@
                             <div class="small text-muted mt-2">Top contributors nejsou dostupní, protože selection nemá measured contribution s daty.</div>
                         }
 
-                        <div class="small text-muted mt-2">@contributionIntelligence.Methodology</div>
-
-                        @if (SelectionBreakdownItems.Count > contributionIntelligence.TopContributors.Count)
+                        @if (contributionIntelligence.TopContributors.Count > displayedContributors.Count)
                         {
-                            <div class="small text-muted mt-2">Plný node breakdown zůstává zachovaný v datové pipeline pro numerickou validaci aggregate a role breakdown.</div>
+                            <div class="small text-muted mt-2">Zobrazeni jsou top 3 contributors z @contributionIntelligence.TopContributors.Count.</div>
+                        }
+
+                        @if (extraContributors.Count > 0)
+                        {
+                            <details class="mt-2">
+                                <summary class="small text-secondary">Další contributors (@(contributionIntelligence.TopContributors.Count - displayedContributors.Count))</summary>
+                                <div class="contributor-more-list">
+                                    @foreach (var extraContributor in extraContributors)
+                                    {
+                                        var extraSharePercent = extraContributor.AbsoluteSharePercent > 0
+                                            ? Math.Clamp(extraContributor.AbsoluteSharePercent, 0.0, 100.0)
+                                            : 0.0;
+                                        var extraContributionRoleLabel = GetContributionRoleText(extraContributor.ContributionRole);
+                                        var extraDirectionLabel = GetContributionDirectionText(extraContributor.Direction);
+
+                                        <div class="breakdown-item contributor-item mt-1">
+                                            <div class="contributor-top-row">
+                                                <div class="contributor-main-col">
+                                                    <div class="breakdown-node-label">@extraContributor.Label</div>
+                                                    <div class="contributor-badges">
+                                                        @extraContributor.NodeRoleLabel · @extraContributionRoleLabel · @extraDirectionLabel
+                                                    </div>
+                                                </div>
+                                                <div class="contributor-values">
+                                                    <div class="contributor-signed-value">@FormatSigned(extraContributor.IntervalEnergyKwh, "N1") kWh</div>
+                                                    <div class="contributor-share">share: @extraContributor.AbsoluteSharePercent.ToString("N1") %</div>
+                                                </div>
+                                            </div>
+                                            <div class="breakdown-bar-track">
+                                                <div class="breakdown-bar-fill" style="width: @(extraSharePercent.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture))%;"></div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </details>
                         }
                     }
                     else
@@ -980,33 +1221,30 @@
                                     ? Math.Clamp(roleContribution.SharePercent.Value, 0.0, 100.0)
                                     : 0.0;
                                 var contributionRoleLabel = GetContributionRoleText(roleContribution.ContributionRole);
-                                var contributionRoleBadgeClass = GetContributionRoleBadgeClass(roleContribution.ContributionRole);
 
-                                <div class="breakdown-item @(roleContribution.HasData ? string.Empty : "breakdown-item-nodata")">
+                                <div class="breakdown-item role-breakdown-item @(roleContribution.HasData ? string.Empty : "breakdown-item-nodata")">
                                     <div class="breakdown-header-row">
-                                        <div class="d-flex align-items-center gap-2 min-w-0">
+                                        <div class="role-breakdown-main">
                                             <div class="breakdown-node-label">@roleContribution.RoleLabel</div>
-                                            @if (roleContribution.HasData)
-                                            {
-                                                <span class="badge @contributionRoleBadgeClass">@contributionRoleLabel</span>
-                                            }
+                                            <div class="breakdown-meta">
+                                                @if (roleContribution.HasData)
+                                                {
+                                                    <span>@contributionRoleLabel · @roleContribution.ContributingNodeCount/@roleContribution.NodeCount uzlů</span>
+                                                }
+                                                else
+                                                {
+                                                    <span>@roleContribution.NodeCount uzlů bez použitelných dat.</span>
+                                                }
+                                            </div>
                                         </div>
                                         <div class="breakdown-value-label">@FormatSigned(roleContribution.IntervalEnergyKwh, "N1") kWh</div>
                                     </div>
-                                    <div class="breakdown-meta">
-                                        @if (roleContribution.HasData)
-                                        {
-                                            <span>@roleContribution.ContributingNodeCount/@roleContribution.NodeCount uzlů přispívá · share: @(roleContribution.SharePercent?.ToString("N1") ?? "0.0") %</span>
-                                            @if (roleContribution.HasMixedSigns)
-                                            {
-                                                <span> · mixed-sign role</span>
-                                            }
-                                        }
-                                        else
-                                        {
-                                            <span>Role je ve výběru, ale pro interval nemá použitelná data.</span>
-                                        }
-                                    </div>
+                                    @if (roleContribution.HasData)
+                                    {
+                                        <div class="breakdown-meta">
+                                            share: @(roleContribution.SharePercent?.ToString("N1") ?? "0.0") %@(roleContribution.HasMixedSigns ? " · mixed-sign role" : string.Empty)
+                                        </div>
+                                    }
                                     @if (roleContribution.HasData)
                                     {
                                         <div class="breakdown-bar-track">
@@ -1146,6 +1384,7 @@
                     }
                 </div>
             </div>
+            }
 
             @if (HasSelectedNodes)
             {
@@ -1706,12 +1945,22 @@
             {
                 <div class="overview-grid">
                     <div class="overview-widget widget-col-12">
-                        <h6>Selection Set je prázdný</h6>
-                        <div class="small text-muted">Vyberte uzly ve schématu pro aggregate overview KPI a časovou řadu.</div>
-                        @if (_isSchematicHidden)
-                        {
-                            <div class="small text-primary mt-2"><i class="bi bi-info-circle me-1"></i>Schéma je aktuálně skryto. Použijte Zobrazit schéma.</div>
-                        }
+                        <div class="empty-selection-callout">
+                            <div class="empty-selection-title">Selection Set je prázdný</div>
+                            <div class="small text-muted">Vyberte uzly přímo ve schématu a aktivujte aggregate overview KPI, disaggregation i časové řady.</div>
+
+                            <div class="empty-selection-hints">
+                                <div><i class="bi bi-cursor-fill me-1"></i>Single select: klik na uzel</div>
+                                <div><i class="bi bi-diagram-3-fill me-1"></i>Subtree: focus na strukturální node</div>
+                                <div><i class="bi bi-plus-circle me-1"></i>Multi-select: postupně přidejte další uzly</div>
+                                <div><i class="bi bi-bar-chart-line-fill me-1"></i>Analytics se zobrazí po prvním validním výběru</div>
+                            </div>
+
+                            @if (_isSchematicHidden)
+                            {
+                                <div class="small text-primary mt-2"><i class="bi bi-info-circle me-1"></i>Schéma je aktuálně skryto. Použijte Zobrazit schéma.</div>
+                            }
+                        </div>
                     </div>
                 </div>
             }
@@ -3630,13 +3879,14 @@
             return EmptyNodeKeySet;
         }
 
-        var subtreeNodeKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        var focusedNodeKey = _selectedFacilityNode.NodeKey;
+        var reachableFromFocus = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            _selectedFacilityNode.NodeKey
+            focusedNodeKey
         };
 
         var stack = new Stack<string>();
-        stack.Push(_selectedFacilityNode.NodeKey);
+        stack.Push(focusedNodeKey);
 
         while (stack.Count > 0)
         {
@@ -3648,14 +3898,50 @@
 
             foreach (var child in children)
             {
-                if (subtreeNodeKeys.Add(child.NodeKey))
+                if (reachableFromFocus.Add(child.NodeKey))
                 {
                     stack.Push(child.NodeKey);
                 }
             }
         }
 
-        return subtreeNodeKeys;
+        var highlightNodeKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            focusedNodeKey
+        };
+
+        var selectedReachableNodes = _selectionSet
+            .Where(reachableFromFocus.Contains)
+            .ToList();
+
+        if (selectedReachableNodes.Count == 0)
+        {
+            return highlightNodeKeys;
+        }
+
+        foreach (var selectedNodeKey in selectedReachableNodes)
+        {
+            var cursor = selectedNodeKey;
+            while (!string.IsNullOrWhiteSpace(cursor) && reachableFromFocus.Contains(cursor))
+            {
+                if (!highlightNodeKeys.Add(cursor))
+                {
+                    break;
+                }
+
+                if (!string.Equals(cursor, focusedNodeKey, StringComparison.OrdinalIgnoreCase)
+                    && _nodesByKey.TryGetValue(cursor, out var node)
+                    && !string.IsNullOrWhiteSpace(node.ParentNodeKey))
+                {
+                    cursor = node.ParentNodeKey;
+                    continue;
+                }
+
+                break;
+            }
+        }
+
+        return highlightNodeKeys;
     }
 
     private void ClearFocusNodeState()

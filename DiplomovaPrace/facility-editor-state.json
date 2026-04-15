@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 2,
+  "nodeEdits": [
+    {
+      "nodeKey": "trafo_h2z36",
+      "label": null,
+      "tags": [],
+      "note": null,
+      "xHint": 0.8021161220165806,
+      "yHint": 0.15004149365645783,
+      "updatedUtc": "2026-04-13T18:38:43.4112055Z"
+    },
+    {
+      "nodeKey": "trafo_vz82",
+      "label": null,
+      "tags": [],
+      "note": null,
+      "xHint": 0.6538691447492226,
+      "yHint": 0.2355118359200969,
+      "updatedUtc": "2026-04-13T18:38:44.8720817Z"
+    }
+  ],
+  "workingSets": [],
+  "structure": {
+    "addedNodes": [],
+    "removedNodeKeys": [],
+    "parentOverrides": {}
+  }
+}

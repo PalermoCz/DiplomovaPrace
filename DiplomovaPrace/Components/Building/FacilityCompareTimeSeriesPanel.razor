@@ -16,13 +16,7 @@
         @if (Data is not null)
         {
             <div class="small text-muted mb-2">
-                Režim zobrazení: <strong>@GetModeLabel(Data.RequestedMode)</strong>
-            </div>
-            <div class="small text-muted mb-2">
-                Použitá granularita: <strong>@Data.GranularityLabel</strong>
-            </div>
-            <div class="small text-muted mb-2">
-                @Data.AggregationMethod
+                Režim: <strong>@GetModeLabel(Data.RequestedMode)</strong> · Granularita: <strong>@Data.GranularityLabel</strong>
             </div>
         }
 
@@ -48,23 +42,7 @@
         else
         {
             <div id="@_chartElementId" style="height: 260px; width: 100%;"></div>
-            <div class="small text-muted mt-2">
-                Tip: kolečko myši zoomuje časovou osu, tažením v grafu můžete interval posouvat; spodní slider slouží pro přesný výběr části období.
-            </div>
-            <div class="small text-muted mt-2">
-                <i class="bi bi-info-circle me-1"></i>
-                @Data.InterpretationNote
-            </div>
-            <div class="small text-muted mt-1">
-                Osa Y: <strong>@Data.YAxisLabel</strong>
-            </div>
-        }
-
-        @if (Data?.ExcludedNodeMessages.Count > 0)
-        {
-            <div class="small text-muted mt-2">
-                Některé uzly nebyly zahrnuty: @string.Join(" | ", Data.ExcludedNodeMessages)
-            </div>
+            <div class="small text-muted mt-2">Status: Osa Y <strong>@Data.YAxisLabel</strong> · zobrazené série: <strong>@Data.Series.Count</strong>@(Data.ExcludedNodeMessages.Count > 0 ? $" · vyloučené uzly: {Data.ExcludedNodeMessages.Count}" : string.Empty)</div>
         }
     </div>
 </div>

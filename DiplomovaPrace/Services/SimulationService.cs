@@ -283,11 +283,49 @@ public class SimulationService : IHostedService, ISimulationService, IDisposable
     private static double Clamp(double value, double min, double max)
         => Math.Max(min, Math.Min(max, value));
 
-    public void Dispose()
+    
+private bool _disposed;
+
+public void Dispose()
+{
+    if (_disposed)
     {
-        _cts?.Cancel();
-        _timer?.Dispose();
-        _cts?.Dispose();
+        return;
     }
+
+    _disposed = true;
+
+    var timer = _timer;
+    _timer = null;
+    timer?.Dispose();
+
+    var cts = _cts;
+    _cts = null;
+
+    if (cts is not null)
+    {
+        try
+        {
+            if (!cts.IsCancellationRequested)
+            {
+                cts.Cancel();
+            }
+        }
+        catch (ObjectDisposedException)
+        {
+            // už dispose-nutý
+        }
+
+        try
+        {
+            cts.Dispose();
+        }
+        catch (ObjectDisposedException)
+        {
+            // už dispose-nutý
+        }
+    }
+}
+
 }
 

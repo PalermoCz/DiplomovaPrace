@@ -5,9 +5,9 @@
 @inject NavigationManager Navigation
 @implements IDisposable
 
-<header class="facility-topbar text-white d-flex align-items-center px-3 px-lg-4" style="height: 72px; box-shadow: 0 2px 8px rgba(2, 6, 23, 0.35); flex-shrink: 0; z-index: 1000;">
+<header class="facility-topbar text-white d-flex align-items-center px-3 px-lg-4" style="height: 72px; box-shadow: 0 2px 8px rgba(2, 6, 23, 0.35); flex-shrink: 0; z-index: 1000; overflow-x: hidden;">
     @* Leva cast: Branding & Navigace *@
-    <div class="d-flex align-items-center" style="flex: 1;">
+    <div class="d-flex align-items-center" style="flex: 1; min-width: 0;">
         <a class="facility-brand text-white text-decoration-none d-inline-flex align-items-center" href="/facility" title="Přejít na Facility Workbench">
             <span class="facility-brand-mark me-2">FW</span>
             <span class="d-flex flex-column">
@@ -18,7 +18,7 @@
     </div>
 
     @* Stredni cast: Centralni facility selector *@
-    <div class="d-flex justify-content-center align-items-center" style="flex: 1;">
+    <div class="d-flex justify-content-center align-items-center" style="flex: 1; min-width: 0;">
         <div class="position-relative">
             <button type="button"
                     class="facility-selector-trigger"
@@ -56,7 +56,7 @@
     </div>
 
     @* Prava cast: Utility *@
-    <div class="d-flex justify-content-end align-items-center gap-2" style="flex: 1;">
+    <div class="d-flex justify-content-end align-items-center gap-2" style="flex: 1; min-width: 0;">
         <div class="position-relative">
             <button type="button"
                     class="facility-alert-trigger d-flex align-items-center"
@@ -271,7 +271,9 @@
         position: relative;
         z-index: 2;
         pointer-events: auto;
-        min-width: 285px;
+        min-width: 190px;
+        width: clamp(190px, 30vw, 320px);
+        max-width: 100%;
         border: 1px solid rgba(56, 189, 248, 0.45);
         background: rgba(15, 23, 42, 0.5);
         color: #e0f2fe;
@@ -328,6 +330,43 @@
         cursor: pointer;
         transition: all 0.16s ease;
         box-shadow: 0 6px 16px rgba(2, 6, 23, 0.28);
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    @@media (max-width: 1250px) {
+        .facility-brand-subtitle {
+            display: none;
+        }
+
+        .facility-selector-trigger {
+            width: clamp(180px, 27vw, 260px);
+        }
+
+        .facility-badge-critical,
+        .facility-badge-elevated {
+            font-size: 0.72rem;
+            padding: 0.3rem 0.46rem;
+        }
+    }
+
+    @@media (max-width: 1024px) {
+        .facility-brand-title {
+            font-size: 0.92rem;
+        }
+
+        .facility-selector-label {
+            display: none;
+        }
+
+        .facility-selector-value {
+            font-size: 0.84rem;
+        }
+
+        .facility-alert-trigger {
+            padding: 0.35rem 0.56rem;
+            gap: 0.2rem;
+        }
     }
 
     .facility-alert-trigger:hover {

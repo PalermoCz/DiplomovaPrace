@@ -27,64 +27,153 @@
             var nodeByKey = positionedNodes.ToDictionary(node => node.NodeKey, StringComparer.OrdinalIgnoreCase);
             var childrenByParentKey = BuildFacilityChildrenLookup(positionedNodes);
             var depthByNodeKey = BuildFacilityDepthLookup(positionedNodes, childrenByParentKey);
-            var hasAnySelection = SelectedElementIds.Count > 0;
-            var subtreeBounds = BuildSelectedSubtreeBounds(nodeByKey, depthByNodeKey, childrenByParentKey);
+            var hasAnySelection = SelectedElementIds.Count > 0 || !string.IsNullOrWhiteSpace(SelectedElementId);
+            var facilityAreaBlocks = BuildFacilityAreaBlocks(positionedNodes);
+            var subtreeBands = BuildSubtreeBands(positionedNodes, SelectedSubtreeNodeKeys);
+            var backboneBand = BuildBackboneBand(positionedNodes);
+            var renderLinks = BuildFacilityRenderLinks(positionedNodes, nodeByKey, Facility.Edges, childrenByParentKey);
 
             @* Bílé pozadí facility *@
             <rect x="0" y="0"
                   width="@Fmt(ViewBoxWidth)" height="@Fmt(ViewBoxHeight)"
                   fill="white" class="floor-background" pointer-events="none" />
 
-            @if (subtreeBounds is not null)
+            @if (backboneBand is not null)
             {
-                <rect x="@Fmt(subtreeBounds.X)"
-                      y="@Fmt(subtreeBounds.Y)"
-                      width="@Fmt(subtreeBounds.Width)"
-                      height="@Fmt(subtreeBounds.Height)"
-                      rx="16"
+                <rect x="@Fmt(backboneBand.X)"
+                      y="@Fmt(backboneBand.Y)"
+                      width="@Fmt(backboneBand.Width)"
+                      height="@Fmt(backboneBand.Height)"
+                    rx="22"
+                    fill="#dbeafe"
+                    fill-opacity="0.28"
+                    stroke="#7fb2ef"
+                    stroke-width="1.6"
+                      pointer-events="none" />
+
+                <line x1="@Fmt(backboneBand.X + 18)"
+                    y1="@Fmt(backboneBand.Y + 30)"
+                    x2="@Fmt(backboneBand.X + backboneBand.Width - 18)"
+                    y2="@Fmt(backboneBand.Y + 30)"
+                    stroke="#76a6df"
+                    stroke-opacity="0.45"
+                    stroke-width="1.3"
+                    pointer-events="none" />
+            }
+
+            @foreach (var areaBlock in facilityAreaBlocks)
+            {
+                <rect x="@Fmt(areaBlock.X)"
+                      y="@Fmt(areaBlock.Y)"
+                      width="@Fmt(areaBlock.Width)"
+                      height="@Fmt(areaBlock.Height)"
+                                            rx="14"
+                      fill="@areaBlock.Fill"
+                                            fill-opacity="0.19"
+                      stroke="@areaBlock.Stroke"
+                                            stroke-width="1.5"
+                                            stroke-dasharray="5 4"
+                      pointer-events="none" />
+
+                <line x1="@Fmt(areaBlock.X + 10)"
+                                            y1="@Fmt(areaBlock.Y + 26)"
+                                            x2="@Fmt(areaBlock.X + areaBlock.Width - 10)"
+                                            y2="@Fmt(areaBlock.Y + 26)"
+                                            stroke="@areaBlock.Stroke"
+                                            stroke-opacity="0.35"
+                                            stroke-width="1.2"
+                                            pointer-events="none" />
+
+                                @((MarkupString)$"<text x=\"{Fmt(areaBlock.X + 12)}\" y=\"{Fmt(areaBlock.Y + 17)}\" text-anchor=\"start\" font-size=\"10.4\" font-weight=\"720\" fill=\"#1f2937\" pointer-events=\"none\">{EscapeXml(areaBlock.Label)}</text>")
+            }
+
+            @foreach (var band in subtreeBands)
+            {
+                <rect x="@Fmt(band.X)"
+                      y="@Fmt(band.Y)"
+                      width="@Fmt(band.Width)"
+                      height="@Fmt(band.Height)"
+                      rx="9"
                       fill="#dbeafe"
-                      fill-opacity="0.28"
+                      fill-opacity="0.18"
                       stroke="#60a5fa"
-                      stroke-width="2"
-                      stroke-dasharray="8 5"
+                      stroke-width="1.3"
+                      stroke-opacity="0.75"
                       pointer-events="none" />
             }
 
-            @* Vykreslení hran *@
-            @foreach (var edge in Facility.Edges)
+            @* Vykreslení zvýraznění subtree větví *@
+            @foreach (var link in renderLinks)
             {
-                if (!nodeByKey.TryGetValue(edge.SourceNodeKey, out var sourceNode) || !nodeByKey.TryGetValue(edge.TargetNodeKey, out var targetNode))
+                if (!nodeByKey.TryGetValue(link.SourceNodeKey, out var sourceNode) || !nodeByKey.TryGetValue(link.TargetNodeKey, out var targetNode))
                 {
                     continue;
                 }
 
-                var edgeIsInSelectedSubtree = SelectedSubtreeNodeKeys.Contains(edge.SourceNodeKey) && SelectedSubtreeNodeKeys.Contains(edge.TargetNodeKey);
-                var edgeTouchesSelection = SelectedElementIds.Contains(edge.SourceNodeKey) || SelectedElementIds.Contains(edge.TargetNodeKey);
+                var edgeIsInSelectedSubtree = SelectedSubtreeNodeKeys.Contains(link.SourceNodeKey) && SelectedSubtreeNodeKeys.Contains(link.TargetNodeKey);
+                if (!edgeIsInSelectedSubtree)
+                {
+                    continue;
+                }
+
+                var subtreeEdgeTouchesFocus = IsFocusElement(link.SourceNodeKey) || IsFocusElement(link.TargetNodeKey);
+
+                <path d="@BuildOrthogonalLinkPath(sourceNode, targetNode)"
+                      fill="none"
+                      stroke="@(subtreeEdgeTouchesFocus ? "#0b3ea9" : "#1d4ed8")"
+                      stroke-width="@(subtreeEdgeTouchesFocus ? "5.4" : "4.2")"
+                      stroke-opacity="@(subtreeEdgeTouchesFocus ? "0.29" : "0.21")"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      pointer-events="none" />
+            }
+
+            @* Vykreslení hran *@
+            @foreach (var link in renderLinks)
+            {
+                if (!nodeByKey.TryGetValue(link.SourceNodeKey, out var sourceNode) || !nodeByKey.TryGetValue(link.TargetNodeKey, out var targetNode))
+                {
+                    continue;
+                }
+
+                var edgeIsInSelectedSubtree = SelectedSubtreeNodeKeys.Contains(link.SourceNodeKey) && SelectedSubtreeNodeKeys.Contains(link.TargetNodeKey);
+                var edgeTouchesSelection = SelectedElementIds.Contains(link.SourceNodeKey)
+                    || SelectedElementIds.Contains(link.TargetNodeKey)
+                    || IsFocusElement(link.SourceNodeKey)
+                    || IsFocusElement(link.TargetNodeKey);
 
                 var edgeStroke = edgeIsInSelectedSubtree
-                    ? "#3b82f6"
+                    ? "#1d4ed8"
                     : edgeTouchesSelection
-                        ? "#60a5fa"
-                        : "#cbd5e1";
+                        ? "#2563eb"
+                        : link.IsExplicitEdge
+                            ? "#8ea0b5"
+                            : "#d7dee9";
                 var edgeStrokeWidth = edgeIsInSelectedSubtree
-                    ? "3.6"
+                    ? "2.85"
                     : edgeTouchesSelection
-                        ? "2.8"
-                        : "1.9";
+                        ? "2.25"
+                        : link.IsExplicitEdge
+                            ? "1.75"
+                            : "1.35";
                 var edgeOpacity = hasAnySelection && !edgeTouchesSelection && !edgeIsInSelectedSubtree
-                    ? "0.25"
+                    ? "0.09"
                     : edgeIsInSelectedSubtree
-                        ? "0.92"
-                        : "0.68";
+                        ? "0.94"
+                        : link.IsExplicitEdge
+                            ? "0.78"
+                            : "0.5";
+                var edgeDashArray = link.IsExplicitEdge ? string.Empty : "4 4";
 
-                <line x1="@Fmt(sourceNode.XHint!.Value * ViewBoxWidth)"
-                      y1="@Fmt(sourceNode.YHint!.Value * ViewBoxHeight)"
-                      x2="@Fmt(targetNode.XHint!.Value * ViewBoxWidth)"
-                      y2="@Fmt(targetNode.YHint!.Value * ViewBoxHeight)"
+                <path d="@BuildOrthogonalLinkPath(sourceNode, targetNode)"
+                      fill="none"
                       stroke="@edgeStroke"
                       stroke-width="@edgeStrokeWidth"
                       stroke-opacity="@edgeOpacity"
-                      stroke-linecap="round" />
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                        stroke-dasharray="@edgeDashArray"
+                        pointer-events="none" />
             }
 
             @* Vykreslení uzlů *@
@@ -95,13 +184,30 @@
                 var isFocusNode = IsFocusElement(node.NodeKey);
                 var isSelectionNode = SelectedElementIds.Contains(node.NodeKey);
                 var isSubtreeNode = SelectedSubtreeNodeKeys.Contains(node.NodeKey);
+                var isPrimarySelectedNode = isSelectionNode;
+                var isSubtreeDescendantNode = isSubtreeNode && !isSelectionNode;
+                var isSecondaryFocusNode = isFocusNode && !isSelectionNode;
                 var hasChildren = childrenByParentKey.TryGetValue(node.NodeKey, out var children) && children.Count > 0;
                 var depth = GetFacilityDepth(depthByNodeKey, node.NodeKey);
                 var cx = node.XHint!.Value * ViewBoxWidth;
                 var cy = node.YHint!.Value * ViewBoxHeight;
-                var isRectNode = IsRectFacilityNode(node, depth, hasChildren);
-                var nodeSize = hasChildren ? (depth == 0 ? 20d : 18d) : 15d;
-                var symbol = GetFacilityNodeSymbol(node.NodeType);
+                var isAreaAnchorNode = IsAreaAnchorNode(node);
+                var isBackboneNode = IsBackboneNodeType(node);
+                var isUtilityNode = IsUtilityBranchNodeType(node);
+                var isDistributionNode = IsDistributionNode(node, hasChildren, isAreaAnchorNode, isBackboneNode, isUtilityNode);
+                var isRectNode = IsRectFacilityNode(node, isAreaAnchorNode, isBackboneNode, isUtilityNode);
+                var isDiamondNode = isDistributionNode && !isRectNode && !isUtilityNode;
+                var nodeSize = isBackboneNode
+                    ? 24.0d
+                    : isAreaAnchorNode
+                        ? 18.0d
+                        : isUtilityNode
+                            ? 21.0d
+                            : isDistributionNode
+                                ? 15.0d
+                                : 13.0d;
+                var symbol = GetFacilityNodeSymbol(node, isAreaAnchorNode, isDistributionNode, hasChildren);
+                var symbolFontSize = symbol.Length > 2 ? "9.2" : "10.8";
                 var nodeRole = FacilityNodeSemantics.ResolveRole(node.NodeKey, node.NodeType, node.Label);
                 var nodeRoleLabel = FacilityNodeSemantics.GetRoleLabel(nodeRole);
                 var nodeOpacity = 1d;
@@ -119,25 +225,29 @@
                     strokeColor = GetFacilityRoleAccent(nodeRole);
                 }
 
-                var labelColor = hasChildren ? "#1e293b" : "#475569";
-                var labelWeight = hasChildren ? "650" : "540";
-                var strokeW = "2.2";
+                var labelColor = hasChildren ? "#0b1320" : "#1f3348";
+                var labelWeight = hasChildren ? "660" : "580";
+                var strokeW = "2.05";
                 var haloStroke = "none";
                 var haloStrokeWidth = "0";
                 var haloDashArray = string.Empty;
+                var haloFill = "none";
 
                 if (hasAnySelection && !isSelectionNode && !isFocusNode && !isSubtreeNode)
                 {
-                    nodeOpacity = 0.5;
-                    labelOpacity = 0.48;
+                    nodeOpacity = 0.46;
+                    labelOpacity = 0.56;
                 }
 
-                if (isSubtreeNode && !isSelectionNode && !isFocusNode)
+                if (isSubtreeDescendantNode)
                 {
-                    strokeColor = "#60a5fa";
-                    strokeW = "3.1";
+                    strokeColor = "#3b82f6";
+                    strokeW = "3.0";
                     labelColor = "#1d4ed8";
                     labelWeight = "620";
+                    haloStroke = "#dbeafe";
+                    haloStrokeWidth = "3.3";
+                    haloFill = "#eff6ff";
                 }
 
                 if (isSelectionNode)
@@ -145,7 +255,8 @@
                     strokeColor = "#1d4ed8";
                     strokeW = "4.4";
                     haloStroke = "#93c5fd";
-                    haloStrokeWidth = "7";
+                    haloStrokeWidth = "6.5";
+                    haloFill = "none";
 
                     if (alertSeverity is null)
                     {
@@ -165,27 +276,39 @@
                     labelWeight = "700";
                 }
 
-                if (isFocusNode)
+                if (isSecondaryFocusNode)
                 {
-                    if (!isSelectionNode)
-                    {
-                        strokeColor = "#334155";
-                        strokeW = "3.6";
-                    }
-
-                    haloStroke = "#0f172a";
-                    haloStrokeWidth = "2.4";
-                    haloDashArray = "6 4";
+                    strokeColor = "#1f2937";
+                    strokeW = "3.05";
+                    haloStroke = "#475569";
+                    haloStrokeWidth = "2.0";
+                    haloDashArray = "4 3";
+                    haloFill = "none";
                     labelColor = "#0f172a";
+                    labelWeight = "660";
+                }
+
+                if (isPrimarySelectedNode)
+                {
+                    strokeColor = "#0b3ea9";
+                    strokeW = "5.0";
+                    haloStroke = "#1d4ed8";
+                    haloStrokeWidth = "8.0";
+                    haloDashArray = string.Empty;
+                    haloFill = "#dbeafe";
+                    labelColor = "#0f2f7a";
+                    labelWeight = "730";
+
+                    if (alertSeverity is null)
+                    {
+                        fillColor = "#1d4ed8";
+                        textColor = "white";
+                    }
                 }
 
                 var labelText = node.Label ?? node.NodeKey;
                 var labelWidth = EstimateLabelWidth(labelText);
-                var placeLabelRight = node.XHint.Value < 0.84;
-                var labelX = placeLabelRight ? cx + nodeSize + 12 : cx - nodeSize - 12;
-                var labelY = cy + 4;
-                var labelAnchor = placeLabelRight ? "start" : "end";
-                var labelBoxX = placeLabelRight ? labelX - 4 : labelX - labelWidth - 4;
+                var labelPlacement = GetFacilityLabelPlacement(node, cx, cy, nodeSize, labelWidth, isBackboneNode, isUtilityNode, isAreaAnchorNode, isDistributionNode);
 
                      <g data-node-key="@node.NodeKey"
                          data-node-x="@Fmt(cx)"
@@ -198,12 +321,12 @@
                         {
                             <rect x="@Fmt(cx - nodeSize - 3)" y="@Fmt(cy - nodeSize - 3)"
                                   width="@Fmt((nodeSize + 3) * 2)" height="@Fmt((nodeSize + 3) * 2)" rx="9"
-                                  fill="none" stroke="@haloStroke" stroke-width="@haloStrokeWidth" stroke-dasharray="@haloDashArray" pointer-events="none" />
+                                                                    fill="@haloFill" fill-opacity="0.35" stroke="@haloStroke" stroke-width="@haloStrokeWidth" stroke-dasharray="@haloDashArray" pointer-events="none" />
                         }
                         else
                         {
                             <circle cx="@Fmt(cx)" cy="@Fmt(cy)" r="@Fmt(nodeSize + 4)"
-                                    fill="none" stroke="@haloStroke" stroke-width="@haloStrokeWidth" stroke-dasharray="@haloDashArray" pointer-events="none" />
+                                                                        fill="@haloFill" fill-opacity="0.35" stroke="@haloStroke" stroke-width="@haloStrokeWidth" stroke-dasharray="@haloDashArray" pointer-events="none" />
                         }
                     }
 
@@ -212,22 +335,31 @@
                         <rect x="@Fmt(cx - nodeSize)" y="@Fmt(cy - nodeSize)" width="@Fmt(nodeSize * 2)" height="@Fmt(nodeSize * 2)" rx="7"
                               fill="@fillColor" stroke="@strokeColor" stroke-width="@strokeW" />
                     }
+                    else if (isAreaAnchorNode)
+                    {
+                        <rect x="@Fmt(cx - (nodeSize + 5))" y="@Fmt(cy - (nodeSize * 0.68))"
+                              width="@Fmt((nodeSize + 5) * 2)" height="@Fmt((nodeSize * 0.68) * 2)" rx="10"
+                              fill="@fillColor" stroke="@strokeColor" stroke-width="@strokeW" />
+                    }
+                    else if (isDiamondNode)
+                    {
+                        <polygon points="@($"{Fmt(cx)} {Fmt(cy - nodeSize)} {Fmt(cx + nodeSize)} {Fmt(cy)} {Fmt(cx)} {Fmt(cy + nodeSize)} {Fmt(cx - nodeSize)} {Fmt(cy)}")"
+                                 fill="@fillColor"
+                                 stroke="@strokeColor"
+                                 stroke-width="@strokeW" />
+                    }
                     else
                     {
                         <circle cx="@Fmt(cx)" cy="@Fmt(cy)" r="@Fmt(nodeSize)"
                                 fill="@fillColor" stroke="@strokeColor" stroke-width="@strokeW" />
                     }
 
-                    <text x="@Fmt(cx)" y="@Fmt(cy + 4)" text-anchor="middle" font-size="10" font-weight="700" fill="@textColor" pointer-events="none">
-                        @symbol
-                    </text>
+                                        @((MarkupString)$"<text x=\"{Fmt(cx)}\" y=\"{Fmt(cy + 4.6)}\" text-anchor=\"middle\" font-size=\"{symbolFontSize}\" font-weight=\"700\" fill=\"{textColor}\" pointer-events=\"none\">{EscapeXml(symbol)}</text>")
 
-                    <rect x="@Fmt(labelBoxX)" y="@Fmt(cy - 8)" width="@Fmt(labelWidth + 8)" height="16" rx="6"
-                          fill="white" fill-opacity="0.88" stroke="#e2e8f0" stroke-width="1" pointer-events="none" opacity="@Fmt(labelOpacity)" />
+                                            <rect x="@Fmt(labelPlacement.BoxX)" y="@Fmt(labelPlacement.BoxY)" width="@Fmt(labelWidth + 8)" height="18" rx="7"
+                          fill="white" fill-opacity="0.93" stroke="#cfd8e3" stroke-width="1" pointer-events="none" opacity="@Fmt(labelOpacity)" />
 
-                    <text x="@Fmt(labelX)" y="@Fmt(labelY)" text-anchor="@labelAnchor" font-size="11" font-weight="@labelWeight" fill="@labelColor" pointer-events="none" opacity="@Fmt(labelOpacity)">
-                        @EscapeXml(labelText)
-                    </text>
+                                        @((MarkupString)$"<text x=\"{Fmt(labelPlacement.X)}\" y=\"{Fmt(labelPlacement.Y)}\" text-anchor=\"{labelPlacement.Anchor}\" font-size=\"12.8\" font-weight=\"{labelWeight}\" fill=\"{labelColor}\" pointer-events=\"none\" opacity=\"{Fmt(labelOpacity)}\">{EscapeXml(labelText)}</text>")
                 </g>
             }
         }
@@ -378,11 +510,11 @@
     private bool _prevFacilityNodeDragEnabled;
 
     private double ViewBoxWidth  { get {
-        if (Facility != null) return 1200;
+        if (Facility != null) return 640;
         return Floor?.ViewBoxWidth ?? 800;
     } }
     private double ViewBoxHeight { get {
-        if (Facility != null) return 800;
+        if (Facility != null) return 440;
         return Floor?.ViewBoxHeight ?? 300;
     } }
 
@@ -668,71 +800,399 @@
         return depthByNodeKey.TryGetValue(nodeKey, out var depth) ? depth : 0;
     }
 
-    private SubtreeBounds? BuildSelectedSubtreeBounds(
+    private static List<FacilityRenderLink> BuildFacilityRenderLinks(
+        IReadOnlyList<SchematicNodeEntity> positionedNodes,
         IReadOnlyDictionary<string, SchematicNodeEntity> nodeByKey,
-        IReadOnlyDictionary<string, int> depthByNodeKey,
+        IEnumerable<SchematicEdgeEntity> explicitEdges,
         IReadOnlyDictionary<string, List<SchematicNodeEntity>> childrenByParent)
     {
-        if (SelectedSubtreeNodeKeys.Count == 0)
-        {
-            return null;
-        }
+        var links = new List<FacilityRenderLink>();
+        var seenLinkKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        var points = new List<(double X, double Y)>();
-        var maxDepth = 0;
-
-        foreach (var nodeKey in SelectedSubtreeNodeKeys)
+        foreach (var edge in explicitEdges)
         {
-            if (!nodeByKey.TryGetValue(nodeKey, out var node) || !node.XHint.HasValue || !node.YHint.HasValue)
+            if (!nodeByKey.ContainsKey(edge.SourceNodeKey) || !nodeByKey.ContainsKey(edge.TargetNodeKey))
             {
                 continue;
             }
 
-            points.Add((node.XHint.Value * ViewBoxWidth, node.YHint.Value * ViewBoxHeight));
-            maxDepth = Math.Max(maxDepth, GetFacilityDepth(depthByNodeKey, nodeKey));
-        }
-
-        if (points.Count == 0)
-        {
-            return null;
-        }
-
-        var minX = points.Min(point => point.X);
-        var maxX = points.Max(point => point.X);
-        var minY = points.Min(point => point.Y);
-        var maxY = points.Max(point => point.Y);
-
-        var verticalPadding = 42d;
-        var rightPadding = maxDepth >= 2 ? 170d : 130d;
-        var leftPadding = 36d;
-
-        foreach (var nodeKey in SelectedSubtreeNodeKeys)
-        {
-            if (!childrenByParent.TryGetValue(nodeKey, out var children) || children.Count == 0)
+            var linkKey = BuildLinkKey(edge.SourceNodeKey, edge.TargetNodeKey);
+            if (!seenLinkKeys.Add(linkKey))
             {
                 continue;
             }
 
-            rightPadding = Math.Max(rightPadding, 190d);
-            break;
+            links.Add(new FacilityRenderLink(edge.SourceNodeKey, edge.TargetNodeKey, IsExplicitEdge: true));
         }
 
-        minX = Math.Max(0, minX - leftPadding);
-        maxX = Math.Min(ViewBoxWidth, maxX + rightPadding);
-        minY = Math.Max(0, minY - verticalPadding);
-        maxY = Math.Min(ViewBoxHeight, maxY + verticalPadding);
+        foreach (var (parentNodeKey, children) in childrenByParent)
+        {
+            if (!nodeByKey.ContainsKey(parentNodeKey))
+            {
+                continue;
+            }
 
-        return new SubtreeBounds(minX, minY, Math.Max(0, maxX - minX), Math.Max(0, maxY - minY));
+            foreach (var child in children)
+            {
+                if (!nodeByKey.ContainsKey(child.NodeKey))
+                {
+                    continue;
+                }
+
+                var linkKey = BuildLinkKey(parentNodeKey, child.NodeKey);
+                if (!seenLinkKeys.Add(linkKey))
+                {
+                    continue;
+                }
+
+                links.Add(new FacilityRenderLink(parentNodeKey, child.NodeKey, IsExplicitEdge: false));
+            }
+        }
+
+        links.Sort((left, right) =>
+        {
+            if (!nodeByKey.TryGetValue(left.SourceNodeKey, out var leftSource) || !nodeByKey.TryGetValue(right.SourceNodeKey, out var rightSource))
+            {
+                return StringComparer.OrdinalIgnoreCase.Compare(left.SourceNodeKey, right.SourceNodeKey);
+            }
+
+            var leftX = leftSource.XHint.GetValueOrDefault();
+            var rightX = rightSource.XHint.GetValueOrDefault();
+            var xCompare = leftX.CompareTo(rightX);
+            if (xCompare != 0)
+            {
+                return xCompare;
+            }
+
+            var leftY = leftSource.YHint.GetValueOrDefault();
+            var rightY = rightSource.YHint.GetValueOrDefault();
+            var yCompare = leftY.CompareTo(rightY);
+            if (yCompare != 0)
+            {
+                return yCompare;
+            }
+
+            return StringComparer.OrdinalIgnoreCase.Compare(left.SourceNodeKey, right.SourceNodeKey);
+        });
+
+        return links;
     }
 
-    private static bool IsRectFacilityNode(SchematicNodeEntity node, int depth, bool hasChildren)
+    private static string BuildLinkKey(string sourceNodeKey, string targetNodeKey)
     {
-        if (depth == 0)
+        return $"{sourceNodeKey}|{targetNodeKey}";
+    }
+
+    private string BuildOrthogonalLinkPath(SchematicNodeEntity sourceNode, SchematicNodeEntity targetNode)
+    {
+        var sourceX = sourceNode.XHint!.Value * ViewBoxWidth;
+        var sourceY = sourceNode.YHint!.Value * ViewBoxHeight;
+        var targetX = targetNode.XHint!.Value * ViewBoxWidth;
+        var targetY = targetNode.YHint!.Value * ViewBoxHeight;
+
+        var sourceArea = ResolveFacilityAreaKey(sourceNode);
+        var targetArea = ResolveFacilityAreaKey(targetNode);
+        var sourceIsBackbone = IsBackboneNodeType(sourceNode);
+        var targetIsBackbone = IsBackboneNodeType(targetNode);
+        var sourceIsUtility = IsUtilityBranchNodeType(sourceNode);
+        var targetIsUtility = IsUtilityBranchNodeType(targetNode);
+
+        var utilityBusY = ViewBoxHeight * 0.29;
+        var areaBusY = ViewBoxHeight * 0.38;
+
+        if (!string.IsNullOrWhiteSpace(sourceArea)
+            && string.Equals(sourceArea, targetArea, StringComparison.OrdinalIgnoreCase)
+            && !sourceIsBackbone
+            && !targetIsBackbone)
+        {
+            var insideAreaMidX = sourceX <= targetX
+                ? Math.Min(targetX - 10, sourceX + 20)
+                : Math.Max(targetX + 10, sourceX - 20);
+            return $"M {Fmt(sourceX)} {Fmt(sourceY)} L {Fmt(insideAreaMidX)} {Fmt(sourceY)} L {Fmt(insideAreaMidX)} {Fmt(targetY)} L {Fmt(targetX)} {Fmt(targetY)}";
+        }
+
+        if (sourceIsBackbone && targetIsUtility)
+        {
+            var elbowY = Math.Min(targetY - 14, utilityBusY - 8);
+            return $"M {Fmt(sourceX)} {Fmt(sourceY)} L {Fmt(sourceX)} {Fmt(elbowY)} L {Fmt(targetX)} {Fmt(elbowY)} L {Fmt(targetX)} {Fmt(targetY)}";
+        }
+
+        if (sourceIsUtility && targetIsBackbone)
+        {
+            var elbowY = Math.Max(targetY + 14, utilityBusY - 8);
+            return $"M {Fmt(sourceX)} {Fmt(sourceY)} L {Fmt(sourceX)} {Fmt(elbowY)} L {Fmt(targetX)} {Fmt(elbowY)} L {Fmt(targetX)} {Fmt(targetY)}";
+        }
+
+        if (sourceIsBackbone && !targetIsBackbone)
+        {
+            return $"M {Fmt(sourceX)} {Fmt(sourceY)} L {Fmt(sourceX)} {Fmt(areaBusY)} L {Fmt(targetX)} {Fmt(areaBusY)} L {Fmt(targetX)} {Fmt(targetY)}";
+        }
+
+        if (!sourceIsBackbone && targetIsBackbone)
+        {
+            return $"M {Fmt(sourceX)} {Fmt(sourceY)} L {Fmt(sourceX)} {Fmt(areaBusY)} L {Fmt(targetX)} {Fmt(areaBusY)} L {Fmt(targetX)} {Fmt(targetY)}";
+        }
+
+        if (sourceIsUtility || targetIsUtility)
+        {
+            var branchDropY = Math.Max(utilityBusY + 10, Math.Min(sourceY, targetY) + 10);
+            return $"M {Fmt(sourceX)} {Fmt(sourceY)} L {Fmt(sourceX)} {Fmt(branchDropY)} L {Fmt(targetX)} {Fmt(branchDropY)} L {Fmt(targetX)} {Fmt(targetY)}";
+        }
+
+        var elbowX = (sourceX + targetX) / 2d;
+        return $"M {Fmt(sourceX)} {Fmt(sourceY)} L {Fmt(elbowX)} {Fmt(sourceY)} L {Fmt(elbowX)} {Fmt(targetY)} L {Fmt(targetX)} {Fmt(targetY)}";
+    }
+
+    private List<FacilityAreaBlock> BuildFacilityAreaBlocks(IReadOnlyList<SchematicNodeEntity> nodes)
+    {
+        var width = ViewBoxWidth;
+        var height = ViewBoxHeight;
+        var blocks = new List<FacilityAreaBlock>();
+        var nodesByArea = nodes
+            .Select(node => (Node: node, Area: ResolveFacilityAreaKey(node)))
+            .Where(item => !string.IsNullOrWhiteSpace(item.Area))
+            .GroupBy(item => item.Area!, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var areaGroup in nodesByArea)
+        {
+            var coordinates = areaGroup
+                .Where(item => item.Node.XHint.HasValue && item.Node.YHint.HasValue)
+                .Select(item => (X: item.Node.XHint!.Value, Y: item.Node.YHint!.Value))
+                .ToList();
+
+            if (coordinates.Count == 0)
+            {
+                continue;
+            }
+
+            var (label, fill, stroke, order) = GetAreaVisual(areaGroup.Key);
+            var minX = coordinates.Min(point => point.X);
+            var maxX = coordinates.Max(point => point.X);
+            var minY = coordinates.Min(point => point.Y);
+            var maxY = coordinates.Max(point => point.Y);
+
+            var minWidth = areaGroup.Key.Equals("offices", StringComparison.OrdinalIgnoreCase)
+                ? width * 0.3
+                : width * 0.68;
+            var minHeight = areaGroup.Key.Equals("offices", StringComparison.OrdinalIgnoreCase)
+                ? height * 0.2
+                : height * 0.26;
+            var horizontalPadding = areaGroup.Key.Equals("offices", StringComparison.OrdinalIgnoreCase)
+                ? width * 0.035
+                : width * 0.065;
+            var verticalPaddingTop = height * 0.052;
+            var verticalPaddingBottom = height * 0.045;
+
+            var areaX = Math.Max(20, (minX * width) - horizontalPadding);
+            var areaY = Math.Max(58, (minY * height) - verticalPaddingTop);
+            var areaWidth = Math.Max(minWidth, ((maxX - minX) * width) + (horizontalPadding * 2));
+            var areaHeight = Math.Max(minHeight, ((maxY - minY) * height) + verticalPaddingTop + verticalPaddingBottom);
+
+            var maxWidth = (width - 24) - areaX;
+            areaWidth = Math.Max(220, Math.Min(areaWidth, maxWidth));
+            areaHeight = Math.Min(areaHeight, Math.Min(280, height * 0.48));
+
+            blocks.Add(new FacilityAreaBlock(areaGroup.Key, label, fill, stroke, areaX, areaY, areaWidth, areaHeight, order));
+        }
+
+        return blocks
+            .OrderBy(block => block.Order)
+            .ThenBy(block => block.AreaKey, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private BackboneBand? BuildBackboneBand(IReadOnlyList<SchematicNodeEntity> nodes)
+    {
+        var width = ViewBoxWidth;
+        var height = ViewBoxHeight;
+        var backboneNodes = nodes
+            .Where(IsBackboneNodeType)
+            .Where(node => node.XHint.HasValue && node.YHint.HasValue)
+            .ToList();
+
+        if (backboneNodes.Count == 0)
+        {
+            return null;
+        }
+
+        var minX = backboneNodes.Min(node => node.XHint!.Value * width);
+        var maxX = backboneNodes.Max(node => node.XHint!.Value * width);
+        var minY = backboneNodes.Min(node => node.YHint!.Value * height);
+        var maxY = backboneNodes.Max(node => node.YHint!.Value * height);
+
+        var x = Math.Max(16, minX - 78);
+        var y = Math.Max(18, minY - 44);
+        var bandWidth = Math.Max(width * 0.82, (maxX - minX) + 176);
+        var bandHeight = Math.Max(height * 0.16, (maxY - minY) + 94);
+
+        if (x + bandWidth > width - 12)
+        {
+            bandWidth = (width - 12) - x;
+        }
+
+        return new BackboneBand(x, y, bandWidth, bandHeight);
+    }
+
+    private List<SubtreeBand> BuildSubtreeBands(
+        IReadOnlyList<SchematicNodeEntity> nodes,
+        IReadOnlySet<string> selectedSubtreeNodeKeys)
+    {
+        var width = ViewBoxWidth;
+        var height = ViewBoxHeight;
+        if (selectedSubtreeNodeKeys.Count == 0)
+        {
+            return [];
+        }
+
+        var bands = new List<SubtreeBand>();
+        var groupedByArea = nodes
+            .Where(node => selectedSubtreeNodeKeys.Contains(node.NodeKey))
+            .Select(node => (Node: node, Area: ResolveFacilityAreaKey(node)))
+            .Where(item => !string.IsNullOrWhiteSpace(item.Area)
+                && item.Node.XHint.HasValue
+                && item.Node.YHint.HasValue)
+            .GroupBy(item => item.Area!, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var areaGroup in groupedByArea)
+        {
+            var coordinates = areaGroup
+                .Select(item => (X: item.Node.XHint!.Value * width, Y: item.Node.YHint!.Value * height))
+                .ToList();
+
+            if (coordinates.Count == 0)
+            {
+                continue;
+            }
+
+            var minX = coordinates.Min(point => point.X);
+            var maxX = coordinates.Max(point => point.X);
+            var minY = coordinates.Min(point => point.Y);
+            var maxY = coordinates.Max(point => point.Y);
+
+            var x = Math.Max(0, minX - 14);
+            var y = Math.Max(0, minY - 12);
+            var bandWidth = Math.Max(58, (maxX - minX) + 28);
+            var bandHeight = Math.Max(34, (maxY - minY) + 22);
+            bands.Add(new SubtreeBand(x, y, bandWidth, bandHeight));
+        }
+
+        return bands;
+    }
+
+    private static string? ResolveFacilityAreaKey(SchematicNodeEntity node)
+    {
+        if (IsBackboneNodeType(node))
+        {
+            return null;
+        }
+
+        var zone = node.Zone?.Trim().ToLowerInvariant();
+        var combined = $"{node.NodeKey} {node.Label} {zone}".ToLowerInvariant();
+
+        if (combined.Contains("emission"))
+        {
+            return "emission_lab";
+        }
+
+        if (combined.Contains("design") || combined.Contains("ds_"))
+        {
+            return "design_studio";
+        }
+
+        if (combined.Contains("workshop") || combined.Contains("robotlab"))
+        {
+            return "workshop";
+        }
+
+        if (combined.Contains("office"))
+        {
+            return "offices";
+        }
+
+        return null;
+    }
+
+    private static (string Label, string Fill, string Stroke, int Order) GetAreaVisual(string areaKey)
+    {
+        return areaKey.ToLowerInvariant() switch
+        {
+            "emission_lab" => ("Emission Lab", "#dcfce7", "#15803d", 0),
+            "design_studio" => ("Design Studio", "#e0f2fe", "#0369a1", 1),
+            "workshop" => ("Workshop", "#fef3c7", "#b45309", 2),
+            "offices" => ("Office Building", "#e2e8f0", "#334155", 3),
+            _ => (areaKey, "#f1f5f9", "#475569", 8)
+        };
+    }
+
+    private static bool IsBackboneNodeType(SchematicNodeEntity node)
+    {
+        var nodeType = node.NodeType?.Trim();
+        if (string.IsNullOrWhiteSpace(nodeType))
+        {
+            return false;
+        }
+
+        return nodeType.Equals("grid", StringComparison.OrdinalIgnoreCase)
+            || nodeType.Equals("site", StringComparison.OrdinalIgnoreCase)
+            || nodeType.Equals("building", StringComparison.OrdinalIgnoreCase)
+            || nodeType.Equals("transformer", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsUtilityBranchNodeType(SchematicNodeEntity node)
+    {
+        var nodeType = node.NodeType?.Trim();
+        if (string.IsNullOrWhiteSpace(nodeType))
+        {
+            return false;
+        }
+
+        return nodeType.Equals("generator_pv", StringComparison.OrdinalIgnoreCase)
+            || nodeType.Equals("generator_chp", StringComparison.OrdinalIgnoreCase)
+            || nodeType.Equals("utility_cooling", StringComparison.OrdinalIgnoreCase)
+            || nodeType.Equals("utility_heating", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsAreaAnchorNode(SchematicNodeEntity node)
+    {
+        return string.Equals(node.NodeType, "zone", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsDistributionNode(
+        SchematicNodeEntity node,
+        bool hasChildren,
+        bool isAreaAnchorNode,
+        bool isBackboneNode,
+        bool isUtilityNode)
+    {
+        if (isAreaAnchorNode || isBackboneNode || isUtilityNode)
+        {
+            return false;
+        }
+
+        if (hasChildren)
         {
             return true;
         }
 
-        if (!hasChildren)
+        var nodeType = node.NodeType?.Trim();
+        return string.Equals(nodeType, "subzone", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(nodeType, "distribution", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(nodeType, "branch", StringComparison.OrdinalIgnoreCase)
+            || (!string.IsNullOrWhiteSpace(nodeType) && nodeType.EndsWith("_branch", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsRectFacilityNode(
+        SchematicNodeEntity node,
+        bool isAreaAnchorNode,
+        bool isBackboneNode,
+        bool isUtilityNode)
+    {
+        if (isBackboneNode)
+        {
+            return true;
+        }
+
+        if (isUtilityNode)
         {
             return false;
         }
@@ -743,23 +1203,152 @@
                string.Equals(node.NodeType, "transformer", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string GetFacilityNodeSymbol(string? nodeType)
+    private static string GetFacilityNodeSymbol(SchematicNodeEntity node, bool isAreaAnchorNode, bool isDistributionNode, bool hasChildren)
     {
+        var nodeType = node.NodeType?.Trim();
         if (string.IsNullOrWhiteSpace(nodeType))
         {
-            return "?";
+            return hasChildren ? "ND" : "EP";
         }
 
-        return nodeType.Trim()[0].ToString().ToUpperInvariant();
+        if (isAreaAnchorNode)
+        {
+            return "IN";
+        }
+
+        if (nodeType.Equals("grid", StringComparison.OrdinalIgnoreCase)
+            || nodeType.Equals("site", StringComparison.OrdinalIgnoreCase)
+            || nodeType.Equals("building", StringComparison.OrdinalIgnoreCase))
+        {
+            return "G";
+        }
+
+        if (nodeType.Equals("transformer", StringComparison.OrdinalIgnoreCase))
+        {
+            return "T";
+        }
+
+        if (nodeType.Equals("generator_pv", StringComparison.OrdinalIgnoreCase))
+        {
+            return "PV";
+        }
+
+        if (nodeType.Equals("generator_chp", StringComparison.OrdinalIgnoreCase))
+        {
+            return "CHP";
+        }
+
+        if (nodeType.Equals("utility_cooling", StringComparison.OrdinalIgnoreCase))
+        {
+            return "C";
+        }
+
+        if (nodeType.Equals("utility_heating", StringComparison.OrdinalIgnoreCase))
+        {
+            return "H";
+        }
+
+        if (nodeType.Equals("server", StringComparison.OrdinalIgnoreCase))
+        {
+            return "SV";
+        }
+
+        if (nodeType.Equals("subzone", StringComparison.OrdinalIgnoreCase) || isDistributionNode)
+        {
+            return "SW";
+        }
+
+        return hasChildren ? "ND" : "EP";
     }
 
     private static double EstimateLabelWidth(string label)
     {
         var normalizedLength = Math.Clamp(label.Length, 5, 30);
-        return normalizedLength * 6.8;
+        return normalizedLength * 7.6;
     }
 
-    private sealed record SubtreeBounds(double X, double Y, double Width, double Height);
+    private LabelPlacement GetFacilityLabelPlacement(
+        SchematicNodeEntity node,
+        double cx,
+        double cy,
+        double nodeSize,
+        double labelWidth,
+        bool isBackboneNode,
+        bool isUtilityNode,
+        bool isAreaAnchorNode,
+        bool isDistributionNode)
+    {
+        var normalizedX = node.XHint.GetValueOrDefault();
+        var normalizedY = node.YHint.GetValueOrDefault();
+
+        if (isBackboneNode)
+        {
+            var transformerLower = string.Equals(node.NodeType, "transformer", StringComparison.OrdinalIgnoreCase)
+                && normalizedX > 0.58
+                && normalizedX < 0.79;
+            if (transformerLower)
+            {
+                var y = cy + nodeSize + 16;
+                var boxX = cx - (labelWidth / 2) - 4;
+                return new LabelPlacement(cx, y, "middle", boxX, cy + nodeSize + 5);
+            }
+
+            var upperY = cy - nodeSize - 10;
+            var upperBoxX = cx - (labelWidth / 2) - 4;
+            return new LabelPlacement(cx, upperY, "middle", upperBoxX, cy - nodeSize - 21);
+        }
+
+        if (isUtilityNode)
+        {
+            var y = cy + nodeSize + 17;
+            var boxX = cx - (labelWidth / 2) - 4;
+            return new LabelPlacement(cx, y, "middle", boxX, cy + nodeSize + 6);
+        }
+
+        if (isAreaAnchorNode)
+        {
+            var x = cx + nodeSize + 13;
+            return new LabelPlacement(x, cy + 4, "start", x - 4, cy - 8);
+        }
+
+        if (isDistributionNode)
+        {
+            if (normalizedX < 0.62)
+            {
+                var x = cx + nodeSize + 11;
+                return new LabelPlacement(x, cy + 4, "start", x - 4, cy - 8);
+            }
+
+            var leftX = cx - nodeSize - 11;
+            return new LabelPlacement(leftX, cy + 4, "end", leftX - labelWidth - 4, cy - 8);
+        }
+
+        if (normalizedY > 0.80)
+        {
+            var y = cy - nodeSize - 8;
+            var boxX = cx - (labelWidth / 2) - 4;
+            return new LabelPlacement(cx, y, "middle", boxX, cy - nodeSize - 19);
+        }
+
+        if (normalizedX < 0.82)
+        {
+            var x = cx + nodeSize + 11;
+            return new LabelPlacement(x, cy + 4, "start", x - 4, cy - 8);
+        }
+
+        var fallbackX = cx - nodeSize - 11;
+        return new LabelPlacement(fallbackX, cy + 4, "end", fallbackX - labelWidth - 4, cy - 8);
+    }
+
+    private sealed record FacilityRenderLink(string SourceNodeKey, string TargetNodeKey, bool IsExplicitEdge);
+
+    private sealed record FacilityAreaBlock(string AreaKey, string Label, string Fill, string Stroke, double X, double Y, double Width, double Height, int Order);
+
+    private sealed record BackboneBand(double X, double Y, double Width, double Height);
+
+    private sealed record SubtreeBand(double X, double Y, double Width, double Height);
+
+    private sealed record LabelPlacement(double X, double Y, string Anchor, double BoxX, double BoxY);
 
     private static string GetDeviceSymbol(DeviceType type) => type switch
     {
