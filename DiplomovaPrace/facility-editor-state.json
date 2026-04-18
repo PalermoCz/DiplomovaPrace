@@ -2,6 +2,30 @@
   "schemaVersion": 2,
   "nodeEdits": [
     {
+      "nodeKey": "design_studio",
+      "label": "Design Studio X",
+      "tags": [],
+      "note": null,
+      "xHint": 0.45,
+      "yHint": 0.56,
+      "updatedUtc": "2026-04-18T13:50:10.0791692Z"
+    },
+    {
+      "nodeKey": "design_studio_test1",
+      "label": "Test 1",
+      "tags": [
+        "facility",
+        "role:testingsimulation",
+        "semantic:testinglab",
+        "type:test",
+        "unmetered"
+      ],
+      "note": null,
+      "xHint": 0.51,
+      "yHint": 0.6000000000000001,
+      "updatedUtc": "2026-04-18T13:35:45.5501079Z"
+    },
+    {
       "nodeKey": "trafo_h2z36",
       "label": null,
       "tags": [],
@@ -18,12 +42,37 @@
       "xHint": 0.6538691447492226,
       "yHint": 0.2355118359200969,
       "updatedUtc": "2026-04-13T18:38:44.8720817Z"
+    },
+    {
+      "nodeKey": "workshop_main",
+      "label": "Workshop Main",
+      "tags": [],
+      "note": null,
+      "xHint": 0.73,
+      "yHint": 0.76,
+      "updatedUtc": "2026-04-16T15:54:23.4501858Z"
     }
   ],
   "workingSets": [],
   "structure": {
-    "addedNodes": [],
-    "removedNodeKeys": [],
+    "addedNodes": [
+      {
+        "nodeKey": "design_studio_test1",
+        "label": "Test 1",
+        "nodeType": "Test",
+        "zone": null,
+        "meterUrn": null,
+        "parentNodeKey": "design_studio",
+        "xHint": 0.51,
+        "yHint": 0.6000000000000001,
+        "updatedUtc": "2026-04-18T13:35:45.5414049Z"
+      }
+    ],
+    "removedNodeKeys": [
+      "ds_main",
+      "ds_sim_1",
+      "ds_sim_2"
+    ],
     "parentOverrides": {}
   }
 }

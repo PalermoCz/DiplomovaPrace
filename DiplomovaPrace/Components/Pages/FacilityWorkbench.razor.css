@@ -1,0 +1,1168 @@
+/* ══════════════════════════════════════════════════════════
+   FacilityWorkbench — scoped layout CSS
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Base workbench shell ────────────────────────────────── */
+.facility-workbench {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-width: 0;
+    overflow: hidden;
+    background-color: #f8fafc;
+    position: relative;
+}
+
+/* ── Dashboard workspace row (schematic + overview) ──────── */
+.wb-workspace-row {
+    display: grid;
+    grid-template-columns: 2.1fr 0.95fr;
+    min-height: 38vh;
+    max-height: 44vh;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+/* ── Schematic pane ──────────────────────────────────────── */
+.wb-schematic {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    border-right: 1px solid #e2e8f0;
+    background: #ffffff;
+}
+
+.wb-schematic-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.75rem;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    z-index: 10;
+    flex-shrink: 0;
+}
+
+.wb-schematic-toolbar .toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.wb-schematic-toolbar .toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: nowrap;
+}
+
+/* ── Shared icon-button design token ─────────────────────
+   Covers: dashboard toolbar, focus toolbar, edit toolbar,
+           and the editor tools rail.
+   Same size · same border · same radius · same states.
+   ───────────────────────────────────────────────────── */
+.wb-toolbar-icon-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    padding: 0 !important;
+    flex-shrink: 0;
+    background: #ffffff;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.45rem;
+    cursor: pointer;
+    transition: background 0.13s, border-color 0.13s, color 0.13s;
+    box-shadow: none;
+    text-decoration: none;
+    /* reset any Bootstrap remnant */
+    line-height: 1;
+    font-size: 0.9rem;
+}
+
+.wb-toolbar-icon-btn:hover:not([disabled]):not(:disabled) {
+    background: #f1f5f9;
+    color: #1e293b;
+    border-color: #94a3b8;
+}
+
+.wb-toolbar-icon-btn:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 1px;
+}
+
+.wb-toolbar-icon-btn:disabled,
+.wb-toolbar-icon-btn[disabled] {
+    opacity: 0.38;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Primary CTA variant — Edit Mode button */
+.wb-toolbar-icon-btn-primary {
+    color: #2563eb;
+    border-color: #2563eb;
+    background: transparent;
+}
+
+.wb-toolbar-icon-btn-primary:hover:not([disabled]):not(:disabled) {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #1d4ed8;
+}
+
+/* Danger variant — destructive action (Delete node) */
+.wb-toolbar-icon-btn-danger:hover:not([disabled]):not(:disabled) {
+    background: #fee2e2;
+    color: #dc2626;
+    border-color: #fca5a5;
+}
+
+/* Active/toggle state — e.g. Reconnect mode is active */
+.wb-toolbar-icon-btn-active {
+    background: #2563eb !important;
+    color: #ffffff !important;
+    border-color: #1d4ed8 !important;
+}
+
+.wb-toolbar-icon-btn-active:hover:not([disabled]):not(:disabled) {
+    background: #1d4ed8 !important;
+    border-color: #1e40af !important;
+    color: #ffffff !important;
+}
+
+.wb-schematic-body {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.wb-schematic-body .editor-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* ── Overview pane (right side in dashboard) ─────────────── */
+.wb-overview {
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 0.85rem 0.75rem;
+    background: #ffffff;
+    min-width: 0;
+}
+
+.wb-overview > * {
+    min-width: 0;
+}
+
+/* ── Analytics section (below workspace row in dashboard) ── */
+.wb-analytics {
+    flex: 1;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 0.75rem 1rem;
+    min-height: 0;
+}
+
+/* Analytics empty state hint */
+.wb-analytics-empty-state {
+    padding: 0.75rem 0.5rem 0.35rem;
+}
+
+.empty-analytics-hint {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    padding: 0.6rem 0.85rem;
+    border: 1px dashed #e2e8f0;
+    border-radius: 0.5rem;
+    background: #f8fafc;
+}
+
+/* ══════════════════════════════════════════════════════════
+   FOCUS MODE — overlay under topnav
+   ══════════════════════════════════════════════════════════ */
+.wb-focus-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    background: #f8fafc;
+}
+
+.wb-focus-overlay .wb-schematic {
+    flex: 1;
+    border-right: none;
+}
+
+/* ══════════════════════════════════════════════════════════
+   EDIT MODE — overlay with canvas + tools rail + properties
+   ══════════════════════════════════════════════════════════ */
+.wb-editor-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    grid-template-columns: 1fr auto 24rem;
+    grid-template-rows: 1fr;
+    grid-template-areas: "canvas rail props";
+    background: #f8fafc;
+    overflow: hidden;
+}
+
+.wb-editor-overlay .wb-schematic {
+    grid-area: canvas;
+    border-right: none;
+}
+
+/* ── Editor tools rail ───────────────────────────────────── */
+.wb-editor-rail {
+    grid-area: rail;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.75rem 0.35rem;
+    background: #f1f5f9;
+    border-left: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    width: 3.0rem;
+}
+
+/* Rail uses wb-toolbar-icon-btn directly — same token as toolbar */
+
+.wb-editor-rail .rail-divider {
+    width: 80%;
+    height: 1px;
+    background: #cbd5e1;
+    margin: 0.35rem 0;
+}
+
+/* ── Editor properties panel ─────────────────────────────── */
+.wb-editor-props {
+    grid-area: props;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #ffffff;
+    min-width: 0;
+    border-left: 1px solid #e2e8f0;
+}
+
+.wb-editor-props-content {
+    flex: 1;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 0.85rem 0.85rem 0.5rem;
+    min-height: 0;
+}
+
+/* ── Sticky footer inside right panel ────────────────────── */
+.wb-editor-footer {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 0.65rem 0.85rem;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+}
+
+.wb-editor-footer-status {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 0.45rem;
+}
+
+.wb-editor-footer-buttons {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.wb-editor-props-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0;
+    padding: 0.75rem 0.85rem 0.65rem;
+    border-bottom: 2px solid #e2e8f0;
+    flex-shrink: 0;
+}
+
+.wb-editor-props-header h5 {
+    margin: 0;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+}
+
+.wb-editor-section {
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.65rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.wb-editor-section:last-of-type {
+    border-bottom: none;
+}
+
+.wb-editor-section-title {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    font-weight: 600;
+    margin-bottom: 0.45rem;
+}
+
+.wb-editor-field {
+    margin-bottom: 0.45rem;
+}
+
+.wb-editor-field label {
+    display: block;
+    font-size: 0.75rem;
+    color: #475569;
+    margin-bottom: 0.2rem;
+    font-weight: 500;
+}
+
+.wb-editor-placeholder {
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    text-align: center;
+}
+
+.wb-editor-placeholder-icon {
+    font-size: 1.5rem;
+    color: #94a3b8;
+    margin-bottom: 0.35rem;
+}
+
+.wb-editor-placeholder-text {
+    font-size: 0.78rem;
+    color: #64748b;
+    line-height: 1.4;
+}
+
+/* ── Footer action buttons — text buttons, unified height & radius ─ */
+/* Shared base */
+.btn-confirm,
+.btn-cancel {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    height: 2.2rem;
+    padding: 0 0.9rem;
+    border-radius: 0.45rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.13s, border-color 0.13s, color 0.13s;
+    box-shadow: none;
+    border: 1px solid transparent;
+}
+
+/* Success primary */
+.btn-confirm {
+    background: #16a34a;
+    color: #ffffff;
+    border-color: #15803d;
+    font-weight: 600;
+}
+
+.btn-confirm:hover {
+    background: #15803d;
+    border-color: #166534;
+}
+
+.btn-confirm:focus-visible {
+    outline: 2px solid #4ade80;
+    outline-offset: 1px;
+}
+
+/* Secondary neutral */
+.btn-cancel {
+    background: #ffffff;
+    color: #475569;
+    border-color: #cbd5e1;
+}
+
+.btn-cancel:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+    border-color: #94a3b8;
+}
+
+.btn-cancel:focus-visible {
+    outline: 2px solid #94a3b8;
+    outline-offset: 1px;
+}
+
+/* ── Node selection highlight in editor ──────────────────── */
+.wb-editor-node-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1e293b;
+    padding: 0.5rem 0.6rem;
+    background: #eff6ff;
+    border-left: 3px solid #2563eb;
+    border-radius: 0 0.35rem 0.35rem 0;
+    margin-bottom: 0.65rem;
+}
+
+.wb-editor-node-name .node-key-sub {
+    font-size: 0.72rem;
+    font-weight: 400;
+    color: #64748b;
+    display: block;
+    margin-top: 0.15rem;
+}
+
+/* ── Tag chips ───────────────────────────────────────────── */
+.wb-tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-bottom: 0.4rem;
+}
+
+.wb-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.18rem 0.5rem;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    color: #334155;
+}
+
+/* ══════════════════════════════════════════════════════════
+   OVERVIEW WIDGETS (shared between dashboard overview pane
+   and analytics section)
+   ══════════════════════════════════════════════════════════ */
+
+.overview-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 0.55rem;
+    width: 100%;
+    min-width: 0;
+    align-items: start;
+    margin-bottom: 0.55rem;
+}
+
+.overview-widget {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 0.64rem;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    min-width: 0;
+    overflow: hidden;
+}
+
+.overview-widget-soft {
+    background: #f8fafc;
+}
+
+.overview-widget h6 {
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+    margin-bottom: 0.45rem;
+}
+
+.metric-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.1;
+}
+
+.metric-caption {
+    font-size: 0.72rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.micro-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem 0.5rem;
+}
+
+.micro-kpi {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 0.45rem 0.5rem;
+    background: #f8fafc;
+}
+
+.headline-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.3rem;
+}
+
+.headline-kpi-cell {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.45rem;
+    padding: 0.35rem 0.45rem;
+    background: #f8fafc;
+}
+
+.aggregate-status-line {
+    font-size: 0.75rem;
+    color: #64748b;
+    line-height: 1.3;
+}
+
+.main-analytics-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2.3fr);
+    align-items: stretch;
+}
+
+.main-kpi-widget {
+    grid-column: 1;
+}
+
+.main-chart-widget {
+    grid-column: 2;
+    min-width: 0;
+}
+
+.forecast-analytics-grid {
+    grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr);
+    align-items: stretch;
+}
+
+.forecast-compare-widget {
+    grid-column: 1;
+    min-width: 0;
+}
+
+.forecast-diagnostics-widget {
+    grid-column: 2;
+}
+
+.forecast-diagnostics-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.forecast-diagnostics-point {
+    font-size: 0.73rem;
+    color: #475569;
+    line-height: 1.3;
+}
+
+.operational-intelligence-grid {
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
+    align-items: stretch;
+}
+
+.ems-evaluation-grid {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr);
+    align-items: stretch;
+}
+
+.ems-scorecard-list,
+.ems-inefficiency-list,
+.ems-opportunity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.ems-scorecard-item,
+.ems-inefficiency-item,
+.ems-opportunity-item {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 0.42rem 0.5rem;
+    background: #ffffff;
+}
+
+.ems-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+    margin-bottom: 0.2rem;
+}
+
+.ems-item-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.ems-item-summary {
+    font-size: 0.73rem;
+    color: #475569;
+    line-height: 1.3;
+}
+
+.ems-item-meta {
+    font-size: 0.7rem;
+    color: #64748b;
+    line-height: 1.25;
+    margin-top: 0.16rem;
+}
+
+.profile-bucket-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.profile-bucket-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0.45rem;
+    align-items: center;
+}
+
+.profile-bucket-label {
+    font-size: 0.72rem;
+    color: #334155;
+    min-width: 6.5rem;
+}
+
+.profile-bucket-track {
+    height: 0.3rem;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+
+.profile-bucket-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #10b981 0%, #0284c7 100%);
+}
+
+.profile-bucket-value {
+    font-size: 0.72rem;
+    color: #334155;
+    white-space: nowrap;
+}
+
+.secondary-widgets-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+}
+
+.secondary-widgets-grid .overview-widget {
+    padding: 0.58rem;
+}
+
+.tools-widgets-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 0.5rem;
+}
+
+.tools-widget {
+    max-height: 20rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.tools-widgets-grid-empty .tools-widget {
+    max-height: 14.5rem;
+}
+
+.tools-widget .form-select,
+.tools-widget .form-control,
+.tools-widget textarea {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+}
+
+.tools-widget-section {
+    margin-top: 0.65rem;
+    padding-top: 0.55rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.secondary-breakdown-widget {
+    grid-column: span 2;
+}
+
+.secondary-role-widget {
+    grid-column: span 1;
+}
+
+.secondary-health-widget {
+    grid-column: span 1;
+}
+
+.secondary-coverage-widget {
+    grid-column: span 1;
+}
+
+.secondary-compare-widget {
+    grid-column: span 1;
+}
+
+.operational-point-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.operational-point {
+    font-size: 0.73rem;
+    color: #475569;
+    line-height: 1.3;
+}
+
+.interval-widget {
+    display: flex;
+    flex-direction: column;
+}
+
+.interval-meta-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    margin-bottom: 0.4rem;
+    min-width: 0;
+}
+
+.interval-range-text {
+    font-size: 0.78rem;
+    color: #334155;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.interval-custom-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+    margin-top: 0.5rem;
+}
+
+.breakdown-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.breakdown-item {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 0.4rem 0.5rem;
+    background: #ffffff;
+}
+
+.breakdown-item-nodata {
+    background: #f8fafc;
+}
+
+.breakdown-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.breakdown-node-label {
+    font-size: 0.78rem;
+    color: #1e293b;
+    font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.breakdown-value-label {
+    font-size: 0.75rem;
+    color: #334155;
+    white-space: nowrap;
+}
+
+.role-breakdown-item .breakdown-header-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.role-breakdown-main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.role-breakdown-main .breakdown-node-label {
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: normal;
+    line-height: 1.2;
+    max-height: none;
+}
+
+.role-breakdown-item .breakdown-value-label {
+    text-align: right;
+    white-space: nowrap;
+    line-height: 1.2;
+    font-size: 0.74rem;
+}
+
+.contributor-item {
+    padding: 0.38rem 0.46rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.24rem;
+}
+
+.contributor-top-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.42rem;
+    align-items: start;
+}
+
+.contributor-main-col {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.22rem;
+}
+
+.contributor-badges {
+    font-size: 0.69rem;
+    color: #64748b;
+    line-height: 1.25;
+    min-width: 0;
+}
+
+.contributor-values {
+    min-width: 0;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.contributor-signed-value {
+    font-size: 0.76rem;
+    font-weight: 650;
+    color: #1e293b;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.contributor-share {
+    font-size: 0.7rem;
+    color: #64748b;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.role-breakdown-item .breakdown-meta {
+    overflow-wrap: anywhere;
+}
+
+.contributor-more-list {
+    margin-top: 0.35rem;
+    max-height: 10rem;
+    overflow-y: auto;
+}
+
+.secondary-breakdown-widget .breakdown-list,
+.secondary-role-widget .breakdown-list {
+    max-height: 20rem;
+    overflow-y: auto;
+    padding-right: 0.18rem;
+}
+
+.breakdown-meta {
+    font-size: 0.72rem;
+    color: #64748b;
+    line-height: 1.3;
+}
+
+.breakdown-bar-track {
+    margin-top: 0.25rem;
+    height: 0.32rem;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+
+.breakdown-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #0ea5e9 0%, #0284c7 100%);
+    border-radius: inherit;
+}
+
+.chart-widget {
+    min-height: 280px;
+}
+
+.min-w-0 {
+    min-width: 0;
+}
+
+.empty-selection-callout {
+    border: 1px dashed #94a3b8;
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 0.75rem;
+    padding: 0.9rem 1rem;
+}
+
+.empty-selection-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 0.3rem;
+}
+
+.empty-selection-hints {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem 0.7rem;
+    margin-top: 0.45rem;
+    color: #334155;
+    font-size: 0.78rem;
+}
+
+.main-chart-widget .card {
+    margin-bottom: 0;
+}
+
+.widget-col-2 { grid-column: span 2; }
+.widget-col-3 { grid-column: span 3; }
+.widget-col-4 { grid-column: span 4; }
+.widget-col-6 { grid-column: span 6; }
+.widget-col-8 { grid-column: span 8; }
+.widget-col-12 { grid-column: span 12; }
+
+/* ══════════════════════════════════════════════════════════
+   Responsive
+   ══════════════════════════════════════════════════════════ */
+
+@media (max-width: 1400px) {
+    .wb-workspace-row {
+        grid-template-columns: 1.8fr 1fr;
+        min-height: 52vh;
+    }
+
+    .main-analytics-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    }
+
+    .forecast-analytics-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .forecast-compare-widget,
+    .forecast-diagnostics-widget {
+        grid-column: 1;
+        min-width: 0;
+    }
+
+    .operational-intelligence-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .ems-evaluation-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .secondary-widgets-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .tools-widgets-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tools-widget {
+        max-height: none;
+    }
+
+    .secondary-breakdown-widget,
+    .secondary-coverage-widget {
+        grid-column: span 2;
+    }
+
+    .secondary-role-widget,
+    .secondary-health-widget,
+    .secondary-compare-widget {
+        grid-column: span 1;
+    }
+
+    .interval-custom-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .widget-col-2,
+    .widget-col-3,
+    .widget-col-4,
+    .widget-col-6 {
+        grid-column: span 6;
+    }
+
+    .widget-col-8,
+    .widget-col-12 {
+        grid-column: span 12;
+    }
+}
+
+@media (max-width: 1100px) {
+    .wb-workspace-row {
+        grid-template-columns: 1fr;
+        min-height: 45vh;
+        max-height: none;
+    }
+
+    .wb-editor-overlay {
+        grid-template-columns: 1fr auto 18rem;
+    }
+
+    .main-analytics-grid,
+    .secondary-widgets-grid,
+    .tools-widgets-grid,
+    .forecast-analytics-grid,
+    .operational-intelligence-grid,
+    .ems-evaluation-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .main-kpi-widget,
+    .main-chart-widget,
+    .forecast-compare-widget,
+    .forecast-diagnostics-widget,
+    .secondary-role-widget,
+    .secondary-health-widget,
+    .secondary-coverage-widget,
+    .secondary-compare-widget,
+    .secondary-breakdown-widget {
+        grid-column: 1;
+    }
+
+    .main-chart-widget {
+        min-width: 0;
+    }
+}
+
+@media (max-width: 900px) {
+    .empty-selection-hints {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .widget-col-2,
+    .widget-col-3,
+    .widget-col-4,
+    .widget-col-6,
+    .widget-col-8,
+    .widget-col-12 {
+        grid-column: span 12;
+    }
+}
+
+/* ── Dirty state — status chip (NOT a button) ─────────────── */
+.wb-editor-dirty-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: #92400e;
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: 999px;   /* pill */
+    padding: 0.22rem 0.7rem;
+    white-space: nowrap;
+    pointer-events: none;   /* non-interactive */
+    cursor: default;
+    user-select: none;
+    letter-spacing: 0.01em;
+}
+
+/* ── Discard guard dialog ─────────────────────────────────── */
+.wb-discard-guard-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.wb-discard-guard-modal {
+    background: #ffffff;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    max-width: 380px;
+    width: 90%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22);
+}
+
+.wb-discard-guard-title {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #1e293b;
+    margin-bottom: 0.75rem;
+}
+
+.wb-discard-guard-body {
+    font-size: 0.88rem;
+    color: #475569;
+    margin-bottom: 1.25rem;
+    line-height: 1.5;
+}
+
+.wb-discard-guard-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+/* ── Form field helper text ───────────────────────────────── */
+.wb-editor-field-hint {
+    font-size: 0.69rem;
+    color: #94a3b8;
+    margin-top: 0.2rem;
+    line-height: 1.3;
+}
+
+/* ── Add-node parent preview box ──────────────────────────── */
+.wb-editor-add-parent-preview {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 0.4rem;
+    padding: 0.45rem 0.65rem;
+    margin-bottom: 0.6rem;
+    font-size: 0.82rem;
+    color: #166534;
+}

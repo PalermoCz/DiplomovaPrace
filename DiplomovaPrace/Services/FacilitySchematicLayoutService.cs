@@ -14,11 +14,11 @@ public static class FacilitySchematicLayoutService
     private const double MinY = 0.06;
     private const double MaxY = 0.95;
 
-    private const double BackboneY = 0.105;
-    private const double UtilityY = 0.245;
+    private const double BackboneY = 0.145;
+    private const double UtilityY = 0.265;
 
-    private const double AreaTopStart = 0.355;
-    private const double AreaRowGap = 0.036;
+    private const double AreaTopStart = 0.400;
+    private const double AreaRowGap = 0.024;
     private const int DefaultAreaEndpointColumns = 3;
 
     private static readonly string[] PreferredAreaOrder =
@@ -31,10 +31,10 @@ public static class FacilitySchematicLayoutService
 
     private static readonly Dictionary<string, double> PreferredUtilityXByNodeKey = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["cooling_main"] = 0.17,
-        ["heating_main"] = 0.30,
-        ["chp_main"] = 0.43,
-        ["pv_main"] = 0.57
+        ["cooling_main"] = 0.15,
+        ["heating_main"] = 0.27,
+        ["chp_main"] = 0.40,
+        ["pv_main"] = 0.56
     };
 
     public static FacilityEntity BuildReadableLayout(FacilityEntity source)
@@ -145,12 +145,12 @@ public static class FacilitySchematicLayoutService
 
         if (transformerNodes.Count > 0)
         {
-            var transformerStartX = 0.34;
-            var transformerEndX = 0.90;
+            var transformerStartX = 0.22;
+            var transformerEndX = 0.84;
             var availableWidth = Math.Max(0.08, transformerEndX - transformerStartX);
             var transformerStep = transformerNodes.Count <= 1
                 ? 0d
-                : Math.Max(0.12, availableWidth / (transformerNodes.Count - 1));
+                : Math.Max(0.18, availableWidth / (transformerNodes.Count - 1));
 
             for (var index = 0; index < transformerNodes.Count; index++)
             {
@@ -267,7 +267,7 @@ public static class FacilitySchematicLayoutService
                 .Where(node => string.Equals(areaByNodeKey.GetValueOrDefault(node.NodeKey), areaKey, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            var height = Math.Max(0.115, areaLayout.Height * heightScale);
+            var height = Math.Max(0.095, areaLayout.Height * heightScale);
             if (cursorTop + height > MaxY - 0.02)
             {
                 cursorTop = Math.Max(AreaTopStart, MaxY - 0.02 - height);
@@ -505,11 +505,11 @@ public static class FacilitySchematicLayoutService
 
     private static double CalculateAreaHeight(int endpointRows, int distributionRows, int anchorCount)
     {
-        var rawHeight = 0.078
-            + (Math.Max(1, anchorCount) * 0.012)
-            + (distributionRows * 0.019)
-            + (endpointRows * 0.032);
-        return Math.Clamp(rawHeight, 0.11, 0.19);
+        var rawHeight = 0.072
+            + (Math.Max(1, anchorCount) * 0.011)
+            + (distributionRows * 0.018)
+            + (endpointRows * 0.030);
+        return Math.Clamp(rawHeight, 0.095, 0.15);
     }
 
     private static double GetAreaHorizontalShift(string areaKey)

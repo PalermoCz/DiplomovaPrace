@@ -1,0 +1,417 @@
+@using DiplomovaPrace.Services
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+@*
+ * FacilitySchematicV2 — nový SVG renderer pro facility schematic.
+ *
+ * Rozdíly oproti V1 (EditorCanvas facility mode):
+ *   - Čistý tree layout z SchematicComposerV2 (subtree-width centering)
+ *   - Rovné čáry místo ortogonálního routingu
+ *   - Kruhy místo boxy pro všechny uzly
+ *   - Žádné area bounding boxy / backbone band
+ *   - Čistý subtree highlight bez giant dekorací
+ *
+ * Pan/zoom: sdílí editorCanvas.js (JS modul pro SVG interakci).
+ * Kliknutí: JS dispatchuje přes data-node-key atributy.
+ *@
+
+<svg id="@_svgId" class="editor-svg"
+     style="background-color: #ffffff;"
+     tabindex="0">
+
+    <g id="@(_svgId + "-content")">
+        @if (Layout is not null && Layout.Nodes.Count > 0)
+        {
+            var nodeByKey = Layout.Nodes.ToDictionary(n => n.NodeKey, StringComparer.OrdinalIgnoreCase);
+            var hasAnySelection = SelectedElementIds.Count > 0 || !string.IsNullOrWhiteSpace(SelectedElementId);
+
+            @* ── Background ─────────────────────────────────── *@
+            <rect x="0" y="0"
+                  width="@Fmt(Layout.CanvasWidth)" height="@Fmt(Layout.CanvasHeight)"
+                  fill="white" pointer-events="none" />
+
+            @* ── Subtree highlight bands (subtle) ─────────── *@
+            @if (SelectedSubtreeNodeKeys.Count > 0)
+            {
+                var subtreeNodes = Layout.Nodes
+                    .Where(n => SelectedSubtreeNodeKeys.Contains(n.NodeKey))
+                    .ToList();
+
+                if (subtreeNodes.Count > 1)
+                {
+                    var stMinX = subtreeNodes.Min(n => n.X) - 22;
+                    var stMaxX = subtreeNodes.Max(n => n.X) + 22;
+                    var stMinY = subtreeNodes.Min(n => n.Y) - 22;
+                    var stMaxY = subtreeNodes.Max(n => n.Y) + 22;
+
+                    <rect x="@Fmt(stMinX)" y="@Fmt(stMinY)"
+                          width="@Fmt(stMaxX - stMinX)" height="@Fmt(stMaxY - stMinY)"
+                          rx="12" fill="#dbeafe" fill-opacity="0.22"
+                          stroke="#93c5fd" stroke-width="1.2" stroke-opacity="0.5"
+                          pointer-events="none" />
+                }
+            }
+
+            @* ── Links ──────────────────────────────────────── *@
+            @foreach (var link in Layout.Links)
+            {
+                if (!nodeByKey.TryGetValue(link.SourceNodeKey, out var src) ||
+                    !nodeByKey.TryGetValue(link.TargetNodeKey, out var tgt))
+                    continue;
+
+                var linkInSubtree = SelectedSubtreeNodeKeys.Contains(link.SourceNodeKey)
+                    && SelectedSubtreeNodeKeys.Contains(link.TargetNodeKey);
+                var linkTouchesSelection = IsElementSelected(link.SourceNodeKey)
+                    || IsElementSelected(link.TargetNodeKey);
+                var linkTouchesFocus = IsFocusElement(link.SourceNodeKey)
+                    || IsFocusElement(link.TargetNodeKey);
+
+                var linkStroke = linkTouchesFocus ? "#1d4ed8"
+                    : linkInSubtree ? "#3b82f6"
+                    : linkTouchesSelection ? "#64748b"
+                    : link.IsParentChild ? "#94a3b8" : "#cbd5e1";
+                var linkWidth = linkTouchesFocus ? "2.4"
+                    : linkInSubtree ? "2.0"
+                    : linkTouchesSelection ? "1.6"
+                    : link.IsParentChild ? "1.3" : "1.0";
+                var linkOpacity = hasAnySelection && !linkInSubtree && !linkTouchesSelection && !linkTouchesFocus
+                    ? "0.15" : linkInSubtree ? "0.9" : "0.65";
+                var linkDash = link.IsParentChild ? "" : "5 3";
+
+                @* Subtree highlight underlay for focused links *@
+                @if (linkInSubtree && linkTouchesFocus)
+                {
+                    <line x1="@Fmt(src.X)" y1="@Fmt(src.Y)"
+                          x2="@Fmt(tgt.X)" y2="@Fmt(tgt.Y)"
+                          stroke="#93c5fd" stroke-width="6" stroke-opacity="0.25"
+                          stroke-linecap="round" pointer-events="none" />
+                }
+
+                <line x1="@Fmt(src.X)" y1="@Fmt(src.Y)"
+                      x2="@Fmt(tgt.X)" y2="@Fmt(tgt.Y)"
+                      stroke="@linkStroke" stroke-width="@linkWidth"
+                      stroke-opacity="@linkOpacity" stroke-linecap="round"
+                      stroke-dasharray="@linkDash"
+                      pointer-events="none" />
+            }
+
+            @* ── Nodes ──────────────────────────────────────── *@
+            @foreach (var node in Layout.Nodes)
+            {
+                var isFocus = IsFocusElement(node.NodeKey);
+                var isSelected = IsElementSelected(node.NodeKey);
+                var isSubtree = SelectedSubtreeNodeKeys.Contains(node.NodeKey);
+                var cx = node.X;
+                var cy = node.Y;
+                var layer = node.Layer;
+
+                // Node sizing by layer
+                var radius = layer switch
+                {
+                    SchematicNodeLayerV2.Backbone => 19.0,
+                    SchematicNodeLayerV2.Zone => 17.0,
+                    SchematicNodeLayerV2.Utility => 17.0,
+                    SchematicNodeLayerV2.Distribution => 14.0,
+                    _ => 12.0
+                };
+
+                // Symbol
+                var symbol = GetNodeSymbol(node);
+                var symbolFontSize = symbol.Length > 2 ? "8.5" : "10.5";
+
+                // Colors
+                NodeDeviationSeverity? alertSeverity = null;
+                if (IsEnergyAlertNode(node.NodeKey)
+                    && FacilityNodeAlertSeverities.TryGetValue(node.NodeKey, out var sev))
+                {
+                    alertSeverity = sev;
+                }
+
+                var (fillColor, strokeColor, textColor) = GetNodePalette(alertSeverity);
+                if (alertSeverity is null)
+                    strokeColor = GetLayerAccent(layer);
+
+                var labelColor = node.HasChildren ? "#0f172a" : "#334155";
+                var labelWeight = node.HasChildren ? "640" : "560";
+                var nodeOpacity = 1.0;
+                var labelOpacity = 1.0;
+
+                // Selection state styling
+                if (hasAnySelection && !isSelected && !isFocus && !isSubtree)
+                {
+                    nodeOpacity = 0.35;
+                    labelOpacity = 0.4;
+                }
+
+                if (isSubtree && !isSelected && !isFocus)
+                {
+                    // Structural zone anchors in the subtree path are highlighted more strongly
+                    // (they have children) so the root of the selected subtree is clearly visible.
+                    if (node.HasChildren)
+                    {
+                        fillColor = "#93c5fd";   // medium blue — zone anchor
+                        strokeColor = "#1d4ed8";
+                        textColor = "#1e3a8a";
+                        labelColor = "#1d4ed8";
+                        labelWeight = "700";
+                    }
+                    else
+                    {
+                        fillColor = "#dbeafe";
+                        strokeColor = "#3b82f6";
+                        textColor = "#1e40af";
+                        labelColor = "#1d4ed8";
+                        labelWeight = "640";
+                    }
+                }
+
+                if (isSelected && !isFocus)
+                {
+                    fillColor = alertSeverity is null ? "#2563eb" : fillColor;
+                    textColor = alertSeverity is null ? "white" : textColor;
+                    strokeColor = "#1d4ed8";
+                    labelColor = "#1e3a8a";
+                    labelWeight = "680";
+                }
+
+                if (isFocus)
+                {
+                    fillColor = alertSeverity is null ? "#1d4ed8" : fillColor;
+                    textColor = alertSeverity is null ? "white" : textColor;
+                    strokeColor = "#0b3ea9";
+                    labelColor = "#0f2f7a";
+                    labelWeight = "720";
+                }
+
+                // Halo for selected/focused/subtree nodes
+                var showHalo = isSelected || isFocus || isSubtree;
+                var haloRadius = radius + (isFocus ? 6 : isSelected ? 5 : (isSubtree && node.HasChildren ? 4 : 3));
+                var haloStroke = isFocus ? "#1d4ed8" : isSelected ? "#93c5fd" : (isSubtree && node.HasChildren ? "#2563eb" : "#dbeafe");
+                var haloStrokeWidth = isFocus ? "3.5" : isSelected ? "2.8" : (isSubtree && node.HasChildren ? "2.2" : "1.5");
+                var haloFill = isFocus ? "#dbeafe" : "none";
+                var haloFillOpacity = isFocus ? "0.4" : "0";
+
+                var labelText = TruncateLabel(node.Label ?? node.NodeKey, node.Layer);
+                var labelFontSize = node.Layer switch
+                {
+                    SchematicNodeLayerV2.Backbone => "10",
+                    SchematicNodeLayerV2.Zone => "9.5",
+                    SchematicNodeLayerV2.Utility => "9",
+                    SchematicNodeLayerV2.Distribution => "8",
+                    _ => "7.5"
+                };
+                var labelY = cy + radius + 13;
+
+                <g data-node-key="@node.NodeKey"
+                   data-node-x="@Fmt(cx)"
+                   data-node-y="@Fmt(cy)"
+                   opacity="@Fmt(nodeOpacity)"
+                   style="cursor: pointer;">
+
+                    <title>@($"{labelText} ({node.NodeType ?? "node"})")</title>
+
+                    @* Halo *@
+                    @if (showHalo)
+                    {
+                        <circle cx="@Fmt(cx)" cy="@Fmt(cy)" r="@Fmt(haloRadius)"
+                                fill="@haloFill" fill-opacity="@haloFillOpacity"
+                                stroke="@haloStroke" stroke-width="@haloStrokeWidth"
+                                pointer-events="none" />
+                    }
+
+                    @* Node circle *@
+                    <circle cx="@Fmt(cx)" cy="@Fmt(cy)" r="@Fmt(radius)"
+                            fill="@fillColor" stroke="@strokeColor"
+                            stroke-width="@(isFocus ? "3.5" : isSelected ? "2.8" : "1.8")" />
+
+                    @* Symbol *@
+                    @((MarkupString)$"<text x=\"{Fmt(cx)}\" y=\"{Fmt(cy + 4)}\" text-anchor=\"middle\" font-size=\"{symbolFontSize}\" font-weight=\"700\" fill=\"{textColor}\" pointer-events=\"none\">{EscapeXml(symbol)}</text>")
+
+                    @* Label *@
+                    @((MarkupString)$"<text x=\"{Fmt(cx)}\" y=\"{Fmt(labelY)}\" text-anchor=\"middle\" font-size=\"{labelFontSize}\" font-weight=\"{labelWeight}\" fill=\"{labelColor}\" pointer-events=\"none\" opacity=\"{Fmt(labelOpacity)}\">{EscapeXml(labelText)}</text>")
+                </g>
+            }
+        }
+        else
+        {
+            @* Empty state *@
+            @((MarkupString)"<text x=\"200\" y=\"145\" text-anchor=\"middle\" font-size=\"14\" fill=\"#94a3b8\" pointer-events=\"none\">Žádná facility data</text>")
+            @((MarkupString)"<text x=\"200\" y=\"165\" text-anchor=\"middle\" font-size=\"11\" fill=\"#cbd5e1\" pointer-events=\"none\">Importujte nebo načtěte facility</text>")
+        }
+    </g>
+</svg>
+
+@code {
+    [Parameter] public SchematicLayoutV2? Layout { get; set; }
+    [Parameter] public string? SelectedElementId { get; set; }
+    [Parameter] public IReadOnlySet<string> SelectedElementIds { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    [Parameter] public IReadOnlySet<string> SelectedSubtreeNodeKeys { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    [Parameter] public IReadOnlyDictionary<string, NodeDeviationSeverity> FacilityNodeAlertSeverities { get; set; } = new Dictionary<string, NodeDeviationSeverity>();
+    /// <summary>Controls the initial fit behavior: "home" (default, root-centric), "focus", "edit".</summary>
+    [Parameter] public string InitialFitMode { get; set; } = "home";
+
+    [Parameter] public EventCallback<(string Id, EditorSelectionType Type)> OnElementSelected { get; set; }
+    [Parameter] public EventCallback<(double X, double Y)> OnCanvasClicked { get; set; }
+
+    private readonly string _svgId = "schematic-v2-svg";
+    private DotNetObjectReference<FacilitySchematicV2>? _dotNetRef;
+    private bool _jsInitialized;
+    private bool _isDisposed;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_isDisposed) return;
+
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("editorCanvas.init", _svgId, _dotNetRef);
+                if (_isDisposed)
+                {
+                    await JSRuntime.InvokeVoidAsync("editorCanvas.dispose", _svgId);
+                    return;
+                }
+                await JSRuntime.InvokeVoidAsync("editorCanvas.setTool", "Select");
+                await JSRuntime.InvokeVoidAsync("editorCanvas.setFloorBounds",
+                    Layout?.CanvasWidth ?? 400, Layout?.CanvasHeight ?? 300);
+                if (InitialFitMode == "home")
+                    await JSRuntime.InvokeVoidAsync("editorCanvas.goHome");
+                else
+                    await JSRuntime.InvokeVoidAsync("editorCanvas.fitToView", InitialFitMode);
+                _jsInitialized = true;
+            }
+            catch { /* component may have been disposed during render */ }
+            return;
+        }
+
+        if (!_jsInitialized || _isDisposed) return;
+
+        await JSRuntime.InvokeVoidAsync("editorCanvas.setFloorBounds",
+            Layout?.CanvasWidth ?? 400, Layout?.CanvasHeight ?? 300);
+        await JSRuntime.InvokeVoidAsync("editorCanvas.reapplyTransform");
+    }
+
+    // ── JSInvokable — called by editorCanvas.js ──────────────────────────
+
+    [JSInvokable]
+    public Task JsOnRoomDrawn(double x, double y, double width, double height) => Task.CompletedTask;
+
+    [JSInvokable]
+    public Task JsOnDeviceDragEnd(string deviceId, double x, double y) => Task.CompletedTask;
+
+    [JSInvokable]
+    public Task JsOnFacilityNodeDragEnd(string nodeKey, double x, double y) => Task.CompletedTask;
+
+    [JSInvokable]
+    public async Task JsOnElementClicked(string id, string typeName)
+    {
+        if (!Enum.TryParse<EditorSelectionType>(typeName, out var type))
+            type = EditorSelectionType.None;
+        await OnElementSelected.InvokeAsync((id, type));
+    }
+
+    [JSInvokable]
+    public async Task JsOnCanvasClicked(double x, double y) =>
+        await OnCanvasClicked.InvokeAsync((x, y));
+
+    [JSInvokable]
+    public Task JsOnDeleteClicked(string id, string typeName) => Task.CompletedTask;
+
+    [JSInvokable]
+    public Task JsOnKeyboardShortcut(string shortcut) => Task.CompletedTask;
+
+    // ── Helpers ──────────────────────────────────────────────────────────
+
+    public async Task ResetViewAsync()
+    {
+        if (_jsInitialized && !_isDisposed)
+            await JSRuntime.InvokeVoidAsync("editorCanvas.resetView");
+    }
+
+    private bool IsFocusElement(string key) =>
+        !string.IsNullOrEmpty(SelectedElementId)
+        && string.Equals(SelectedElementId, key, StringComparison.OrdinalIgnoreCase);
+
+    private bool IsElementSelected(string key) =>
+        IsFocusElement(key) || SelectedElementIds.Contains(key);
+
+    private static bool IsEnergyAlertNode(string nodeKey) =>
+        nodeKey is "pv_main" or "chp_main" or "cooling_main" or "heating_main";
+
+    private static string GetNodeSymbol(SchematicNodeLayoutV2 node)
+    {
+        var type = node.NodeType?.Trim().ToLowerInvariant();
+        return type switch
+        {
+            "grid" or "site" or "building" => "g",
+            "transformer" => "t",
+            "generator_pv" => "g",
+            "generator_chp" => "g",
+            "utility_cooling" => "u",
+            "utility_heating" => "h",
+            "zone" => "z",
+            "subzone" => "s",
+            "server" => "s",
+            "ventilation" => "v",
+            "test" => "t",
+            "simulation" => "s",
+            "hvac_branch" => "h",
+            "cooling_branch" => "c",
+            "office_branch" => "o",
+            _ => node.HasChildren ? "s" : "s"
+        };
+    }
+
+    private static (string Fill, string Stroke, string Text) GetNodePalette(NodeDeviationSeverity? severity) =>
+        severity switch
+        {
+            NodeDeviationSeverity.High => ("#f87171", "#b91c1c", "white"),
+            NodeDeviationSeverity.Elevated => ("#fcd34d", "#b45309", "#1f2937"),
+            _ => ("#f1f5f9", "#475569", "#334155")
+        };
+
+    private static string GetLayerAccent(SchematicNodeLayerV2 layer) =>
+        layer switch
+        {
+            SchematicNodeLayerV2.Backbone => "#1e40af",
+            SchematicNodeLayerV2.Utility => "#0f766e",
+            SchematicNodeLayerV2.Zone => "#475569",
+            SchematicNodeLayerV2.Distribution => "#6b7280",
+            _ => "#94a3b8"
+        };
+
+    private static string Fmt(double v) =>
+        v.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    private static string EscapeXml(string? s) =>
+        string.IsNullOrEmpty(s) ? "" :
+        s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;");
+
+    private static string TruncateLabel(string label, SchematicNodeLayerV2 layer)
+    {
+        var maxLen = layer switch
+        {
+            SchematicNodeLayerV2.Backbone => 24,
+            SchematicNodeLayerV2.Zone => 18,
+            SchematicNodeLayerV2.Utility => 16,
+            SchematicNodeLayerV2.Distribution => 14,
+            _ => 12
+        };
+        return label.Length <= maxLen ? label : label[..(maxLen - 1)] + "…";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _isDisposed = true;
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("editorCanvas.dispose", _svgId);
+        }
+        catch { }
+        _dotNetRef?.Dispose();
+        _dotNetRef = null;
+    }
+}

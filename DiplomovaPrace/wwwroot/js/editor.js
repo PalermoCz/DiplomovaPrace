@@ -399,6 +399,113 @@ window.editorCanvas = (function () {
             applyTransform();
         },
 
+        /**
+         * Fit-to-view: compute initial transform so the content group's bounding box
+         * is centered and scaled to fill the SVG viewport with some padding.
+         *
+         * For SVGs without a viewBox (screen-pixel coordinate space):
+         *   - uses getBoundingClientRect() for actual container dimensions
+         *   - for wide tree layouts (aspect ratio > 2:1): fills width, top-aligns
+         *   - for square/portrait layouts: fits entirely with center alignment
+         *
+         * For SVGs with a viewBox (legacy floor editor):
+         *   - uses viewBox dimensions as target space (backward compatible)
+         */
+        fitToView: function (mode) {
+            mode = mode || 'default';
+            var svg = getSvg();
+            var g = getContent();
+            if (!svg || !g) return;
+            var bbox = g.getBBox();
+            if (bbox.width < 1 || bbox.height < 1) return;
+            var vb = svg.viewBox.baseVal;
+            var hasViewBox = vb && vb.width > 1;
+            var vw, vh;
+            if (hasViewBox) {
+                vw = vb.width;
+                vh = vb.height;
+            } else {
+                var rect = svg.getBoundingClientRect();
+                vw = rect.width > 10 ? rect.width : 800;
+                vh = rect.height > 10 ? rect.height : 600;
+            }
+            var pad = 28;
+            var scaleX = (vw - pad * 2) / bbox.width;
+            var scaleY = (vh - pad * 2) / bbox.height;
+            var scale;
+            var contentAspect = bbox.width / bbox.height;
+
+            if (mode === 'focus') {
+                // Focus mode: fit entire tree centered with generous padding
+                var focusPad = 36;
+                var focusScaleX = (vw - focusPad * 2) / bbox.width;
+                var focusScaleY = (vh - focusPad * 2) / bbox.height;
+                scale = Math.min(focusScaleX, focusScaleY);
+                pad = focusPad;
+            } else if (mode === 'edit') {
+                // Edit mode: slightly more padding, fit-center
+                var editPad = 40;
+                var editScaleX = (vw - editPad * 2) / bbox.width;
+                var editScaleY = (vh - editPad * 2) / bbox.height;
+                scale = Math.min(editScaleX, editScaleY);
+                pad = editPad;
+            } else {
+                // Default dashboard: wide trees fill width (top-align), others fit-center
+                if (!hasViewBox && contentAspect > 2.0) {
+                    scale = scaleX;
+                } else {
+                    scale = Math.min(scaleX, scaleY);
+                }
+            }
+
+            if (scale > 2.5) scale = 2.5;
+            var tx = pad + (vw - pad * 2 - bbox.width * scale) / 2 - bbox.x * scale;
+            var ty;
+            if (mode === 'default' && !hasViewBox && contentAspect > 2.0) {
+                // Top-align for wide tree: show root nodes at top
+                ty = pad - bbox.y * scale;
+            } else {
+                ty = pad + (vh - pad * 2 - bbox.height * scale) / 2 - bbox.y * scale;
+            }
+            _transform = { tx: tx, ty: ty, scale: scale };
+            applyTransform();
+        },
+
+        /**
+         * goHome — root-centric view: fit tree to width with top-align bias,
+         * then apply a zoom-in factor so root nodes are clearly visible.
+         * Called on initial render and by the Home button.
+         */
+        goHome: function () {
+            var svg = getSvg();
+            var g = getContent();
+            if (!svg || !g) return;
+            var bbox = g.getBBox();
+            if (bbox.width < 1 || bbox.height < 1) return;
+            var vb = svg.viewBox.baseVal;
+            var hasViewBox = vb && vb.width > 1;
+            var vw, vh;
+            if (hasViewBox) {
+                vw = vb.width; vh = vb.height;
+            } else {
+                var rect = svg.getBoundingClientRect();
+                vw = rect.width > 10 ? rect.width : 800;
+                vh = rect.height > 10 ? rect.height : 600;
+            }
+            var pad = 20;
+            // Fit to width first
+            var scaleX = (vw - pad * 2) / bbox.width;
+            // Apply a zoom factor so root area is clearly visible; cap at 1.8 for legibility
+            var scale = Math.min(scaleX * 1.65, 1.8);
+            if (scale < 0.35) scale = 0.35;
+            // Center horizontally
+            var tx = pad + (vw - pad * 2 - bbox.width * scale) / 2 - bbox.x * scale;
+            // Top-align so root node shows at top
+            var ty = pad - bbox.y * scale;
+            _transform = { tx: tx, ty: ty, scale: scale };
+            applyTransform();
+        },
+
         /** Volá se z OnAfterRenderAsync — Blazor nemění transform, ale jen pro jistotu znovu aplikujeme. */
         reapplyTransform: function () { applyTransform(); },
 

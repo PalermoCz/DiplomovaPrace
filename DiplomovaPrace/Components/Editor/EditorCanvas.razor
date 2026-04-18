@@ -514,7 +514,7 @@
         return Floor?.ViewBoxWidth ?? 800;
     } }
     private double ViewBoxHeight { get {
-        if (Facility != null) return 440;
+        if (Facility != null) return 520;
         return Floor?.ViewBoxHeight ?? 300;
     } }
 
@@ -897,8 +897,8 @@
         var sourceIsUtility = IsUtilityBranchNodeType(sourceNode);
         var targetIsUtility = IsUtilityBranchNodeType(targetNode);
 
-        var utilityBusY = ViewBoxHeight * 0.29;
-        var areaBusY = ViewBoxHeight * 0.38;
+        var utilityBusY = ViewBoxHeight * 0.27;
+        var areaBusY = ViewBoxHeight * 0.30;
 
         if (!string.IsNullOrWhiteSpace(sourceArea)
             && string.Equals(sourceArea, targetArea, StringComparison.OrdinalIgnoreCase)
@@ -972,16 +972,16 @@
             var maxY = coordinates.Max(point => point.Y);
 
             var minWidth = areaGroup.Key.Equals("offices", StringComparison.OrdinalIgnoreCase)
-                ? width * 0.3
-                : width * 0.68;
+                ? width * 0.24
+                : width * 0.50;
             var minHeight = areaGroup.Key.Equals("offices", StringComparison.OrdinalIgnoreCase)
-                ? height * 0.2
-                : height * 0.26;
+                ? height * 0.14
+                : height * 0.14;
             var horizontalPadding = areaGroup.Key.Equals("offices", StringComparison.OrdinalIgnoreCase)
-                ? width * 0.035
-                : width * 0.065;
-            var verticalPaddingTop = height * 0.052;
-            var verticalPaddingBottom = height * 0.045;
+                ? width * 0.028
+                : width * 0.044;
+            var verticalPaddingTop = height * 0.028;
+            var verticalPaddingBottom = height * 0.028;
 
             var areaX = Math.Max(20, (minX * width) - horizontalPadding);
             var areaY = Math.Max(58, (minY * height) - verticalPaddingTop);
@@ -990,7 +990,7 @@
 
             var maxWidth = (width - 24) - areaX;
             areaWidth = Math.Max(220, Math.Min(areaWidth, maxWidth));
-            areaHeight = Math.Min(areaHeight, Math.Min(280, height * 0.48));
+            areaHeight = Math.Min(areaHeight, Math.Min(200, height * 0.36));
 
             blocks.Add(new FacilityAreaBlock(areaGroup.Key, label, fill, stroke, areaX, areaY, areaWidth, areaHeight, order));
         }
@@ -1020,10 +1020,10 @@
         var minY = backboneNodes.Min(node => node.YHint!.Value * height);
         var maxY = backboneNodes.Max(node => node.YHint!.Value * height);
 
-        var x = Math.Max(16, minX - 78);
-        var y = Math.Max(18, minY - 44);
-        var bandWidth = Math.Max(width * 0.82, (maxX - minX) + 176);
-        var bandHeight = Math.Max(height * 0.16, (maxY - minY) + 94);
+        var x = Math.Max(14, minX - 52);
+        var y = Math.Max(14, minY - 30);
+        var bandWidth = Math.Max(width * 0.80, (maxX - minX) + 126);
+        var bandHeight = Math.Max(50, (maxY - minY) + 64);
 
         if (x + bandWidth > width - 12)
         {
@@ -1283,10 +1283,10 @@
 
         if (isBackboneNode)
         {
-            var transformerLower = string.Equals(node.NodeType, "transformer", StringComparison.OrdinalIgnoreCase)
-                && normalizedX > 0.58
-                && normalizedX < 0.79;
-            if (transformerLower)
+            // Transformer: alternate labels above/below to reduce crowding
+            var transformerBelow = string.Equals(node.NodeType, "transformer", StringComparison.OrdinalIgnoreCase)
+                && normalizedX >= 0.38 && normalizedX < 0.79;
+            if (transformerBelow)
             {
                 var y = cy + nodeSize + 16;
                 var boxX = cx - (labelWidth / 2) - 4;
@@ -1294,6 +1294,16 @@
             }
 
             var upperY = cy - nodeSize - 10;
+            // Edge-aware: prevent right overflow for right-side backbone nodes
+            if (normalizedX > 0.72)
+            {
+                return new LabelPlacement(cx, upperY, "end", cx - labelWidth - 8, cy - nodeSize - 21);
+            }
+            // Edge-aware: prevent left overflow for ext_grid at far left
+            if (normalizedX < 0.16)
+            {
+                return new LabelPlacement(cx + nodeSize + 6, upperY, "start", cx + nodeSize + 2, cy - nodeSize - 21);
+            }
             var upperBoxX = cx - (labelWidth / 2) - 4;
             return new LabelPlacement(cx, upperY, "middle", upperBoxX, cy - nodeSize - 21);
         }

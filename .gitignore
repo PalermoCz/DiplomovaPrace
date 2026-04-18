@@ -492,13 +492,8 @@ $RECYCLE.BIN/
 # Vim temporary swap files
 *.swp
 
-# Blazor / Editor runtime artefakty
-wwwroot/js/
-wwwroot/css/
-
 # ASP.NET Data Protection keys
 .aspnet/
 
-# Codespaces
-.vscode/
+
 

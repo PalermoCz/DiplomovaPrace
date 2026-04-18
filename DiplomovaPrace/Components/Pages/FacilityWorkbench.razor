@@ -1,4 +1,4 @@
-@page "/"
+﻿@page "/"
 @page "/facility"
 @using DiplomovaPrace.Services
 @using DiplomovaPrace.Components.Editor
@@ -14,736 +14,488 @@
 
 <PageTitle>Facility Schematic</PageTitle>
 
-@* Aplikujeme lokální styly pro flexibilitu okna *@
-<style>
-    .facility-workbench {
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-        min-width: 0;
-        overflow-x: hidden;
-        background-color: #f8fafc;
-    }
-    
-    .facility-main {
-        display: flex;
-        flex: 1;
-        min-width: 0;
-        overflow-x: hidden;
-        overflow: hidden;
-    }
-    
-    .facility-canvas-wrapper {
-        flex: 1.35 1 0;
-        min-width: 0;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .facility-properties {
-        flex: 0.95 1 0;
-        min-width: 0;
-        max-width: 47rem;
-        background-color: #ffffff;
-        padding: 1.1rem 1rem;
-        overflow-x: hidden;
-        overflow-y: auto;
-        box-shadow: -2px 0 10px rgba(0,0,0,0.02);
-        display: flex;
-        flex-direction: column;
-    }
-
-    .facility-properties > * {
-        min-width: 0;
-    }
-
-    .overview-grid {
-        display: grid;
-        grid-template-columns: repeat(12, minmax(0, 1fr));
-        gap: 0.55rem;
-        width: 100%;
-        min-width: 0;
-        align-items: start;
-        margin-bottom: 0.55rem;
-    }
-
-    .overview-widget {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 0.75rem;
-        padding: 0.64rem;
-        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
-        min-width: 0;
-        overflow: hidden;
-    }
-
-    .overview-widget-soft {
-        background: #f8fafc;
-    }
-
-    .overview-widget h6 {
-        font-size: 0.82rem;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: #64748b;
-        margin-bottom: 0.45rem;
-    }
-
-    .metric-value {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: #0f172a;
-        line-height: 1.1;
-    }
-
-    .metric-caption {
-        font-size: 0.72rem;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-    }
-
-    .micro-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.35rem 0.5rem;
-    }
-
-    .micro-kpi {
-        border: 1px solid #e2e8f0;
-        border-radius: 0.5rem;
-        padding: 0.45rem 0.5rem;
-        background: #f8fafc;
-    }
-
-    .headline-kpi-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.3rem;
-    }
-
-    .headline-kpi-cell {
-        border: 1px solid #e2e8f0;
-        border-radius: 0.45rem;
-        padding: 0.35rem 0.45rem;
-        background: #f8fafc;
-    }
-
-    .aggregate-status-line {
-        font-size: 0.75rem;
-        color: #64748b;
-        line-height: 1.3;
-    }
-
-    .main-analytics-grid {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 2.3fr);
-        align-items: stretch;
-    }
-
-    .main-kpi-widget {
-        grid-column: 1;
-    }
-
-    .main-chart-widget {
-        grid-column: 2;
-        min-width: 0;
-    }
-
-    .forecast-analytics-grid {
-        grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr);
-        align-items: stretch;
-    }
-
-    .forecast-compare-widget {
-        grid-column: 1;
-        min-width: 0;
-    }
-
-    .forecast-diagnostics-widget {
-        grid-column: 2;
-    }
-
-    .forecast-diagnostics-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-    }
-
-    .forecast-diagnostics-point {
-        font-size: 0.73rem;
-        color: #475569;
-        line-height: 1.3;
-    }
-
-    .operational-intelligence-grid {
-        grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
-        align-items: stretch;
-    }
-
-    .ems-evaluation-grid {
-        grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr);
-        align-items: stretch;
-    }
-
-    .ems-scorecard-list,
-    .ems-inefficiency-list,
-    .ems-opportunity-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.35rem;
-    }
-
-    .ems-scorecard-item,
-    .ems-inefficiency-item,
-    .ems-opportunity-item {
-        border: 1px solid #e2e8f0;
-        border-radius: 0.5rem;
-        padding: 0.42rem 0.5rem;
-        background: #ffffff;
-    }
-
-    .ems-item-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.4rem;
-        margin-bottom: 0.2rem;
-    }
-
-    .ems-item-title {
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: #1e293b;
-    }
-
-    .ems-item-summary {
-        font-size: 0.73rem;
-        color: #475569;
-        line-height: 1.3;
-    }
-
-    .ems-item-meta {
-        font-size: 0.7rem;
-        color: #64748b;
-        line-height: 1.25;
-        margin-top: 0.16rem;
-    }
-
-    .profile-bucket-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.3rem;
-    }
-
-    .profile-bucket-row {
-        display: grid;
-        grid-template-columns: auto 1fr auto;
-        gap: 0.45rem;
-        align-items: center;
-    }
-
-    .profile-bucket-label {
-        font-size: 0.72rem;
-        color: #334155;
-        min-width: 6.5rem;
-    }
-
-    .profile-bucket-track {
-        height: 0.3rem;
-        border-radius: 999px;
-        background: #e2e8f0;
-        overflow: hidden;
-    }
-
-    .profile-bucket-fill {
-        height: 100%;
-        border-radius: inherit;
-        background: linear-gradient(90deg, #10b981 0%, #0284c7 100%);
-    }
-
-    .profile-bucket-value {
-        font-size: 0.72rem;
-        color: #334155;
-        white-space: nowrap;
-    }
-
-    .secondary-widgets-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        align-items: stretch;
-    }
-
-    .secondary-widgets-grid .overview-widget {
-        padding: 0.58rem;
-    }
-
-    .tools-widgets-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        order: 90;
-        margin-top: 0.7rem;
-    }
-
-    .tools-widget {
-        max-height: 20rem;
-        overflow-x: hidden;
-        overflow-y: auto;
-    }
-
-    .tools-widgets-grid-empty .tools-widget {
-        max-height: 14.5rem;
-    }
-
-    .tools-widget .form-select,
-    .tools-widget .form-control,
-    .tools-widget textarea {
-        min-width: 0;
-        width: 100%;
-        max-width: 100%;
-    }
-
-    .tools-widget-section {
-        margin-top: 0.65rem;
-        padding-top: 0.55rem;
-        border-top: 1px solid #e2e8f0;
-    }
-
-    .secondary-breakdown-widget {
-        grid-column: span 2;
-    }
-
-    .secondary-role-widget {
-        grid-column: span 1;
-    }
-
-    .secondary-health-widget {
-        grid-column: span 1;
-    }
-
-    .secondary-coverage-widget {
-        grid-column: span 1;
-    }
-
-    .secondary-compare-widget {
-        grid-column: span 1;
-    }
-
-    .operational-point-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.2rem;
-    }
-
-    .operational-point {
-        font-size: 0.73rem;
-        color: #475569;
-        line-height: 1.3;
-    }
-
-    .interval-widget {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .interval-meta-row {
-        display: flex;
-        flex-direction: column;
-        gap: 0.2rem;
-        margin-bottom: 0.4rem;
-        min-width: 0;
-    }
-
-    .interval-range-text {
-        font-size: 0.78rem;
-        color: #334155;
-        line-height: 1.3;
-        overflow-wrap: anywhere;
-    }
-
-    .interval-custom-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.45rem;
-        margin-top: 0.5rem;
-    }
-
-    .breakdown-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.45rem;
-    }
-
-    .breakdown-item {
-        border: 1px solid #e2e8f0;
-        border-radius: 0.5rem;
-        padding: 0.4rem 0.5rem;
-        background: #ffffff;
-    }
-
-    .breakdown-item-nodata {
-        background: #f8fafc;
-    }
-
-    .breakdown-header-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.5rem;
-        min-width: 0;
-    }
-
-    .breakdown-node-label {
-        font-size: 0.78rem;
-        color: #1e293b;
-        font-weight: 600;
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .breakdown-value-label {
-        font-size: 0.75rem;
-        color: #334155;
-        white-space: nowrap;
-    }
-
-    .role-breakdown-item .breakdown-header-row {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        align-items: center;
-        gap: 0.4rem;
-    }
-
-    .role-breakdown-main {
-        min-width: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0.15rem;
-    }
-
-    .role-breakdown-main .breakdown-node-label {
-        white-space: normal;
-        overflow-wrap: break-word;
-        word-break: normal;
-        line-height: 1.2;
-        max-height: none;
-    }
-
-    .role-breakdown-item .breakdown-value-label {
-        text-align: right;
-        white-space: nowrap;
-        line-height: 1.2;
-        font-size: 0.74rem;
-    }
-
-    .contributor-item {
-        padding: 0.38rem 0.46rem;
-        display: flex;
-        flex-direction: column;
-        gap: 0.24rem;
-    }
-
-    .contributor-top-row {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: 0.42rem;
-        align-items: start;
-    }
-
-    .contributor-main-col {
-        min-width: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0.22rem;
-    }
-
-    .contributor-badges {
-        font-size: 0.69rem;
-        color: #64748b;
-        line-height: 1.25;
-        min-width: 0;
-    }
-
-    .contributor-values {
-        min-width: 0;
-        text-align: right;
-        white-space: nowrap;
-    }
-
-    .contributor-signed-value {
-        font-size: 0.76rem;
-        font-weight: 650;
-        color: #1e293b;
-        line-height: 1.2;
-        white-space: nowrap;
-    }
-
-    .contributor-share {
-        font-size: 0.7rem;
-        color: #64748b;
-        line-height: 1.2;
-        white-space: nowrap;
-    }
-
-    .role-breakdown-item .breakdown-meta {
-        overflow-wrap: anywhere;
-    }
-
-    .contributor-more-list {
-        margin-top: 0.35rem;
-        max-height: 10rem;
-        overflow-y: auto;
-    }
-
-    .secondary-breakdown-widget .breakdown-list,
-    .secondary-role-widget .breakdown-list {
-        max-height: 20rem;
-        overflow-y: auto;
-        padding-right: 0.18rem;
-    }
-
-    .breakdown-meta {
-        font-size: 0.72rem;
-        color: #64748b;
-        line-height: 1.3;
-    }
-
-    .breakdown-bar-track {
-        margin-top: 0.25rem;
-        height: 0.32rem;
-        border-radius: 999px;
-        background: #e2e8f0;
-        overflow: hidden;
-    }
-
-    .breakdown-bar-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #0ea5e9 0%, #0284c7 100%);
-        border-radius: inherit;
-    }
-
-    .chart-widget {
-        min-height: 280px;
-    }
-
-    .min-w-0 {
-        min-width: 0;
-    }
-
-    .empty-selection-callout {
-        border: 1px dashed #94a3b8;
-        background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-        border-radius: 0.75rem;
-        padding: 0.9rem 1rem;
-    }
-
-    .empty-selection-title {
-        font-size: 1rem;
-        font-weight: 700;
-        color: #0f172a;
-        margin-bottom: 0.3rem;
-    }
-
-    .empty-selection-hints {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.35rem 0.7rem;
-        margin-top: 0.45rem;
-        color: #334155;
-        font-size: 0.78rem;
-    }
-
-    .main-chart-widget .card {
-        margin-bottom: 0;
-    }
-
-    .widget-col-2 { grid-column: span 2; }
-    .widget-col-3 { grid-column: span 3; }
-    .widget-col-4 { grid-column: span 4; }
-    .widget-col-6 { grid-column: span 6; }
-    .widget-col-8 { grid-column: span 8; }
-    .widget-col-12 { grid-column: span 12; }
-
-    @@media (max-width: 1400px) {
-        .main-analytics-grid {
-            grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-        }
-
-        .forecast-analytics-grid {
-            grid-template-columns: minmax(0, 1fr);
-        }
-
-        .forecast-compare-widget,
-        .forecast-diagnostics-widget {
-            grid-column: 1;
-            min-width: 0;
-        }
-
-        .operational-intelligence-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .ems-evaluation-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .secondary-widgets-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .tools-widgets-grid {
-            grid-template-columns: minmax(0, 1fr);
-        }
-
-        .tools-widget {
-            max-height: none;
-        }
-
-        .secondary-breakdown-widget,
-        .secondary-coverage-widget {
-            grid-column: span 2;
-        }
-
-        .secondary-role-widget,
-        .secondary-health-widget,
-        .secondary-compare-widget {
-            grid-column: span 1;
-        }
-
-        .interval-custom-grid {
-            grid-template-columns: minmax(0, 1fr);
-        }
-
-        .widget-col-2,
-        .widget-col-3,
-        .widget-col-4,
-        .widget-col-6 {
-            grid-column: span 6;
-        }
-
-        .widget-col-8,
-        .widget-col-12 {
-            grid-column: span 12;
-        }
-    }
-
-    @@media (max-width: 1100px) {
-        .facility-canvas-wrapper,
-        .facility-properties {
-            flex: 1 1 0;
-            max-width: none;
-        }
-
-        .main-analytics-grid,
-        .secondary-widgets-grid,
-        .tools-widgets-grid,
-        .forecast-analytics-grid,
-        .operational-intelligence-grid,
-        .ems-evaluation-grid {
-            grid-template-columns: minmax(0, 1fr);
-        }
-
-        .main-kpi-widget,
-        .main-chart-widget,
-        .forecast-compare-widget,
-        .forecast-diagnostics-widget,
-        .secondary-role-widget,
-        .secondary-health-widget,
-        .secondary-coverage-widget,
-        .secondary-compare-widget,
-        .secondary-breakdown-widget {
-            grid-column: 1;
-        }
-
-        .main-chart-widget {
-            min-width: 0;
-        }
-    }
-
-    @@media (max-width: 900px) {
-        .empty-selection-hints {
-            grid-template-columns: minmax(0, 1fr);
-        }
-
-        .widget-col-2,
-        .widget-col-3,
-        .widget-col-4,
-        .widget-col-6,
-        .widget-col-8,
-        .widget-col-12 {
-            grid-column: span 12;
-        }
-    }
-</style>
+@* Layout CSS is in FacilityWorkbench.razor.css (scoped) *@
 
 <div class="facility-workbench">
-    @* ── Hlavní část ──────────────────────────────────────────────────── *@
-    <div class="facility-main position-relative">
-        
-        @* Levá část: Canvas *@
-        <div class="facility-canvas-wrapper @(_isSchematicHidden ? "d-none" : "d-flex flex-column")" style="border-right: 1px solid #e2e8f0;">
-            <div class="bg-white border-bottom px-3 py-2 d-flex justify-content-between align-items-center" style="z-index: 10;">
-                <span class="text-muted fw-bold small text-uppercase"><i class="bi bi-bezier2 me-1"></i> Facility Schéma</span>
-                <button class="btn btn-sm btn-light border d-flex align-items-center text-secondary shadow-sm" @onclick="() => ReloadData()">
-                    <i class="bi bi-arrow-clockwise me-1"></i> Znovu načíst schéma
-                </button>
-            </div>
-            
-            <div class="flex-grow-1 position-relative">
-                @if (_facility is null)
-                {
-                    <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
-                        <div class="spinner-border mb-3" role="status"></div>
-                        <p class="mb-0">Načítám strukturní data...</p>
+
+    @* ══ FOCUS MODE OVERLAY ══════════════════════════════════════ *@
+    @if (_isSchematicFullscreen)
+    {
+        <div class="wb-focus-overlay">
+            <div class="wb-schematic">
+                <div class="wb-schematic-toolbar">
+                    <div class="toolbar-left">
+                        <span class="text-muted fw-bold small text-uppercase"><i class="bi bi-bezier2 me-1"></i> Facility Schéma</span>
+                        <span class="badge bg-secondary-subtle text-secondary border"><i class="bi bi-arrows-fullscreen me-1"></i>Focus</span>
                     </div>
-                }
-                else
-                {
-                    <EditorCanvas @ref="_canvas"
-                                  Facility="_facility"
-                                  ActiveTool="@SessionService.ActiveTool"
-                                  SelectedElementId="@SessionService.SelectedElementId"
-                                  SelectedElementIds="@_selectionSet"
-                                  SelectedSubtreeNodeKeys="@SelectedSubtreeNodeKeysForCanvas"
-                                  FacilityNodeAlertSeverities="@AlertSeverityByNodeKey"
-                                  EnableFacilityNodeDrag="@_isSchematicEditorEnabled"
-                                  ShowGrid="false"
-                                  OnElementSelected="HandleElementSelected"
-                                  OnCanvasClicked="HandleCanvasClicked"
-                                  OnFacilityNodeMoved="HandleFacilityNodeMovedAsync" />
-                }
+                    <div class="toolbar-right">
+                        <button class="wb-toolbar-icon-btn" @onclick="GoHomeAsync"
+                                title="Domů – výchozí pohled" disabled="@(_canvasV2 is null)">
+                            <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354z"/></svg>
+                        </button>
+                        <button class="wb-toolbar-icon-btn" @onclick="() => ReloadData()" title="Znovu načíst schéma">
+                            <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></svg>
+                        </button>
+                        <button class="wb-toolbar-icon-btn"
+                                @onclick="ToggleSchematicFullscreen" title="Zavřít focus – zpět do workbench">
+                            <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5.5 0a.5.5 0 0 1 .5.5v4A1.5 1.5 0 0 1 4.5 6h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5m5 0a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 10 4.5v-4a.5.5 0 0 1 .5-.5M0 10.5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 6 11.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5m10 1a1.5 1.5 0 0 1 1.5-1.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0z"/></svg>
+                        </button>
+                        <button class="wb-toolbar-icon-btn wb-toolbar-icon-btn-primary"
+                                @onclick="ToggleEditMode" title="Upravit schéma" disabled="@(_facility is null)">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="wb-schematic-body">
+                    @if (_facility is null)
+                    {
+                        <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
+                            <div class="spinner-border mb-3" role="status"></div>
+                            <p class="mb-0">Načítám strukturní data...</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <FacilitySchematicV2 @ref="_canvasV2"
+                                      Layout="_schematicLayout"
+                                      InitialFitMode="focus"
+                                      SelectedElementId="@SessionService.SelectedElementId"
+                                      SelectedElementIds="@_selectionSet"
+                                      SelectedSubtreeNodeKeys="@SelectedSubtreeNodeKeysForCanvas"
+                                      FacilityNodeAlertSeverities="@AlertSeverityByNodeKey"
+                                      OnElementSelected="HandleElementSelected"
+                                      OnCanvasClicked="HandleCanvasClicked" />
+                    }
+                </div>
             </div>
         </div>
-        
-        @* Pravá část: Widget-based overview panel *@
-        @{
-            var hasFocusNode = SessionService.SelectedElementType == EditorSelectionType.FacilityNode && _selectedFacilityNode is not null;
-            var weatherSummary = _curatedDeviationData?.WeatherExplanation;
-        }
-        <div class="facility-properties @(hasFocusNode ? string.Empty : "bg-light")">
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-3 border-bottom">
-                <h5 class="mb-0 fw-bold">Workspace Overview</h5>
-                <div class="d-flex flex-wrap align-items-center justify-content-end gap-2">
-                    <button class="btn btn-sm btn-outline-secondary d-flex align-items-center bg-light px-3 fw-medium" @onclick="ToggleSchematic">
-                        <i class="bi @(_isSchematicHidden ? "bi-layout-split" : "bi-arrows-fullscreen") me-1"></i>
-                        @(_isSchematicHidden ? "Zobrazit schéma" : "Maximalizovat detail")
-                    </button>
-                    <button class="btn btn-sm d-flex align-items-center fw-medium @(_isSchematicEditorEnabled ? "btn-primary" : "btn-outline-primary")"
-                            @onclick="ToggleSchematicEditorMode"
-                            disabled="@(_facility is null)">
-                        <i class="bi @(_isSchematicEditorEnabled ? "bi-pencil-square" : "bi-pencil") me-1"></i>
-                        @(_isSchematicEditorEnabled ? "Editor zapnut" : "Zapnout editor")
-                    </button>
-                    @if (hasFocusNode)
-                    {
-                        <button class="btn btn-sm btn-light border shadow-sm text-secondary px-3 fw-medium" @onclick="ClosePanel" title="Zavřít focus uzel">
-                            <i class="bi bi-x-lg me-1"></i> Zrušit focus
+    }
+    @* ══ EDIT MODE OVERLAY ═══════════════════════════════════════ *@
+    else if (_isEditModeOpen)
+    {
+        <div class="wb-editor-overlay">
+            @* Canvas area *@
+            <div class="wb-schematic">
+                <div class="wb-schematic-toolbar">
+                    <div class="toolbar-left">
+                        <span class="text-muted fw-bold small text-uppercase"><i class="bi bi-bezier2 me-1"></i> Facility Schéma</span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle"><i class="bi bi-pencil-fill me-1"></i>Edit Mode</span>
+                    </div>
+                    <div class="toolbar-right">
+                        <button class="wb-toolbar-icon-btn" @onclick="GoHomeAsync"
+                                title="Výchozí pohled" disabled="@(_canvasV2 is null)">
+                            <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354z"/></svg>
                         </button>
+                        <button class="wb-toolbar-icon-btn" @onclick="() => ReloadData()" title="Znovu načíst schéma">
+                            <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="wb-schematic-body">
+                    @if (_facility is null)
+                    {
+                        <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
+                            <div class="spinner-border mb-3" role="status"></div>
+                            <p class="mb-0">Načítám strukturní data...</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <FacilitySchematicV2 @ref="_canvasV2"
+                                      Layout="_schematicLayout"
+                                      InitialFitMode="edit"
+                                      SelectedElementId="@SessionService.SelectedElementId"
+                                      SelectedElementIds="@_selectionSet"
+                                      SelectedSubtreeNodeKeys="@SelectedSubtreeNodeKeysForCanvas"
+                                      FacilityNodeAlertSeverities="@AlertSeverityByNodeKey"
+                                      OnElementSelected="HandleElementSelected"
+                                      OnCanvasClicked="HandleCanvasClicked" />
                     }
                 </div>
             </div>
 
-            <div class="overview-grid">
-                <div class="overview-widget widget-col-3">
+            @* Tools Rail — inline SVG ikony jako primární, text label jako fallback *@
+            <div class="wb-editor-rail">
+                @* Přidat uzel — aktivní jen při vybraném editovatelném uzlu *@
+                <button class="wb-toolbar-icon-btn" title="@(_selectedFacilityNode is not null && CanEditFocusedNode ? $"Přidat child uzel pod '{_selectedFacilityNode.Label}'" : "Vyberte editovatelný uzel ve schématu")"
+                        disabled="@(!_isSchematicEditorEnabled || _selectedFacilityNode is null || !CanEditFocusedNode)"
+                        @onclick="ScrollToAddNodeSectionAsync">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 1"/></svg>
+                </button>
+                @* Smazat uzel *@
+                <button class="wb-toolbar-icon-btn wb-toolbar-icon-btn-danger" title="Smazat vybraný leaf uzel"
+                        disabled="@(!_isSchematicEditorEnabled || !CanRemoveFocusedLeafNode)"
+                        @onclick="RemoveFocusedLeafNodeAsync">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg>
+                </button>
+                <div class="rail-divider"></div>
+                @* Reconnect parent *@
+                <button class="wb-toolbar-icon-btn @(_isReconnectMode ? "wb-toolbar-icon-btn-active" : "")" title="@(CanEditFocusedNode ? "Změnit parent vybraného uzlu" : "Vyberte editovatelný uzel pro reconnect")"
+                        disabled="@(!_isSchematicEditorEnabled || !CanEditFocusedNode)"
+                        @onclick="ToggleReconnectModeAndScrollAsync">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M6 3.5A1.5 1.5 0 0 1 7.5 2h1A1.5 1.5 0 0 1 10 3.5v1A1.5 1.5 0 0 1 8.5 6v1H14a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0v-1A.5.5 0 0 1 2 7h5.5V6A1.5 1.5 0 0 1 6 4.5zM8.5 5a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5zM0 11.5A1.5 1.5 0 0 1 1.5 10h1A1.5 1.5 0 0 1 4 11.5v1A1.5 1.5 0 0 1 2.5 14h-1A1.5 1.5 0 0 1 0 12.5zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm4.5.5A1.5 1.5 0 0 1 7.5 10h1a1.5 1.5 0 0 1 1.5 1.5v1A1.5 1.5 0 0 1 8.5 14h-1A1.5 1.5 0 0 1 6 12.5zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm4.5.5a1.5 1.5 0 0 1 1.5-1.5h1a1.5 1.5 0 0 1 1.5 1.5v1a1.5 1.5 0 0 1-1.5 1.5h-1a1.5 1.5 0 0 1-1.5-1.5zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5z"/></svg>
+                </button>
+                <div class="rail-divider"></div>
+                @* Undo — funkční, snapshot-based *@
+                <button class="wb-toolbar-icon-btn"
+                        title="@(_editModeCanUndo ? ("Vrátit zpět: " + (_editUndoStack.Count > 0 ? _editUndoStack[^1].Description : "")) : "Zpět — žádná změna k vrácení")"
+                        disabled="@(!_editModeCanUndo)"
+                        @onclick="UndoEditAsync">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466"/></svg>
+                </button>
+                @* Redo — funkční, snapshot-based *@
+                <button class="wb-toolbar-icon-btn"
+                        title="@(_editModeCanRedo ? ("Znovu provést: " + (_editRedoStack.Count > 0 ? _editRedoStack[^1].Description : "")) : "Znovu — žádná vrácená změna")"
+                        disabled="@(!_editModeCanRedo)"
+                        @onclick="RedoEditAsync">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></svg>
+                </button>
+            </div>
+
+            @* Properties Panel *@
+            <div class="wb-editor-props" id="editor-props-panel">
+                <div class="wb-editor-props-header">
+                    <h5>
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" class="me-2 text-primary" style="flex-shrink:0" aria-hidden="true"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/></svg>Schema Editor
+                    </h5>
+                </div>
+                <div class="wb-editor-props-content">
+
+                @{
+                    var editorHasFocusNode = SessionService.SelectedElementType == EditorSelectionType.FacilityNode && _selectedFacilityNode is not null;
+                }
+
+                @* ── Selected Node Header ── *@
+                @if (editorHasFocusNode)
+                {
+                    <div class="wb-editor-node-name">
+                        @_selectedFacilityNode!.Label
+                        <span class="node-key-sub">@_selectedFacilityNode.NodeKey</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="small text-muted mb-3 p-2 bg-light rounded">
+                        <i class="bi bi-info-circle me-1"></i>Vyberte uzel ve schématu pro editaci.
+                    </div>
+                }
+
+                @* ── Section 1: Metadata ── *@
+                <div class="wb-editor-section" id="editor-metadata-section">
+                    <div class="wb-editor-section-title">Metadata uzlu</div>
+                    @if (editorHasFocusNode && CanEditFocusedNode)
+                    {
+                        <div class="wb-editor-field">
+                            <label>Label / Název</label>
+                            <input class="form-control form-control-sm" @bind="_editorLabelInput" maxlength="200" />
+                            <div class="wb-editor-field-hint">Zobrazovaný název uzlu ve schématu</div>
+                        </div>
+                        <div class="wb-editor-field">
+                            <label>NodeType</label>
+                            <input class="form-control form-control-sm bg-light" value="@(_selectedFacilityNode!.NodeType ?? "—")" readonly />
+                            <div class="wb-editor-field-hint">Typ uzlu — subzone, meter, equipment…</div>
+                        </div>
+                        <div class="wb-editor-field">
+                            <label>Zone</label>
+                            <input class="form-control form-control-sm bg-light" value="@(_selectedFacilityNode.Zone ?? "—")" readonly />
+                            <div class="wb-editor-field-hint">Logická oblast / funkční zóna</div>
+                        </div>
+                        <div class="wb-editor-field" id="editor-reconnect-section">
+                            <label>Parent</label>
+                            <div class="d-flex align-items-center gap-2">
+                                <input class="form-control form-control-sm bg-light flex-grow-1" value="@(_selectedFacilityNode.ParentNodeKey ?? "root")" readonly />
+                                <button class="btn btn-sm btn-outline-primary" @onclick="ToggleReconnectModeAndScrollAsync"
+                                        disabled="@(!_isSchematicEditorEnabled)" title="Změnit parent uzlu">
+                                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M6 3.5A1.5 1.5 0 0 1 7.5 2h1A1.5 1.5 0 0 1 10 3.5v1A1.5 1.5 0 0 1 8.5 6v1H14a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0v-1A.5.5 0 0 1 2 7h5.5V6A1.5 1.5 0 0 1 6 4.5zM8.5 5a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5zM0 11.5A1.5 1.5 0 0 1 1.5 10h1A1.5 1.5 0 0 1 4 11.5v1A1.5 1.5 0 0 1 2.5 14h-1A1.5 1.5 0 0 1 0 12.5zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm4.5.5A1.5 1.5 0 0 1 7.5 10h1a1.5 1.5 0 0 1 1.5 1.5v1A1.5 1.5 0 0 1 8.5 14h-1A1.5 1.5 0 0 1 6 12.5zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm4.5.5a1.5 1.5 0 0 1 1.5-1.5h1a1.5 1.5 0 0 1 1.5 1.5v1a1.5 1.5 0 0 1-1.5 1.5h-1a1.5 1.5 0 0 1-1.5-1.5zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5z"/></svg>
+                                </button>
+                            </div>
+                            <div class="wb-editor-field-hint">Nadřazený uzel — klikni pro změnu</div>
+                        </div>
+
+                        @if (_isReconnectMode)
+                        {
+                            <div class="p-2 border rounded bg-light-subtle mt-2 mb-2">
+                                <div class="small text-muted mb-1">Nový parent pro @_selectedFacilityNode.NodeKey:</div>
+                                <select class="form-select form-select-sm bg-light mb-2" @bind="_reconnectParentNodeKeyInput">
+                                    <option value="">root (bez parentu)</option>
+                                    @foreach (var parentCandidate in GetReconnectParentCandidates(_selectedFacilityNode.NodeKey))
+                                    {
+                                        <option value="@parentCandidate.NodeKey">@parentCandidate.Label (@parentCandidate.NodeKey)</option>
+                                    }
+                                </select>
+                                <button class="btn btn-sm btn-outline-primary" @onclick="ReconnectFocusedNodeAsync">
+                                    <i class="bi bi-check2-circle me-1"></i>Potvrdit reconnect
+                                </button>
+                            </div>
+                        }
+                    }
+                    else if (editorHasFocusNode)
+                    {
+                        <div class="small text-muted">Uzel @_selectedFacilityNode!.NodeKey je kontextový a nelze ho editovat.</div>
+                    }
+                    else
+                    {
+                        <div class="small text-muted">Žádný uzel není vybrán.</div>
+                    }
+                </div>
+
+                @* ── Section 2: Tags ── *@
+                <div class="wb-editor-section">
+                    <div class="wb-editor-section-title">Tagy</div>
+                    @if (editorHasFocusNode && CanEditFocusedNode)
+                    {
+                        @if (!string.IsNullOrWhiteSpace(_editorTagsInput))
+                        {
+                            <div class="wb-tag-list">
+                                @foreach (var tag in _editorTagsInput.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                                {
+                                    <span class="wb-tag"><i class="bi bi-tag-fill me-1" style="font-size: 0.65rem;"></i>@tag</span>
+                                }
+                            </div>
+                        }
+                        <input class="form-control form-control-sm" @bind="_editorTagsInput"
+                               placeholder="např. hvac, maintenance, zone:workshop" />
+                        <div class="small text-muted mt-1">Oddělujte čárkou</div>
+                    }
+                    else
+                    {
+                        <div class="small text-muted">Vyberte editovatelný uzel pro správu tagů.</div>
+                    }
+                </div>
+
+                @* ── Section 3: Poznámka ── *@
+                <div class="wb-editor-section">
+                    <div class="wb-editor-section-title">Poznámka</div>
+                    @if (editorHasFocusNode && CanEditFocusedNode)
+                    {
+                        <textarea class="form-control form-control-sm" rows="2" maxlength="500" @bind="_editorNoteInput" placeholder="Volitelná poznámka k uzlu..."></textarea>
+                    }
+                    else
+                    {
+                        <div class="small text-muted">—</div>
+                    }
+                </div>
+
+                @* ── Section 4: Data Binding Placeholder ── *@
+                <div class="wb-editor-section">
+                    <div class="wb-editor-section-title">Napojení na data</div>
+                    @if (editorHasFocusNode && !string.IsNullOrWhiteSpace(_selectedFacilityNode!.MeterUrn))
+                    {
+                        <div class="wb-editor-field">
+                            <label>Meter URN</label>
+                            <input class="form-control form-control-sm bg-light" value="@_selectedFacilityNode.MeterUrn" readonly />
+                        </div>
+                    }
+                    <div class="wb-editor-placeholder">
+                        <div class="wb-editor-placeholder-icon"><i class="bi bi-database-gear"></i></div>
+                        <div class="wb-editor-placeholder-text">
+                            Napojení na data bude doplněno v pozdějším kroku.
+                            <br /><span class="text-muted" style="font-size: 0.7rem;">External source binding · Import data mapping</span>
+                        </div>
+                    </div>
+                </div>
+
+                @* ── Section 5: Node Actions ── *@
+                <div class="wb-editor-section">
+                    <div class="wb-editor-section-title">Akce uzlu</div>
+                    @if (editorHasFocusNode && CanEditFocusedNode)
+                    {
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <button class="btn btn-sm btn-primary" @onclick="SaveFocusedNodeMetadataAsync" disabled="@(!_isSchematicEditorEnabled)">
+                                <i class="bi bi-save me-1"></i>Uložit metadata
+                            </button>
+                            <button class="btn btn-sm btn-link text-decoration-none p-0" @onclick="RestoreFocusedNodeEditorDraft">
+                                Obnovit draft
+                            </button>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button class="btn btn-sm btn-outline-danger" @onclick="RemoveFocusedLeafNodeAsync"
+                                    disabled="@(!_isSchematicEditorEnabled || !CanRemoveFocusedLeafNode)">
+                                <i class="bi bi-node-minus me-1"></i>Smazat uzel
+                            </button>
+                        </div>
+                    }
+                </div>
+
+                @* ── Section 6: Add Node ── *@
+                <div class="wb-editor-section" id="editor-add-node-section">
+                    <div class="wb-editor-section-title">Přidat nový uzel</div>
+                    @if (_selectedFacilityNode is null || !CanEditFocusedNode)
+                    {
+                        <div class="small text-muted p-2 bg-light rounded">
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" class="me-1" aria-hidden="true"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/><path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/></svg>Vyberte uzel ve schématu — nový uzel se přidá jako jeho child.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="wb-editor-add-parent-preview">
+                            <div class="wb-editor-field-hint mb-1">Parent uzel (automaticky):</div>
+                            <strong>@_selectedFacilityNode!.Label</strong>
+                            <code class="small text-muted d-block">@_selectedFacilityNode.NodeKey</code>
+                        </div>
+                        <div class="wb-editor-field">
+                            <label>NodeKey <span class="text-danger">*</span></label>
+                            <input class="form-control form-control-sm" @bind="_newNodeKeyInput" maxlength="100" placeholder="např. workshop_aux_1" />
+                            <div class="wb-editor-field-hint">Unikátní technický identifikátor — malá písmena, podtržítko</div>
+                        </div>
+                        <div class="wb-editor-field">
+                            <label>Label <span class="text-danger">*</span></label>
+                            <input class="form-control form-control-sm" @bind="_newNodeLabelInput" maxlength="200" placeholder="Zobrazovaný název" />
+                            <div class="wb-editor-field-hint">Název zobrazovaný ve schématu a reportech</div>
+                        </div>
+                        <div class="wb-editor-field d-flex gap-1 align-items-start">
+                            <div class="flex-grow-1">
+                                <label>NodeType</label>
+                                <input class="form-control form-control-sm" @bind="_newNodeTypeInput" maxlength="100" placeholder="subzone" />
+                                <div class="wb-editor-field-hint">Typ uzlu (subzone, meter…)</div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <label>Zone</label>
+                                <input class="form-control form-control-sm" @bind="_newNodeZoneInput" maxlength="100" placeholder="volitelně" />
+                                <div class="wb-editor-field-hint">Logická oblast</div>
+                            </div>
+                        </div>
+                        <div class="wb-editor-field">
+                            <label>Meter URN</label>
+                            <input class="form-control form-control-sm" @bind="_newNodeMeterUrnInput" maxlength="200" placeholder="volitelně" />
+                            <div class="wb-editor-field-hint">Vazba na měřidlo / datový zdroj</div>
+                        </div>
+                        <button class="btn btn-sm btn-primary w-100 mt-1" @onclick="AddNodeAsync" disabled="@(!_isSchematicEditorEnabled)">
+                            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" class="me-1" aria-hidden="true"><path d="M8 1a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 1"/></svg>Přidat child uzel
+                        </button>
+                    }
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(_editorStatusMessage))
+                {
+                    <div class="small text-muted mt-2">@_editorStatusMessage</div>
+                }
+                @if (!string.IsNullOrWhiteSpace(_structureStatusMessage))
+                {
+                    <div class="small text-muted mt-2">@_structureStatusMessage</div>
+                }
+                </div>@* end wb-editor-props-content *@
+
+                @* ── Sticky Footer — akce editoru *@
+                <div class="wb-editor-footer">
+                    @if (EditModeDirty)
+                    {
+                        <div class="wb-editor-footer-status">
+                            <span class="wb-editor-dirty-badge">
+                                <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><circle cx="4" cy="4" r="4"/></svg>
+                                neuložené změny
+                            </span>
+                        </div>
+                    }
+                    <div class="wb-editor-footer-buttons">
+                        <button class="btn-cancel" @onclick="ExitSchematicOverlayAsync" title="Zavřít editor bez uložení">
+                            <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/></svg>Ukončit
+                        </button>
+                        <button class="btn-confirm" @onclick="ConfirmAndExitEditMode" title="Uložit všechny změny a ukončit editor">
+                            <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425z"/></svg>Potvrdit a uložit
+                        </button>
+                    </div>
+                </div>
+            </div>@* end wb-editor-props *@
+
+            @* Discard Guard Dialog — zobrazí se pokud je dirty a uživatel klikne na Ukončit *@
+            @if (_showDiscardGuard)
+            {
+                <div class="wb-discard-guard-overlay" @onclick="() => _showDiscardGuard = false">
+                    <div class="wb-discard-guard-modal" @onclick:stopPropagation>
+                        <div class="wb-discard-guard-title">&#9888; Neuložené změny</div>
+                        <div class="wb-discard-guard-body">
+                            Máš neuložené změny v edit mode. Chceš je zahodit a ukončit editor?
+                        </div>
+                        <div class="wb-discard-guard-actions">
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => _showDiscardGuard = false">
+                                Pokračovat v editaci
+                            </button>
+                            <button class="btn btn-sm btn-danger" @onclick="DiscardAndExitAsync">
+                                Zahodit změny
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    @* ══ DASHBOARD MODE ══════════════════════════════════════════ *@
+    else
+    {
+        @* ── Workspace Row: Schematic + Overview ── *@
+        <div class="wb-workspace-row">
+            <div class="wb-schematic">
+                <div class="wb-schematic-toolbar">
+                    <div class="toolbar-left">
+                        <span class="text-muted fw-bold small text-uppercase"><i class="bi bi-bezier2 me-1"></i> Facility Schéma</span>
+                    </div>
+                    <div class="toolbar-right">
+                        <button class="wb-toolbar-icon-btn" @onclick="GoHomeAsync"
+                                title="Domů – výchozí pohled na kořenový uzel" disabled="@(_canvasV2 is null)">
+                            <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354z"/></svg>
+                        </button>
+                        <button class="wb-toolbar-icon-btn" @onclick="() => ReloadData()" title="Znovu načíst schéma">
+                            <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></svg>
+                        </button>
+                        <button class="wb-toolbar-icon-btn"
+                                @onclick="ToggleSchematicFullscreen" title="Otevřít focus – rozšířený pohled"
+                                disabled="@(_facility is null)">
+                            <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M1.5 1h4a.5.5 0 0 1 0 1h-4v4a.5.5 0 0 1-1 0v-4A.5.5 0 0 1 1 1zM10 1.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0v-4h-4a.5.5 0 0 1-.5-.5M1 10.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1h-4v4a.5.5 0 0 1-1 0zm9 0a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0v-4h-4a.5.5 0 0 1-.5-.5z"/></svg>
+                        </button>
+                        <button class="wb-toolbar-icon-btn wb-toolbar-icon-btn-primary"
+                                @onclick="ToggleEditMode"
+                                title="Upravit schéma"
+                                disabled="@(_facility is null)">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="wb-schematic-body">
+                    @if (_facility is null)
+                    {
+                        <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
+                            <div class="spinner-border mb-3" role="status"></div>
+                            <p class="mb-0">Načítám strukturní data...</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <FacilitySchematicV2 @ref="_canvasV2"
+                                      Layout="_schematicLayout"
+                                      InitialFitMode="home"
+                                      SelectedElementId="@SessionService.SelectedElementId"
+                                      SelectedElementIds="@_selectionSet"
+                                      SelectedSubtreeNodeKeys="@SelectedSubtreeNodeKeysForCanvas"
+                                      FacilityNodeAlertSeverities="@AlertSeverityByNodeKey"
+                                      OnElementSelected="HandleElementSelected"
+                                      OnCanvasClicked="HandleCanvasClicked" />
+                    }
+                </div>
+            </div>
+
+            @* ── Overview Pane ── *@
+            <div class="wb-overview">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
+                    <h5 class="mb-0 fw-bold" style="font-size: 0.95rem;">Workspace Overview</h5>
+                </div>
+
+                @{
+                    var hasFocusNode = SessionService.SelectedElementType == EditorSelectionType.FacilityNode && _selectedFacilityNode is not null;
+                    var weatherSummary = _curatedDeviationData?.WeatherExplanation;
+                }
+
+                @if (hasFocusNode)
+                {
+                    <div class="d-flex justify-content-end mb-2">
+                        <button class="btn btn-sm btn-light border shadow-sm text-secondary px-3 fw-medium" @onclick="ClosePanel" title="Zavřít focus uzel">
+                            <i class="bi bi-x-lg me-1"></i>Zrušit focus
+                        </button>
+                    </div>
+                }
+
+                <div class="overview-grid">
+                <div class="overview-widget widget-col-6">
                     <h6>Selection</h6>
                     <div class="d-flex align-items-end justify-content-between mb-2">
                         <div>
@@ -778,8 +530,7 @@
                         Selection summary zůstává nahoře; semantic a editor nástroje jsou v sekci Selection Tools.
                     </div>
                 </div>
-
-                <div class="overview-widget widget-col-4 interval-widget">
+                <div class="overview-widget widget-col-6 interval-widget">
                     <h6>Interval</h6>
                     <div class="interval-meta-row">
                         <span class="badge bg-light text-secondary border">@SelectedIntervalLabel</span>
@@ -813,7 +564,7 @@
                     }
                 </div>
 
-                <div class="overview-widget widget-col-3">
+                <div class="overview-widget widget-col-6">
                     <h6>Deviation Alerty</h6>
                     <div class="d-flex align-items-end justify-content-between mb-2">
                         <div>
@@ -835,7 +586,7 @@
                     }
                 </div>
 
-                <div class="overview-widget widget-col-2">
+                <div class="overview-widget widget-col-6">
                     <h6>Weather</h6>
                     @if (SupportsWeatherExplanation(_selectedFacilityNode?.NodeKey) && weatherSummary?.IsAvailable == true)
                     {
@@ -917,113 +668,6 @@
                 </div>
 
                 <div class="overview-widget overview-widget-soft tools-widget">
-                    <h6>Editor Tools</h6>
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div class="small fw-semibold text-secondary">Schema Editor</div>
-                        <span class="badge @(_isSchematicEditorEnabled ? "bg-primary" : "bg-secondary")">@(_isSchematicEditorEnabled ? "edit mode" : "read mode")</span>
-                    </div>
-
-                    <div class="mb-2 d-flex flex-wrap gap-1">
-                        <button class="btn btn-sm @(_isReconnectMode ? "btn-primary" : "btn-outline-primary")" @onclick="ToggleReconnectMode" disabled="@(!_isSchematicEditorEnabled || !CanEditFocusedNode)">
-                            <i class="bi bi-diagram-3 me-1"></i>Reconnect
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" @onclick="RemoveFocusedLeafNodeAsync" disabled="@(!_isSchematicEditorEnabled || !CanRemoveFocusedLeafNode)">
-                            <i class="bi bi-node-minus me-1"></i>Remove leaf
-                        </button>
-                    </div>
-
-                    @if (_isReconnectMode && _selectedFacilityNode is not null && CanEditFocusedNode)
-                    {
-                        <div class="mb-2 p-2 border rounded bg-light-subtle">
-                            <div class="small text-muted mb-1">Reconnect node @_selectedFacilityNode.NodeKey na nový parent</div>
-                            <select class="form-select form-select-sm bg-light mb-2" @bind="_reconnectParentNodeKeyInput">
-                                <option value="">root (bez parentu)</option>
-                                @foreach (var parentCandidate in GetReconnectParentCandidates(_selectedFacilityNode.NodeKey))
-                                {
-                                    <option value="@parentCandidate.NodeKey">@parentCandidate.Label (@parentCandidate.NodeKey)</option>
-                                }
-                            </select>
-                            <button class="btn btn-sm btn-outline-primary" @onclick="ReconnectFocusedNodeAsync">
-                                <i class="bi bi-check2-circle me-1"></i>Potvrdit reconnect
-                            </button>
-                        </div>
-                    }
-
-                    <div class="tools-widget-section">
-                        <div class="small text-muted mb-1">Add node</div>
-                        <div class="mb-1">
-                            <input class="form-control form-control-sm bg-light" @bind="_newNodeKeyInput" maxlength="100" placeholder="NodeKey (např. workshop_aux_1)" />
-                        </div>
-                        <div class="mb-1">
-                            <input class="form-control form-control-sm bg-light" @bind="_newNodeLabelInput" maxlength="200" placeholder="Label" />
-                        </div>
-                        <div class="mb-1 d-flex gap-1">
-                            <input class="form-control form-control-sm bg-light" @bind="_newNodeTypeInput" maxlength="100" placeholder="Typ (např. subzone)" />
-                            <input class="form-control form-control-sm bg-light" @bind="_newNodeZoneInput" maxlength="100" placeholder="Zóna (volitelně)" />
-                        </div>
-                        <div class="mb-2">
-                            <select class="form-select form-select-sm bg-light" @bind="_newNodeParentNodeKeyInput">
-                                <option value="">root (bez parentu)</option>
-                                @foreach (var parentCandidate in GetReconnectParentCandidates(null))
-                                {
-                                    <option value="@parentCandidate.NodeKey">@parentCandidate.Label (@parentCandidate.NodeKey)</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="mb-2">
-                            <input class="form-control form-control-sm bg-light" @bind="_newNodeMeterUrnInput" maxlength="200" placeholder="Meter URN (volitelně)" />
-                        </div>
-                        <button class="btn btn-sm btn-outline-secondary" @onclick="AddNodeAsync" disabled="@(!_isSchematicEditorEnabled)">
-                            <i class="bi bi-node-plus me-1"></i>Přidat node
-                        </button>
-                    </div>
-
-                    <div class="tools-widget-section">
-                        @if (!hasFocusNode)
-                        {
-                            <div class="small text-muted">Vyberte focus uzel ve schématu pro editaci metadata.</div>
-                        }
-                        else if (!CanEditFocusedNode)
-                        {
-                            <div class="small text-muted">Uzel @_selectedFacilityNode!.NodeKey je pouze kontextový a v editoru se neupravuje.</div>
-                        }
-                        else
-                        {
-                            <div class="mb-2">
-                                <label class="form-label form-label-sm mb-1">Název uzlu</label>
-                                <input class="form-control form-control-sm bg-light" @bind="_editorLabelInput" maxlength="200" />
-                            </div>
-                            <div class="mb-2">
-                                <label class="form-label form-label-sm mb-1">Tagy</label>
-                                <input class="form-control form-control-sm bg-light" @bind="_editorTagsInput" placeholder="např. hvac, maintenance, zone:workshop" />
-                            </div>
-                            <div class="mb-2">
-                                <label class="form-label form-label-sm mb-1">Poznámka</label>
-                                <textarea class="form-control form-control-sm bg-light" rows="2" maxlength="500" @bind="_editorNoteInput"></textarea>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <button class="btn btn-sm btn-primary" @onclick="SaveFocusedNodeMetadataAsync" disabled="@(!_isSchematicEditorEnabled)">
-                                    <i class="bi bi-save me-1"></i>Uložit metadata
-                                </button>
-                                <button class="btn btn-sm btn-link text-decoration-none p-0" @onclick="RestoreFocusedNodeEditorDraft">
-                                    Obnovit draft
-                                </button>
-                            </div>
-                        }
-                    </div>
-
-                    @if (!string.IsNullOrWhiteSpace(_editorStatusMessage))
-                    {
-                        <div class="small text-muted mt-2">@_editorStatusMessage</div>
-                    }
-
-                    @if (!string.IsNullOrWhiteSpace(_structureStatusMessage))
-                    {
-                        <div class="small text-muted mt-2">@_structureStatusMessage</div>
-                    }
-                </div>
-
-                <div class="overview-widget overview-widget-soft tools-widget">
                     <h6>Working Sets</h6>
                     <div class="small fw-semibold text-secondary mb-2">Saved Working Sets</div>
                     <div class="mb-2">
@@ -1075,6 +719,40 @@
                     }
                 </div>
             </div>
+
+            @if (!HasSelectedNodes)
+            {
+                <div class="overview-grid">
+                    <div class="overview-widget widget-col-12">
+                        <div class="empty-selection-callout">
+                            <div class="empty-selection-title">Selection Set je prázdný</div>
+                            <div class="small text-muted">Vyberte uzly přímo ve schématu a aktivujte aggregate overview KPI, disaggregation i časové řady.</div>
+                            <div class="empty-selection-hints">
+                                <div><i class="bi bi-cursor-fill me-1"></i>Single select: klik na uzel</div>
+                                <div><i class="bi bi-diagram-3-fill me-1"></i>Subtree: focus na strukturální node</div>
+                                <div><i class="bi bi-plus-circle me-1"></i>Multi-select: postupně přidejte další uzly</div>
+                                <div><i class="bi bi-bar-chart-line-fill me-1"></i>Analytics se zobrazí po prvním validním výběru</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            </div> @* closes wb-overview *@
+        </div> @* closes wb-workspace-row *@
+
+        @* ── Analytics Section (full-width, below workspace) ── *@
+        <div class="wb-analytics">
+
+            @if (!HasSelectedNodes)
+            {
+                <div class="wb-analytics-empty-state">
+                    <div class="empty-analytics-hint">
+                        <i class="bi bi-bar-chart-line me-2 opacity-50"></i>
+                        Vyberte uzly ve schématu pro aktivaci analytics — disaggregace, contribution intelligence, KPI a časové řady.
+                    </div>
+                </div>
+            }
 
             @if (HasSelectedNodes)
             {
@@ -1941,32 +1619,10 @@
                     </div>
                 }
             }
-            else
-            {
-                <div class="overview-grid">
-                    <div class="overview-widget widget-col-12">
-                        <div class="empty-selection-callout">
-                            <div class="empty-selection-title">Selection Set je prázdný</div>
-                            <div class="small text-muted">Vyberte uzly přímo ve schématu a aktivujte aggregate overview KPI, disaggregation i časové řady.</div>
 
-                            <div class="empty-selection-hints">
-                                <div><i class="bi bi-cursor-fill me-1"></i>Single select: klik na uzel</div>
-                                <div><i class="bi bi-diagram-3-fill me-1"></i>Subtree: focus na strukturální node</div>
-                                <div><i class="bi bi-plus-circle me-1"></i>Multi-select: postupně přidejte další uzly</div>
-                                <div><i class="bi bi-bar-chart-line-fill me-1"></i>Analytics se zobrazí po prvním validním výběru</div>
-                            </div>
-
-                            @if (_isSchematicHidden)
-                            {
-                                <div class="small text-primary mt-2"><i class="bi bi-info-circle me-1"></i>Schéma je aktuálně skryto. Použijte Zobrazit schéma.</div>
-                            }
-                        </div>
-                    </div>
-                </div>
-            }
-        </div>
-    </div>
-</div>
+        </div> @* closes wb-analytics *@
+    } @* closes else (dashboard mode) *@
+</div> @* closes facility-workbench *@
 
 @code {
     private static readonly string[] EnergyAlertNodeKeys = ["pv_main", "chp_main", "cooling_main", "heating_main"];
@@ -1985,8 +1641,9 @@
     private static readonly FacilityNodeSemanticType[] SemanticTypeOptions = Enum.GetValues<FacilityNodeSemanticType>();
     private static readonly SemanticSelectionMutationMode[] SemanticSelectionMutationModeOptions = Enum.GetValues<SemanticSelectionMutationMode>();
 
-    private EditorCanvas? _canvas;
+    private FacilitySchematicV2? _canvasV2;
     private DiplomovaPrace.Persistence.Schematic.FacilityEntity? _facility;
+    private SchematicLayoutV2? _schematicLayout;
     private readonly HashSet<string> _selectionSet = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _selectionOrder = [];
     private readonly Dictionary<string, DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity> _nodesByKey = new(StringComparer.OrdinalIgnoreCase);
@@ -2032,12 +1689,28 @@
     private string _workingSetDescriptionInput = string.Empty;
     private string? _workingSetStatusMessage;
     private bool _isPreviewLoading;
+
+    // ── Edit mode draft/staging state ────────────────────────────────────────
+    /// <summary>JSON snapshot stavu editoru pořízený při vstupu do edit mode pro cancel/restore.</summary>
+    private string? _editModeDraftSnapshot;
+    /// <summary>True pokud existují změny provedené v edit mode, které ještě nebyly potvrzeny.</summary>
+    private bool EditModeDirty => _editUndoStack.Count > 0;
+    /// <summary>Zobrazit guard dialog při pokusu o cancel s dirty stavem.</summary>
+    private bool _showDiscardGuard;
+    /// <summary>Undo zásobník pro edit mode (snapshot-based, max 50 kroků).</summary>
+    private readonly List<(string Json, string Description)> _editUndoStack = [];
+    /// <summary>Redo zásobník pro edit mode.</summary>
+    private readonly List<(string Json, string Description)> _editRedoStack = [];
+    private bool _editModeCanUndo => _editUndoStack.Count > 0;
+    private bool _editModeCanRedo => _editRedoStack.Count > 0;
     private bool _isCuratedNode;
     private bool CanEditFocusedNode => _selectedFacilityNode is not null && !FacilityNodeSemantics.IsWeatherContextNode(_selectedFacilityNode.NodeKey);
     private bool CanRemoveFocusedLeafNode => _selectedFacilityNode is not null && CanEditFocusedNode && !HasChildren(_selectedFacilityNode.NodeKey);
     
     // UI State
-    private bool _isSchematicHidden = false;
+    private bool _isSchematicFullscreen = false;
+    private bool _isEditModeOpen = false;
+    private string _editorActiveTool = "select";
     private string _selectedInterval = "last7d";
     private DateTime _customFromUtc = DateTime.UtcNow.Date.AddDays(-7);
     private DateTime _customToUtcExclusive = DateTime.UtcNow.Date.AddDays(1);
@@ -2197,6 +1870,7 @@
         await Task.WhenAll(facilityTask, editorStateTask, workingSetsTask);
 
         _facility = BuildSchemaFacilityWithoutWeatherNode(facilityTask.Result);
+        _schematicLayout = _facility is not null ? SchematicComposerV2.Compose(_facility) : null;
         SyncEditorNodeStateCache(editorStateTask.Result);
         SyncWorkingSetCache(workingSetsTask.Result);
         RebuildFacilityNodeIndexes();
@@ -2478,6 +2152,18 @@
             : "Reconnect režim vypnutý.";
     }
 
+    private async Task ToggleReconnectModeAndScrollAsync()
+    {
+        ToggleReconnectMode();
+        if (_isReconnectMode)
+        {
+            StateHasChanged();
+            await Task.Delay(60);
+            await JSRuntime.InvokeVoidAsync("eval",
+                "document.getElementById('editor-reconnect-section')?.scrollIntoView({behavior:'smooth', block:'start'})");
+        }
+    }
+
     private async Task ReconnectFocusedNodeAsync()
     {
         if (!_isSchematicEditorEnabled)
@@ -2495,8 +2181,14 @@
         }
 
         var parentMap = BuildCurrentParentMap();
+        var nodeKey = _selectedFacilityNode.NodeKey;
+        var nodeLabel = _selectedFacilityNode.Label ?? nodeKey;
+
+        // Snapshot před operací pro undo
+        var snapshot = await SnapshotEditStateAsync();
+
         var reconnectResult = await FacilityEditorStateService.TryReconnectNodeAsync(
-            _selectedFacilityNode.NodeKey,
+            nodeKey,
             NormalizeOptionalText(_reconnectParentNodeKeyInput),
             parentMap);
 
@@ -2507,7 +2199,9 @@
             return;
         }
 
-        await ReloadData(preserveSelection: true, preferredFocusNodeKey: _selectedFacilityNode.NodeKey);
+        PushEditUndoSnapshot(snapshot, $"Reconnect \"{nodeLabel}\"");
+
+        await ReloadData(preserveSelection: true, preferredFocusNodeKey: nodeKey);
         _isReconnectMode = false;
         await ReloadPreviewDataAsync();
     }
@@ -2538,11 +2232,17 @@
             return;
         }
 
+        // Auto-set parent z vybraného uzlu pokud ještě není nastavený
         var parentKey = NormalizeOptionalText(_newNodeParentNodeKeyInput);
+        if (string.IsNullOrWhiteSpace(parentKey) && _selectedFacilityNode is not null)
+            parentKey = _selectedFacilityNode.NodeKey;
         var nodeType = NormalizeOptionalText(_newNodeTypeInput) ?? "subzone";
         var zone = NormalizeOptionalText(_newNodeZoneInput);
         var meterUrn = NormalizeOptionalText(_newNodeMeterUrnInput);
         var (xHint, yHint) = ResolveNewNodeLayoutHint(parentKey);
+
+        // Snapshot před operací pro undo
+        var snapshot = await SnapshotEditStateAsync();
 
         var addResult = await FacilityEditorStateService.TryAddNodeAsync(
             new FacilityStructureNode
@@ -2566,6 +2266,8 @@
             return;
         }
 
+        PushEditUndoSnapshot(snapshot, $"Přidat uzel \"{label}\"");
+
         // Nový node dostane baseline tagy podle metadata/type, aby semantic query fungovala ihned.
         var baselineTags = FacilityNodeSemantics.DeriveTags(nodeKey, nodeType, label, zone, meterUrn);
         var initialNodeState = new FacilityNodeEditorState
@@ -2583,10 +2285,16 @@
         _newNodeKeyInput = string.Empty;
         _newNodeLabelInput = string.Empty;
         _newNodeMeterUrnInput = string.Empty;
+        _newNodeTypeInput = string.Empty;
+        _newNodeZoneInput = string.Empty;
 
         await ReloadData(preserveSelection: true, preferredFocusNodeKey: nodeKey);
-        _editorStatusMessage = $"Metadata nového uzlu {nodeKey} lze dále upravit v Schema Editoru.";
+        _editorStatusMessage = $"Uzel {nodeKey} přidán — upravte metadata níže.";
         await ReloadPreviewDataAsync();
+        // Scroll na metadata nového uzlu
+        await Task.Delay(80);
+        await JSRuntime.InvokeVoidAsync("eval",
+            "document.getElementById('editor-metadata-section')?.scrollIntoView({behavior:'smooth', block:'start'})");
     }
 
     private async Task RemoveFocusedLeafNodeAsync()
@@ -2606,6 +2314,11 @@
         }
 
         var removedNodeKey = _selectedFacilityNode.NodeKey;
+        var removedLabel = _selectedFacilityNode.Label ?? removedNodeKey;
+
+        // Snapshot před operací pro undo
+        var snapshot = await SnapshotEditStateAsync();
+
         var removeResult = await FacilityEditorStateService.TryRemoveLeafNodeAsync(
             removedNodeKey,
             BuildCurrentParentMap());
@@ -2616,6 +2329,8 @@
             await InvokeAsync(StateHasChanged);
             return;
         }
+
+        PushEditUndoSnapshot(snapshot, $"Smazat uzel \"{removedLabel}\"");
 
         await ReloadData(preserveSelection: true);
         await ReloadPreviewDataAsync();
@@ -2726,7 +2441,12 @@
             UpdatedUtc = DateTime.UtcNow
         };
 
+        // Snapshot před uložením metadat pro undo
+        var snapshot = await SnapshotEditStateAsync();
+
         await FacilityEditorStateService.SaveNodeStatesAsync([nextState]);
+
+        PushEditUndoSnapshot(snapshot, $"Metadata \"{label ?? nodeKey}\"");
 
         if (HasNodeStatePayload(nextState))
         {
@@ -3573,6 +3293,19 @@
             return;
         }
 
+        // V edit mode: vždy single-select — žádný multiselect, žádný subtree batch výběr
+        if (_isEditModeOpen)
+        {
+            ClearSelectionSetState();
+            AddNodeToSelectionSet(nodeKey);
+            var editFocusChanged = ApplyFocusNode(nodeKey);
+            if (!editFocusChanged)
+            {
+                InvokeAsync(async () => await ReloadPreviewDataAsync());
+            }
+            return;
+        }
+
         string? nextFocusNodeKey;
 
         if (IsStructuralNode(node.NodeKey))
@@ -3869,7 +3602,7 @@
             Edges = filteredEdges
         };
 
-        return FacilitySchematicLayoutService.BuildReadableLayout(weatherFilteredFacility);
+        return weatherFilteredFacility;
     }
 
     private IReadOnlySet<string> GetSelectedSubtreeNodeKeysForCanvas()
@@ -3964,21 +3697,171 @@
         _isCuratedNode = false;
     }
     
-    private void ToggleSchematic()
+    private void ToggleSchematicFullscreen()
     {
-        _isSchematicHidden = !_isSchematicHidden;
+        _isSchematicFullscreen = !_isSchematicFullscreen;
+        if (_isSchematicFullscreen)
+            _isEditModeOpen = false;
         StateHasChanged();
-        
-        // Timeout zajišťuje, že se DOM aktualizuje (display: none/block) 
-        // předtím než se zavolá přeškálování a posun JS plátna.
-        Task.Delay(100).ContinueWith(_ => InvokeAsync(async () =>
+        if (_isSchematicFullscreen)
         {
-            if (!_isSchematicHidden)
-            {
-               await JSRuntime.InvokeVoidAsync("editorCanvas.reapplyTransform");
-            }
-        }));
+            Task.Delay(80).ContinueWith(_ => InvokeAsync(async () =>
+                await JSRuntime.InvokeVoidAsync("editorCanvas.fitToView", "focus")));
+        }
+        else
+        {
+            Task.Delay(80).ContinueWith(_ => InvokeAsync(async () =>
+                await JSRuntime.InvokeVoidAsync("editorCanvas.goHome")));
+        }
     }
+
+    private async Task ToggleEditMode()
+    {
+        _isEditModeOpen = !_isEditModeOpen;
+        _isSchematicEditorEnabled = _isEditModeOpen;
+        _editorActiveTool = "select";
+        if (_isEditModeOpen)
+        {
+            _isSchematicFullscreen = false;
+            // Pořídíme snapshot stavu před prvním editem pro cancel/restore
+            _editModeDraftSnapshot = await FacilityEditorStateService.GetRawStateAsync();
+            _editUndoStack.Clear();
+            _editRedoStack.Clear();
+            _showDiscardGuard = false;
+        }
+        StateHasChanged();
+        if (_isEditModeOpen)
+        {
+            Task.Delay(80).ContinueWith(_ => InvokeAsync(async () =>
+                await JSRuntime.InvokeVoidAsync("editorCanvas.fitToView", "edit")));
+        }
+        else
+        {
+            Task.Delay(80).ContinueWith(_ => InvokeAsync(async () =>
+                await JSRuntime.InvokeVoidAsync("editorCanvas.goHome")));
+        }
+    }
+
+    private async Task ExitSchematicOverlayAsync()
+    {
+        if (EditModeDirty)
+        {
+            // Zobraz guard dialog pro potvrzení zahození změn
+            _showDiscardGuard = true;
+            StateHasChanged();
+            return;
+        }
+        DoExitEditMode();
+    }
+
+    private async Task DiscardAndExitAsync()
+    {
+        _showDiscardGuard = false;
+        // Obnovíme stav ze snapshotu pořízeného při vstupu do edit mode
+        if (_editModeDraftSnapshot is not null)
+        {
+            await FacilityEditorStateService.RestoreFromRawStateAsync(_editModeDraftSnapshot);
+            await ReloadData();
+        }
+        DoExitEditMode();
+    }
+
+    private void DoExitEditMode()
+    {
+        _isSchematicFullscreen = false;
+        _isEditModeOpen = false;
+        _isSchematicEditorEnabled = false;
+        _showDiscardGuard = false;
+        _editModeDraftSnapshot = null;
+        _editUndoStack.Clear();
+        _editRedoStack.Clear();
+        StateHasChanged();
+        Task.Delay(80).ContinueWith(_ => InvokeAsync(async () =>
+            await JSRuntime.InvokeVoidAsync("editorCanvas.goHome")));
+    }
+
+    private async Task FitSchematicToViewAsync()
+    {
+        if (_canvasV2 is null) return;
+        var mode = _isSchematicFullscreen ? "focus" : _isEditModeOpen ? "edit" : "default";
+        await JSRuntime.InvokeVoidAsync("editorCanvas.fitToView", mode);
+    }
+
+    private async Task GoHomeAsync()
+    {
+        await JSRuntime.InvokeVoidAsync("editorCanvas.goHome");
+    }
+
+    private void SetEditorTool(string tool)
+    {
+        _editorActiveTool = tool;
+    }
+
+    private async Task ScrollToAddNodeSectionAsync()
+    {
+        _editorActiveTool = "add";
+        // Auto-nastavit parent na aktuálně vybraný node
+        if (_selectedFacilityNode is not null && CanEditFocusedNode)
+            _newNodeParentNodeKeyInput = _selectedFacilityNode.NodeKey;
+        StateHasChanged();
+        await Task.Delay(40);
+        await JSRuntime.InvokeVoidAsync("eval",
+            "document.getElementById('editor-add-node-section')?.scrollIntoView({behavior:'smooth', block:'start'})");
+    }
+
+    private async Task ConfirmAndExitEditMode()
+    {
+        // Potvrzení: změny jsou už v souboru, jen uklidíme edit mode stav
+        _showDiscardGuard = false;
+        _editModeDraftSnapshot = null;
+        _editUndoStack.Clear();
+        _editRedoStack.Clear();
+        _isEditModeOpen = false;
+        _isSchematicEditorEnabled = false;
+        _editorActiveTool = "select";
+        StateHasChanged();
+        await Task.Delay(80);
+        await JSRuntime.InvokeVoidAsync("editorCanvas.goHome");
+    }
+
+    // ── Edit mode undo/redo helpers ───────────────────────────────────────────
+
+    private async Task<string> SnapshotEditStateAsync()
+        => await FacilityEditorStateService.GetRawStateAsync();
+
+    private void PushEditUndoSnapshot(string snapshot, string description)
+    {
+        _editUndoStack.Add((snapshot, description));
+        if (_editUndoStack.Count > 50)
+            _editUndoStack.RemoveAt(0);
+        _editRedoStack.Clear();
+    }
+
+    private async Task UndoEditAsync()
+    {
+        if (_editUndoStack.Count == 0) return;
+        var currentJson = await FacilityEditorStateService.GetRawStateAsync();
+        var entry = _editUndoStack[^1];
+        _editUndoStack.RemoveAt(_editUndoStack.Count - 1);
+        _editRedoStack.Add((currentJson, entry.Description));
+        await FacilityEditorStateService.RestoreFromRawStateAsync(entry.Json);
+        await ReloadData(preserveSelection: true);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RedoEditAsync()
+    {
+        if (_editRedoStack.Count == 0) return;
+        var currentJson = await FacilityEditorStateService.GetRawStateAsync();
+        var entry = _editRedoStack[^1];
+        _editRedoStack.RemoveAt(_editRedoStack.Count - 1);
+        _editUndoStack.Add((currentJson, entry.Description));
+        await FacilityEditorStateService.RestoreFromRawStateAsync(entry.Json);
+        await ReloadData(preserveSelection: true);
+        await InvokeAsync(StateHasChanged);
+    }
+
+
 
     private void ClosePanel()
     {

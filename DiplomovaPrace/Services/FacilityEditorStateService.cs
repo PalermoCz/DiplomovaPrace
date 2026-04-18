@@ -86,6 +86,46 @@ public sealed class FacilityEditorStateService
         _stateFilePath = Path.Combine(environment.ContentRootPath, "facility-editor-state.json");
     }
 
+    /// <summary>
+    /// Vrátí celý stav editoru jako raw JSON string pro snapshot/draft účely.
+    /// Pokud soubor neexistuje, vrátí prázdný výchozí stav.
+    /// </summary>
+    public async Task<string> GetRawStateAsync(CancellationToken ct = default)
+    {
+        await _gate.WaitAsync(ct);
+        try
+        {
+            if (!File.Exists(_stateFilePath))
+                return JsonSerializer.Serialize(new FacilityEditorStateDocument(), JsonOptions);
+            return await File.ReadAllTextAsync(_stateFilePath, ct);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Obnoví stav editoru z raw JSON stringu (pro cancel/undo draft edit session).
+    /// </summary>
+    public async Task RestoreFromRawStateAsync(string rawJson, CancellationToken ct = default)
+    {
+        await _gate.WaitAsync(ct);
+        try
+        {
+            var directory = Path.GetDirectoryName(_stateFilePath);
+            if (!string.IsNullOrWhiteSpace(directory))
+                Directory.CreateDirectory(directory);
+            var tempPath = _stateFilePath + ".tmp";
+            await File.WriteAllTextAsync(tempPath, rawJson, ct);
+            File.Move(tempPath, _stateFilePath, overwrite: true);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     public async Task<IReadOnlyDictionary<string, FacilityNodeEditorState>> GetNodeStatesByKeyAsync(CancellationToken ct = default)
     {
         await _gate.WaitAsync(ct);
