@@ -76,18 +76,70 @@
         <div class="wb-editor-overlay">
             @* Canvas area *@
             <div class="wb-schematic">
-                <div class="wb-schematic-toolbar">
+                <div class="wb-schematic-toolbar wb-editor-toolbar">
                     <div class="toolbar-left">
                         <span class="text-muted fw-bold small text-uppercase"><i class="bi bi-bezier2 me-1"></i> Facility Schéma</span>
                         <span class="badge bg-primary-subtle text-primary border border-primary-subtle"><i class="bi bi-pencil-fill me-1"></i>Edit Mode</span>
                     </div>
-                    <div class="toolbar-right">
+                    <div class="toolbar-right wb-editor-toolbar-right">
+                        @* ── View tools ── *@
                         <button class="wb-toolbar-icon-btn" @onclick="GoHomeAsync"
                                 title="Výchozí pohled" disabled="@(_canvasV2 is null)">
                             <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354z"/></svg>
                         </button>
                         <button class="wb-toolbar-icon-btn" @onclick="() => ReloadData()" title="Znovu načíst schéma">
                             <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></svg>
+                        </button>
+                        <div class="wb-editor-toolbar-divider"></div>
+                        @* ── Structure tools ── *@
+                        <button class="wb-toolbar-icon-btn @(_editorActiveTab == "add" ? "wb-toolbar-icon-btn-active" : "")"
+                                title="@(_selectedFacilityNode is not null && CanEditFocusedNode ? $"Přidat child uzel pod '{_selectedFacilityNode.Label}'" : "Přidat uzel")"
+                                @onclick="@(() => SwitchEditorTab("add"))">
+                            <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 1"/></svg>
+                        </button>
+                        <button class="wb-toolbar-icon-btn @(_editorActiveTab == "delete" ? "wb-toolbar-icon-btn-active" : "") @(CanRemoveFocusedLeafNode ? "wb-toolbar-icon-btn-danger" : "")"
+                                title="Smazat vybraný uzel"
+                                @onclick="@(() => SwitchEditorTab("delete"))">
+                            <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg>
+                        </button>
+                        <div class="wb-editor-toolbar-divider"></div>
+                        @* ── Undo / Redo ── *@
+                        <button class="wb-toolbar-icon-btn"
+                                title="@(_editModeCanUndo ? ("Vrátit zpět: " + (_editUndoStack.Count > 0 ? _editUndoStack[^1].Description : "")) : "Zpět — žádná změna")"
+                                disabled="@(!_editModeCanUndo)"
+                                @onclick="UndoEditAsync">
+                            <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466"/></svg>
+                        </button>
+                        <button class="wb-toolbar-icon-btn"
+                                title="@(_editModeCanRedo ? ("Znovu: " + (_editRedoStack.Count > 0 ? _editRedoStack[^1].Description : "")) : "Znovu — žádná vrácená změna")"
+                                disabled="@(!_editModeCanRedo)"
+                                @onclick="RedoEditAsync">
+                            <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></svg>
+                        </button>
+                        <div class="wb-editor-toolbar-divider"></div>
+                        @* ── Import Data ── *@
+                        <button class="wb-toolbar-icon-btn @(_editorActiveTab == "import" ? "wb-toolbar-icon-btn-active" : "")"
+                                title="Import dat"
+                                @onclick="@(() => SwitchEditorTab("import"))">
+                            <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></svg>
+                        </button>
+                        @* ── Spacer ── *@
+                        <div class="wb-editor-toolbar-spacer"></div>
+                        @* ── Save ── *@
+                        <button class="wb-toolbar-icon-btn @(EditModeDirty ? "wb-toolbar-icon-btn-save-dirty" : "")"
+                                title="@(EditModeDirty ? "Uložit změny (neuložené změny)" : "Uložit změny")"
+                                @onclick="SaveEditModeChangesAsync">
+                            @* Floppy disk / kazeta — proper SVG *@
+                            <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                <path d="M11 2H9v3h2z"/>
+                                <path d="M1.5 0h11.586a1.5 1.5 0 0 1 1.06.44l1.415 1.414A1.5 1.5 0 0 1 16 2.914V14.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 14.5v-13A1.5 1.5 0 0 1 1.5 0M1 1.5v13a.5.5 0 0 0 .5.5H2v-4.5A1.5 1.5 0 0 1 3.5 9h9a1.5 1.5 0 0 1 1.5 1.5V15h.5a.5.5 0 0 0 .5-.5V2.914a.5.5 0 0 0-.146-.353l-1.415-1.415A.5.5 0 0 0 13.086 1H13v3.5A1.5 1.5 0 0 1 11.5 6h-7A1.5 1.5 0 0 1 3 4.5V1H1.5a.5.5 0 0 0-.5.5m3 4a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V1H4zM3 15h10v-4.5a.5.5 0 0 0-.5-.5h-9a.5.5 0 0 0-.5.5z"/>
+                            </svg>
+                        </button>
+                        @* ── Close editor ── *@
+                        <button class="wb-toolbar-icon-btn wb-toolbar-icon-btn-close"
+                                title="Ukončit editor"
+                                @onclick="ExitSchematicOverlayAsync">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/></svg>
                         </button>
                     </div>
                 </div>
@@ -114,291 +166,318 @@
                 </div>
             </div>
 
-            @* Tools Rail — inline SVG ikony jako primární, text label jako fallback *@
-            <div class="wb-editor-rail">
-                @* Přidat uzel — aktivní jen při vybraném editovatelném uzlu *@
-                <button class="wb-toolbar-icon-btn" title="@(_selectedFacilityNode is not null && CanEditFocusedNode ? $"Přidat child uzel pod '{_selectedFacilityNode.Label}'" : "Vyberte editovatelný uzel ve schématu")"
-                        disabled="@(!_isSchematicEditorEnabled || _selectedFacilityNode is null || !CanEditFocusedNode)"
-                        @onclick="ScrollToAddNodeSectionAsync">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 1"/></svg>
-                </button>
-                @* Smazat uzel *@
-                <button class="wb-toolbar-icon-btn wb-toolbar-icon-btn-danger" title="Smazat vybraný leaf uzel"
-                        disabled="@(!_isSchematicEditorEnabled || !CanRemoveFocusedLeafNode)"
-                        @onclick="RemoveFocusedLeafNodeAsync">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg>
-                </button>
-                <div class="rail-divider"></div>
-                @* Reconnect parent *@
-                <button class="wb-toolbar-icon-btn @(_isReconnectMode ? "wb-toolbar-icon-btn-active" : "")" title="@(CanEditFocusedNode ? "Změnit parent vybraného uzlu" : "Vyberte editovatelný uzel pro reconnect")"
-                        disabled="@(!_isSchematicEditorEnabled || !CanEditFocusedNode)"
-                        @onclick="ToggleReconnectModeAndScrollAsync">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M6 3.5A1.5 1.5 0 0 1 7.5 2h1A1.5 1.5 0 0 1 10 3.5v1A1.5 1.5 0 0 1 8.5 6v1H14a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0v-1A.5.5 0 0 1 2 7h5.5V6A1.5 1.5 0 0 1 6 4.5zM8.5 5a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5zM0 11.5A1.5 1.5 0 0 1 1.5 10h1A1.5 1.5 0 0 1 4 11.5v1A1.5 1.5 0 0 1 2.5 14h-1A1.5 1.5 0 0 1 0 12.5zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm4.5.5A1.5 1.5 0 0 1 7.5 10h1a1.5 1.5 0 0 1 1.5 1.5v1A1.5 1.5 0 0 1 8.5 14h-1A1.5 1.5 0 0 1 6 12.5zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm4.5.5a1.5 1.5 0 0 1 1.5-1.5h1a1.5 1.5 0 0 1 1.5 1.5v1a1.5 1.5 0 0 1-1.5 1.5h-1a1.5 1.5 0 0 1-1.5-1.5zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5z"/></svg>
-                </button>
-                <div class="rail-divider"></div>
-                @* Undo — funkční, snapshot-based *@
-                <button class="wb-toolbar-icon-btn"
-                        title="@(_editModeCanUndo ? ("Vrátit zpět: " + (_editUndoStack.Count > 0 ? _editUndoStack[^1].Description : "")) : "Zpět — žádná změna k vrácení")"
-                        disabled="@(!_editModeCanUndo)"
-                        @onclick="UndoEditAsync">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466"/></svg>
-                </button>
-                @* Redo — funkční, snapshot-based *@
-                <button class="wb-toolbar-icon-btn"
-                        title="@(_editModeCanRedo ? ("Znovu provést: " + (_editRedoStack.Count > 0 ? _editRedoStack[^1].Description : "")) : "Znovu — žádná vrácená změna")"
-                        disabled="@(!_editModeCanRedo)"
-                        @onclick="RedoEditAsync">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></svg>
-                </button>
-            </div>
-
-            @* Properties Panel *@
+            @* ── Properties Panel with tabs ── *@
             <div class="wb-editor-props" id="editor-props-panel">
-                <div class="wb-editor-props-header">
-                    <h5>
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" class="me-2 text-primary" style="flex-shrink:0" aria-hidden="true"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/></svg>Schema Editor
-                    </h5>
-                </div>
-                <div class="wb-editor-props-content">
 
+                @* Tab header *@
+                <div class="wb-editor-tabs-header">
+                    <button class="wb-editor-tab @(_editorActiveTab == "edit" ? "wb-editor-tab-active" : "")"
+                            @onclick="@(() => SwitchEditorTab("edit"))">
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/></svg>
+                        Edit
+                    </button>
+                    <button class="wb-editor-tab @(_editorActiveTab == "add" ? "wb-editor-tab-active" : "")"
+                            @onclick="@(() => SwitchEditorTab("add"))">
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 1"/></svg>
+                        Add node
+                    </button>
+                    <button class="wb-editor-tab @(_editorActiveTab == "delete" ? "wb-editor-tab-active" : "")"
+                            @onclick="@(() => SwitchEditorTab("delete"))">
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg>
+                        Delete
+                    </button>
+                    <button class="wb-editor-tab @(_editorActiveTab == "import" ? "wb-editor-tab-active" : "")"
+                            @onclick="@(() => SwitchEditorTab("import"))">
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></svg>
+                        Import
+                    </button>
+                </div>
+
+                @* Tab content *@
+                <div class="wb-editor-props-content">
                 @{
                     var editorHasFocusNode = SessionService.SelectedElementType == EditorSelectionType.FacilityNode && _selectedFacilityNode is not null;
                 }
 
-                @* ── Selected Node Header ── *@
-                @if (editorHasFocusNode)
+                @* ══ TAB: EDIT ══════════════════════════════════════════ *@
+                @if (_editorActiveTab == "edit")
                 {
-                    <div class="wb-editor-node-name">
-                        @_selectedFacilityNode!.Label
-                        <span class="node-key-sub">@_selectedFacilityNode.NodeKey</span>
-                    </div>
-                }
-                else
-                {
-                    <div class="small text-muted mb-3 p-2 bg-light rounded">
-                        <i class="bi bi-info-circle me-1"></i>Vyberte uzel ve schématu pro editaci.
-                    </div>
-                }
-
-                @* ── Section 1: Metadata ── *@
-                <div class="wb-editor-section" id="editor-metadata-section">
-                    <div class="wb-editor-section-title">Metadata uzlu</div>
+                    @if (editorHasFocusNode)
+                    {
+                        <div class="ep-node-header">
+                            <div class="ep-node-header-label">@_selectedFacilityNode!.Label</div>
+                            <div class="ep-node-header-key">@_selectedFacilityNode.NodeKey</div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="wb-editor-empty-state">
+                            <svg width="22" height="22" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" class="wb-editor-empty-icon"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/><path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/></svg>
+                            <div>Vyberte uzel ve schématu pro editaci</div>
+                        </div>
+                    }
                     @if (editorHasFocusNode && CanEditFocusedNode)
                     {
-                        <div class="wb-editor-field">
-                            <label>Label / Název</label>
-                            <input class="form-control form-control-sm" @bind="_editorLabelInput" maxlength="200" />
-                            <div class="wb-editor-field-hint">Zobrazovaný název uzlu ve schématu</div>
-                        </div>
-                        <div class="wb-editor-field">
-                            <label>NodeType</label>
-                            <input class="form-control form-control-sm bg-light" value="@(_selectedFacilityNode!.NodeType ?? "—")" readonly />
-                            <div class="wb-editor-field-hint">Typ uzlu — subzone, meter, equipment…</div>
-                        </div>
-                        <div class="wb-editor-field">
-                            <label>Zone</label>
-                            <input class="form-control form-control-sm bg-light" value="@(_selectedFacilityNode.Zone ?? "—")" readonly />
-                            <div class="wb-editor-field-hint">Logická oblast / funkční zóna</div>
-                        </div>
-                        <div class="wb-editor-field" id="editor-reconnect-section">
-                            <label>Parent</label>
-                            <div class="d-flex align-items-center gap-2">
-                                <input class="form-control form-control-sm bg-light flex-grow-1" value="@(_selectedFacilityNode.ParentNodeKey ?? "root")" readonly />
-                                <button class="btn btn-sm btn-outline-primary" @onclick="ToggleReconnectModeAndScrollAsync"
-                                        disabled="@(!_isSchematicEditorEnabled)" title="Změnit parent uzlu">
-                                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M6 3.5A1.5 1.5 0 0 1 7.5 2h1A1.5 1.5 0 0 1 10 3.5v1A1.5 1.5 0 0 1 8.5 6v1H14a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0v-1A.5.5 0 0 1 2 7h5.5V6A1.5 1.5 0 0 1 6 4.5zM8.5 5a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5zM0 11.5A1.5 1.5 0 0 1 1.5 10h1A1.5 1.5 0 0 1 4 11.5v1A1.5 1.5 0 0 1 2.5 14h-1A1.5 1.5 0 0 1 0 12.5zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm4.5.5A1.5 1.5 0 0 1 7.5 10h1a1.5 1.5 0 0 1 1.5 1.5v1A1.5 1.5 0 0 1 8.5 14h-1A1.5 1.5 0 0 1 6 12.5zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm4.5.5a1.5 1.5 0 0 1 1.5-1.5h1a1.5 1.5 0 0 1 1.5 1.5v1a1.5 1.5 0 0 1-1.5 1.5h-1a1.5 1.5 0 0 1-1.5-1.5zm1.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5z"/></svg>
-                                </button>
+                        <div class="ep-section">
+                            <div class="ep-section-label">Základní info</div>
+                            <div class="ep-field">
+                                <label>Label / Název</label>
+                                <input class="form-control form-control-sm" @bind="_editorLabelInput" maxlength="200" />
                             </div>
-                            <div class="wb-editor-field-hint">Nadřazený uzel — klikni pro změnu</div>
+                            <div class="ep-field-row">
+                                <div class="ep-field">
+                                    <label>NodeType</label>
+                                    <input class="form-control form-control-sm" @bind="_editorNodeTypeInput" maxlength="100" placeholder="subzone, meter…" />
+                                </div>
+                                <div class="ep-field">
+                                    <label>Zone</label>
+                                    <input class="form-control form-control-sm" @bind="_editorZoneInput" maxlength="100" placeholder="volitelně" />
+                                </div>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(_selectedFacilityNode!.MeterUrn))
+                            {
+                                <div class="ep-field">
+                                    <label>Meter URN</label>
+                                    <input class="form-control form-control-sm ep-input-readonly" value="@_selectedFacilityNode.MeterUrn" readonly />
+                                </div>
+                            }
                         </div>
 
-                        @if (_isReconnectMode)
-                        {
-                            <div class="p-2 border rounded bg-light-subtle mt-2 mb-2">
-                                <div class="small text-muted mb-1">Nový parent pro @_selectedFacilityNode.NodeKey:</div>
-                                <select class="form-select form-select-sm bg-light mb-2" @bind="_reconnectParentNodeKeyInput">
-                                    <option value="">root (bez parentu)</option>
+                        <div class="ep-section">
+                            <div class="ep-section-label">
+                                <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor" class="me-1" aria-hidden="true"><path fill-rule="evenodd" d="M6 3.5A1.5 1.5 0 0 1 7.5 2h1A1.5 1.5 0 0 1 10 3.5v1A1.5 1.5 0 0 1 8.5 6v1H14a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0v-1A.5.5 0 0 1 2 7h5.5V6A1.5 1.5 0 0 1 6 4.5zM8.5 5a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5z"/></svg>
+                                Změna parenta
+                            </div>
+                            <div class="ep-field">
+                                <label>Aktuální parent</label>
+                                <div class="ep-value-chip">@(_selectedFacilityNode!.ParentNodeKey ?? "root")</div>
+                            </div>
+                            <div class="ep-field">
+                                <label>Nový parent</label>
+                                <select class="form-select form-select-sm" @bind="_reconnectParentNodeKeyInput">
+                                    <option value="">root (bez parenta)</option>
                                     @foreach (var parentCandidate in GetReconnectParentCandidates(_selectedFacilityNode.NodeKey))
                                     {
                                         <option value="@parentCandidate.NodeKey">@parentCandidate.Label (@parentCandidate.NodeKey)</option>
                                     }
                                 </select>
-                                <button class="btn btn-sm btn-outline-primary" @onclick="ReconnectFocusedNodeAsync">
-                                    <i class="bi bi-check2-circle me-1"></i>Potvrdit reconnect
+                            </div>
+                            @if (HasChildren(_selectedFacilityNode.NodeKey) && !string.Equals(_reconnectParentNodeKeyInput, _selectedFacilityNode.ParentNodeKey ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+                            {
+                                <div class="wb-editor-warning-box">
+                                    <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" class="me-1 flex-shrink-0" aria-hidden="true"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg>
+                                    <div>
+                                        Uzel má child uzly. Přepojením se přesunou <strong>všechny children</strong> spolu s ním.<br />
+                                        <label class="d-flex align-items-center gap-2 mt-2">
+                                            <input type="checkbox" @bind="_reconnectChildrenWarningConfirmed" />
+                                            <span>Beru na vědomí, potvrzuji přepojení</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="ep-section">
+                            <div class="ep-section-label">Tagy</div>
+                            @if (!string.IsNullOrWhiteSpace(_editorTagsInput))
+                            {
+                                <div class="wb-tag-list mb-2">
+                                    @foreach (var tag in _editorTagsInput.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                                    {
+                                        <span class="wb-tag"><i class="bi bi-tag-fill me-1" style="font-size: 0.65rem;"></i>@tag</span>
+                                    }
+                                </div>
+                            }
+                            <input class="form-control form-control-sm" @bind="_editorTagsInput"
+                                   placeholder="např. hvac, maintenance, zone:workshop" />
+                            <div class="ep-hint">Oddělujte čárkou</div>
+                        </div>
+
+                        <div class="ep-section">
+                            <div class="ep-section-label">Poznámka</div>
+                            <textarea class="form-control form-control-sm" rows="2" maxlength="500" @bind="_editorNoteInput" placeholder="Volitelná poznámka k uzlu..."></textarea>
+                        </div>
+
+                        <div class="ep-footer">
+                            <button class="btn btn-sm btn-primary ep-btn-save"
+                                    disabled="@(HasChildren(_selectedFacilityNode.NodeKey) && !string.Equals(_reconnectParentNodeKeyInput, _selectedFacilityNode.ParentNodeKey ?? string.Empty, StringComparison.OrdinalIgnoreCase) && !_reconnectChildrenWarningConfirmed)"
+                                    @onclick="SaveFocusedNodeMetadataAsync">
+                                @* Floppy disk / kazeta SVG *@
+                                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" class="me-1" aria-hidden="true">
+                                    <path d="M11 2H9v3h2z"/>
+                                    <path d="M1.5 0h11.586a1.5 1.5 0 0 1 1.06.44l1.415 1.414A1.5 1.5 0 0 1 16 2.914V14.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 14.5v-13A1.5 1.5 0 0 1 1.5 0M1 1.5v13a.5.5 0 0 0 .5.5H2v-4.5A1.5 1.5 0 0 1 3.5 9h9a1.5 1.5 0 0 1 1.5 1.5V15h.5a.5.5 0 0 0 .5-.5V2.914a.5.5 0 0 0-.146-.353l-1.415-1.415A.5.5 0 0 0 13.086 1H13v3.5A1.5 1.5 0 0 1 11.5 6h-7A1.5 1.5 0 0 1 3 4.5V1H1.5a.5.5 0 0 0-.5.5m3 4a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V1H4zM3 15h10v-4.5a.5.5 0 0 0-.5-.5h-9a.5.5 0 0 0-.5.5z"/>
+                                </svg>
+                                Uložit uzel
+                            </button>
+                            <button class="btn btn-sm btn-link text-decoration-none p-0 ep-btn-restore" @onclick="RestoreFocusedNodeEditorDraft">
+                                Obnovit draft
+                            </button>
+                        </div>
+                    }
+                    else if (editorHasFocusNode)
+                    {
+                        <div class="ep-info-note">Uzel @_selectedFacilityNode!.NodeKey je kontextový a nelze ho editovat.</div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(_editorStatusMessage))
+                    {
+                        <div class="ep-status-msg">@_editorStatusMessage</div>
+                    }
+                }
+
+                @* ══ TAB: ADD NODE ══════════════════════════════════════ *@
+                else if (_editorActiveTab == "add")
+                {
+                    @if (_selectedFacilityNode is null || !CanEditFocusedNode)
+                    {
+                        <div class="ep-node-header ep-node-header-placeholder">
+                            <div class="ep-node-header-label">Add node</div>
+                            <div class="ep-node-header-key">Nový child uzel</div>
+                        </div>
+                        <div class="wb-editor-empty-state">
+                            <svg width="22" height="22" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" class="wb-editor-empty-icon"><path d="M8 1a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 1"/></svg>
+                            <div>Vyberte uzel ve schématu — nový uzel se přidá jako jeho child.</div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="ep-node-header">
+                            <div class="ep-node-header-sublabel">Parent uzel</div>
+                            <div class="ep-node-header-label">@_selectedFacilityNode!.Label</div>
+                            <div class="ep-node-header-key">@_selectedFacilityNode.NodeKey</div>
+                        </div>
+                        <div class="ep-section" id="editor-add-node-section">
+                            <div class="ep-section-label">Nový child uzel</div>
+                            <div class="ep-field">
+                                <label>NodeKey <span class="text-danger">*</span></label>
+                                <input class="form-control form-control-sm" @bind="_newNodeKeyInput" maxlength="100" placeholder="např. workshop_aux_1" />
+                                <div class="ep-hint">Unikátní ID — malá písmena, podtržítko</div>
+                            </div>
+                            <div class="ep-field">
+                                <label>Label <span class="text-danger">*</span></label>
+                                <input class="form-control form-control-sm" @bind="_newNodeLabelInput" maxlength="200" placeholder="Zobrazovaný název" />
+                            </div>
+                            <div class="ep-field-row">
+                                <div class="ep-field">
+                                    <label>NodeType</label>
+                                    <input class="form-control form-control-sm" @bind="_newNodeTypeInput" maxlength="100" placeholder="subzone" />
+                                </div>
+                                <div class="ep-field">
+                                    <label>Zone</label>
+                                    <input class="form-control form-control-sm" @bind="_newNodeZoneInput" maxlength="100" placeholder="volitelně" />
+                                </div>
+                            </div>
+                            <div class="ep-field">
+                                <label>Meter URN</label>
+                                <input class="form-control form-control-sm" @bind="_newNodeMeterUrnInput" maxlength="200" placeholder="volitelně — vazba na měřidlo" />
+                            </div>
+                        </div>
+                        <div class="ep-footer">
+                            <button class="btn btn-sm btn-primary ep-btn-save" @onclick="AddNodeAsync">
+                                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" class="me-1" aria-hidden="true"><path d="M8 1a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 1"/></svg>
+                                Přidat child uzel
+                            </button>
+                        </div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(_structureStatusMessage))
+                    {
+                        <div class="ep-status-msg">@_structureStatusMessage</div>
+                    }
+                }
+
+                @* ══ TAB: DELETE ════════════════════════════════════════ *@
+                else if (_editorActiveTab == "delete")
+                {
+                    @if (!editorHasFocusNode)
+                    {
+                        <div class="ep-node-header ep-node-header-placeholder">
+                            <div class="ep-node-header-label">Delete</div>
+                            <div class="ep-node-header-key">Smazat uzel</div>
+                        </div>
+                        <div class="wb-editor-empty-state">
+                            <svg width="22" height="22" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" class="wb-editor-empty-icon"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg>
+                            <div>Vyberte uzel ve schématu pro smazání.</div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="ep-node-header">
+                            <div class="ep-node-header-sublabel">Vybraný uzel</div>
+                            <div class="ep-node-header-label">@_selectedFacilityNode!.Label</div>
+                            <div class="ep-node-header-key">@_selectedFacilityNode.NodeKey</div>
+                        </div>
+                        @if (!CanEditFocusedNode)
+                        {
+                            <div class="wb-editor-warning-box">
+                                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" class="me-1 flex-shrink-0" aria-hidden="true"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg>
+                                Tento uzel je kontextový a nelze ho smazat.
+                            </div>
+                        }
+                        else if (HasChildren(_selectedFacilityNode!.NodeKey))
+                        {
+                            <div class="wb-editor-warning-box ep-warning-block">
+                                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" class="me-1 flex-shrink-0" aria-hidden="true"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg>
+                                <div>
+                                    <strong>Uzel nelze smazat.</strong><br />
+                                    Uzel má child uzly. Nejdříve přepoj nebo smaž všechny children.
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="ep-section">
+                                <div class="ep-section-label ep-section-label-danger">Nevratná akce</div>
+                                <div class="ep-hint ep-hint-dark">Uzel bude trvale odstraněn ze struktury. Tuto akci nelze vrátit zpět.</div>
+                            </div>
+                            <div class="ep-footer">
+                                <button class="btn btn-sm btn-danger ep-btn-save" @onclick="RemoveFocusedLeafNodeAsync">
+                                    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" class="me-1" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg>
+                                    Smazat uzel
                                 </button>
                             </div>
                         }
                     }
-                    else if (editorHasFocusNode)
+                    @if (!string.IsNullOrWhiteSpace(_structureStatusMessage))
                     {
-                        <div class="small text-muted">Uzel @_selectedFacilityNode!.NodeKey je kontextový a nelze ho editovat.</div>
+                        <div class="ep-status-msg">@_structureStatusMessage</div>
                     }
-                    else
-                    {
-                        <div class="small text-muted">Žádný uzel není vybrán.</div>
-                    }
-                </div>
+                }
 
-                @* ── Section 2: Tags ── *@
-                <div class="wb-editor-section">
-                    <div class="wb-editor-section-title">Tagy</div>
-                    @if (editorHasFocusNode && CanEditFocusedNode)
-                    {
-                        @if (!string.IsNullOrWhiteSpace(_editorTagsInput))
-                        {
-                            <div class="wb-tag-list">
-                                @foreach (var tag in _editorTagsInput.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                                {
-                                    <span class="wb-tag"><i class="bi bi-tag-fill me-1" style="font-size: 0.65rem;"></i>@tag</span>
-                                }
+                @* ══ TAB: IMPORT DATA ═══════════════════════════════════ *@
+                else if (_editorActiveTab == "import")
+                {
+                    <div class="ep-node-header ep-node-header-placeholder">
+                        <div class="ep-node-header-label">Import data</div>
+                        <div class="ep-node-header-key">Napojení na zdroj dat</div>
+                    </div>
+                    <div class="ep-section">
+                        <div class="ep-section-label">Data binding</div>
+                        <div class="ep-placeholder">
+                            <svg width="28" height="28" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" class="ep-placeholder-icon"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></svg>
+                            <div class="ep-placeholder-text">
+                                Napojení na datový zdroj bude implementováno v pozdějším kroku.
                             </div>
-                        }
-                        <input class="form-control form-control-sm" @bind="_editorTagsInput"
-                               placeholder="např. hvac, maintenance, zone:workshop" />
-                        <div class="small text-muted mt-1">Oddělujte čárkou</div>
-                    }
-                    else
-                    {
-                        <div class="small text-muted">Vyberte editovatelný uzel pro správu tagů.</div>
-                    }
-                </div>
-
-                @* ── Section 3: Poznámka ── *@
-                <div class="wb-editor-section">
-                    <div class="wb-editor-section-title">Poznámka</div>
-                    @if (editorHasFocusNode && CanEditFocusedNode)
-                    {
-                        <textarea class="form-control form-control-sm" rows="2" maxlength="500" @bind="_editorNoteInput" placeholder="Volitelná poznámka k uzlu..."></textarea>
-                    }
-                    else
-                    {
-                        <div class="small text-muted">—</div>
-                    }
-                </div>
-
-                @* ── Section 4: Data Binding Placeholder ── *@
-                <div class="wb-editor-section">
-                    <div class="wb-editor-section-title">Napojení na data</div>
+                            <div class="ep-placeholder-sub">External source binding · CSV import · Meter mapping</div>
+                        </div>
+                    </div>
                     @if (editorHasFocusNode && !string.IsNullOrWhiteSpace(_selectedFacilityNode!.MeterUrn))
                     {
-                        <div class="wb-editor-field">
-                            <label>Meter URN</label>
-                            <input class="form-control form-control-sm bg-light" value="@_selectedFacilityNode.MeterUrn" readonly />
+                        <div class="ep-section">
+                            <div class="ep-section-label">Aktuální Meter URN</div>
+                            <div class="ep-value-chip">@_selectedFacilityNode.MeterUrn</div>
                         </div>
                     }
-                    <div class="wb-editor-placeholder">
-                        <div class="wb-editor-placeholder-icon"><i class="bi bi-database-gear"></i></div>
-                        <div class="wb-editor-placeholder-text">
-                            Napojení na data bude doplněno v pozdějším kroku.
-                            <br /><span class="text-muted" style="font-size: 0.7rem;">External source binding · Import data mapping</span>
-                        </div>
-                    </div>
-                </div>
-
-                @* ── Section 5: Node Actions ── *@
-                <div class="wb-editor-section">
-                    <div class="wb-editor-section-title">Akce uzlu</div>
-                    @if (editorHasFocusNode && CanEditFocusedNode)
-                    {
-                        <div class="d-flex flex-wrap gap-2 mb-2">
-                            <button class="btn btn-sm btn-primary" @onclick="SaveFocusedNodeMetadataAsync" disabled="@(!_isSchematicEditorEnabled)">
-                                <i class="bi bi-save me-1"></i>Uložit metadata
-                            </button>
-                            <button class="btn btn-sm btn-link text-decoration-none p-0" @onclick="RestoreFocusedNodeEditorDraft">
-                                Obnovit draft
-                            </button>
-                        </div>
-                        <div class="d-flex flex-wrap gap-2">
-                            <button class="btn btn-sm btn-outline-danger" @onclick="RemoveFocusedLeafNodeAsync"
-                                    disabled="@(!_isSchematicEditorEnabled || !CanRemoveFocusedLeafNode)">
-                                <i class="bi bi-node-minus me-1"></i>Smazat uzel
-                            </button>
-                        </div>
-                    }
-                </div>
-
-                @* ── Section 6: Add Node ── *@
-                <div class="wb-editor-section" id="editor-add-node-section">
-                    <div class="wb-editor-section-title">Přidat nový uzel</div>
-                    @if (_selectedFacilityNode is null || !CanEditFocusedNode)
-                    {
-                        <div class="small text-muted p-2 bg-light rounded">
-                            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" class="me-1" aria-hidden="true"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/><path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/></svg>Vyberte uzel ve schématu — nový uzel se přidá jako jeho child.
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="wb-editor-add-parent-preview">
-                            <div class="wb-editor-field-hint mb-1">Parent uzel (automaticky):</div>
-                            <strong>@_selectedFacilityNode!.Label</strong>
-                            <code class="small text-muted d-block">@_selectedFacilityNode.NodeKey</code>
-                        </div>
-                        <div class="wb-editor-field">
-                            <label>NodeKey <span class="text-danger">*</span></label>
-                            <input class="form-control form-control-sm" @bind="_newNodeKeyInput" maxlength="100" placeholder="např. workshop_aux_1" />
-                            <div class="wb-editor-field-hint">Unikátní technický identifikátor — malá písmena, podtržítko</div>
-                        </div>
-                        <div class="wb-editor-field">
-                            <label>Label <span class="text-danger">*</span></label>
-                            <input class="form-control form-control-sm" @bind="_newNodeLabelInput" maxlength="200" placeholder="Zobrazovaný název" />
-                            <div class="wb-editor-field-hint">Název zobrazovaný ve schématu a reportech</div>
-                        </div>
-                        <div class="wb-editor-field d-flex gap-1 align-items-start">
-                            <div class="flex-grow-1">
-                                <label>NodeType</label>
-                                <input class="form-control form-control-sm" @bind="_newNodeTypeInput" maxlength="100" placeholder="subzone" />
-                                <div class="wb-editor-field-hint">Typ uzlu (subzone, meter…)</div>
-                            </div>
-                            <div class="flex-grow-1">
-                                <label>Zone</label>
-                                <input class="form-control form-control-sm" @bind="_newNodeZoneInput" maxlength="100" placeholder="volitelně" />
-                                <div class="wb-editor-field-hint">Logická oblast</div>
-                            </div>
-                        </div>
-                        <div class="wb-editor-field">
-                            <label>Meter URN</label>
-                            <input class="form-control form-control-sm" @bind="_newNodeMeterUrnInput" maxlength="200" placeholder="volitelně" />
-                            <div class="wb-editor-field-hint">Vazba na měřidlo / datový zdroj</div>
-                        </div>
-                        <button class="btn btn-sm btn-primary w-100 mt-1" @onclick="AddNodeAsync" disabled="@(!_isSchematicEditorEnabled)">
-                            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" class="me-1" aria-hidden="true"><path d="M8 1a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 1"/></svg>Přidat child uzel
+                    <div class="ep-footer">
+                        <button class="btn btn-sm btn-outline-secondary ep-btn-save" disabled title="Funkce bude dostupná v pozdějším kroku">
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" class="me-1" aria-hidden="true"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></svg>
+                            Import data
                         </button>
-                    }
-                </div>
+                    </div>
+                }
 
-                @if (!string.IsNullOrWhiteSpace(_editorStatusMessage))
-                {
-                    <div class="small text-muted mt-2">@_editorStatusMessage</div>
-                }
-                @if (!string.IsNullOrWhiteSpace(_structureStatusMessage))
-                {
-                    <div class="small text-muted mt-2">@_structureStatusMessage</div>
-                }
                 </div>@* end wb-editor-props-content *@
-
-                @* ── Sticky Footer — akce editoru *@
-                <div class="wb-editor-footer">
-                    @if (EditModeDirty)
-                    {
-                        <div class="wb-editor-footer-status">
-                            <span class="wb-editor-dirty-badge">
-                                <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><circle cx="4" cy="4" r="4"/></svg>
-                                neuložené změny
-                            </span>
-                        </div>
-                    }
-                    <div class="wb-editor-footer-buttons">
-                        <button class="btn-cancel" @onclick="ExitSchematicOverlayAsync" title="Zavřít editor bez uložení">
-                            <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/></svg>Ukončit
-                        </button>
-                        <button class="btn-confirm" @onclick="ConfirmAndExitEditMode" title="Uložit všechny změny a ukončit editor">
-                            <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425z"/></svg>Potvrdit a uložit
-                        </button>
-                    </div>
-                </div>
             </div>@* end wb-editor-props *@
 
-            @* Discard Guard Dialog — zobrazí se pokud je dirty a uživatel klikne na Ukončit *@
+            @* Discard Guard Dialog *@
             @if (_showDiscardGuard)
             {
                 <div class="wb-discard-guard-overlay" @onclick="() => _showDiscardGuard = false">
@@ -429,6 +508,12 @@
                 <div class="wb-schematic-toolbar">
                     <div class="toolbar-left">
                         <span class="text-muted fw-bold small text-uppercase"><i class="bi bi-bezier2 me-1"></i> Facility Schéma</span>
+                        @if (_selectedFacilityNode is not null)
+                        {
+                            <button class="wb-focus-chip" @onclick="ClosePanel" title="Zrušit focus a výběr">
+                                <i class="bi bi-crosshair2 me-1"></i>@_selectedFacilityNode.Label<i class="bi bi-x ms-1"></i>
+                            </button>
+                        }
                     </div>
                     <div class="toolbar-right">
                         <button class="wb-toolbar-icon-btn" @onclick="GoHomeAsync"
@@ -441,7 +526,9 @@
                         <button class="wb-toolbar-icon-btn"
                                 @onclick="ToggleSchematicFullscreen" title="Otevřít focus – rozšířený pohled"
                                 disabled="@(_facility is null)">
-                            <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M1.5 1h4a.5.5 0 0 1 0 1h-4v4a.5.5 0 0 1-1 0v-4A.5.5 0 0 1 1 1zM10 1.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0v-4h-4a.5.5 0 0 1-.5-.5M1 10.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1h-4v4a.5.5 0 0 1-1 0zm9 0a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0v-4h-4a.5.5 0 0 1-.5-.5z"/></svg>
+                            <svg class="wb-toolbar-icon-svg" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                <path d="M1 6V1h5v1.5H2.5V6H1zm9-5h5v5h-1.5V2.5H10V1zm3.5 8.5H15V15h-5v-1.5h3.5V9.5zM6 15H1v-5h1.5v3.5H6V15z"/>
+                            </svg>
                         </button>
                         <button class="wb-toolbar-icon-btn wb-toolbar-icon-btn-primary"
                                 @onclick="ToggleEditMode"
@@ -474,83 +561,40 @@
                 </div>
             </div>
 
-            @* ── Overview Pane ── *@
+            @* ── Overview Pane (Control Panel) ── *@
             <div class="wb-overview">
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
-                    <h5 class="mb-0 fw-bold" style="font-size: 0.95rem;">Workspace Overview</h5>
-                </div>
-
                 @{
-                    var hasFocusNode = SessionService.SelectedElementType == EditorSelectionType.FacilityNode && _selectedFacilityNode is not null;
                     var weatherSummary = _curatedDeviationData?.WeatherExplanation;
                 }
 
-                @if (hasFocusNode)
-                {
-                    <div class="d-flex justify-content-end mb-2">
-                        <button class="btn btn-sm btn-light border shadow-sm text-secondary px-3 fw-medium" @onclick="ClosePanel" title="Zavřít focus uzel">
-                            <i class="bi bi-x-lg me-1"></i>Zrušit focus
-                        </button>
+                @* ── INTERVAL — dominant top section ── *@
+                <div class="cp-section cp-interval-section">
+                    <div class="cp-section-label">
+                        <i class="bi bi-calendar3 me-1"></i> Interval
                     </div>
-                }
-
-                <div class="overview-grid">
-                <div class="overview-widget widget-col-6">
-                    <h6>Selection</h6>
-                    <div class="d-flex align-items-end justify-content-between mb-2">
-                        <div>
-                            <div class="metric-value">@SelectionCount</div>
-                            <div class="metric-caption">Vybrané uzly</div>
-                        </div>
-                        @if (hasFocusNode)
-                        {
-                            <span class="badge bg-light text-secondary border">Focus: @_selectedFacilityNode!.Label</span>
-                        }
+                    <div class="cp-interval-range-display">@DisplayIntervalFromTo</div>
+                    <div class="cp-preset-row">
+                        <button class="cp-preset-btn @(_selectedInterval == "last24h" ? "cp-preset-btn-active" : "")"
+                                @onclick='() => SetIntervalPreset("last24h")'>24h</button>
+                        <button class="cp-preset-btn @(_selectedInterval == "last7d" ? "cp-preset-btn-active" : "")"
+                                @onclick='() => SetIntervalPreset("last7d")'>7 dní</button>
+                        <button class="cp-preset-btn @(_selectedInterval == "last30d" ? "cp-preset-btn-active" : "")"
+                                @onclick='() => SetIntervalPreset("last30d")'>30 dní</button>
+                        <button class="cp-preset-btn @(_selectedInterval == "thisMonth" ? "cp-preset-btn-active" : "")"
+                                @onclick='() => SetIntervalPreset("thisMonth")'>Tento měsíc</button>
+                        <button class="cp-preset-btn @(_selectedInterval == "custom" ? "cp-preset-btn-active" : "")"
+                                @onclick='() => SetIntervalPreset("custom")'>Vlastní</button>
                     </div>
-                    @if (HasSelectedNodes)
-                    {
-                        <div class="d-flex flex-wrap gap-2">
-                            @foreach (var selectedNode in SelectionSummaryItems.Take(4))
-                            {
-                                var selectedNodeRole = ResolveNodeRole(selectedNode);
-                                <span class="badge rounded-pill border @GetFacilityRoleBadgeClass(selectedNodeRole)">@selectedNode.Label · @GetFacilityRoleCompactLabel(selectedNodeRole)</span>
-                            }
-                            @if (SelectionCount > 4)
-                            {
-                                <span class="badge rounded-pill border text-secondary-emphasis bg-light-subtle">+@(SelectionCount - 4)</span>
-                            }
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="small text-muted">Výběr je prázdný.</div>
-                    }
-
-                    <div class="mt-3 pt-2 border-top small text-muted">
-                        Selection summary zůstává nahoře; semantic a editor nástroje jsou v sekci Selection Tools.
-                    </div>
-                </div>
-                <div class="overview-widget widget-col-6 interval-widget">
-                    <h6>Interval</h6>
-                    <div class="interval-meta-row">
-                        <span class="badge bg-light text-secondary border">@SelectedIntervalLabel</span>
-                        <span class="interval-range-text">@DisplayIntervalFromTo</span>
-                    </div>
-                    <select class="form-select form-select-sm bg-light fw-medium" @onchange="OnIntervalChanged" value="@_selectedInterval">
-                        <option value="last24h">Posledních 24 hodin</option>
-                        <option value="last7d">Posledních 7 dní</option>
-                        <option value="last30d">Posledních 30 dní</option>
-                        <option value="thisMonth">Tento měsíc</option>
-                        <option value="custom">Vlastní rozsah</option>
-                    </select>
                     @if (_selectedInterval == "custom")
                     {
-                        <div class="interval-custom-grid">
+                        <div class="cp-custom-date-row">
                             <div>
-                                <input type="date" class="form-control form-control-sm bg-light" value="@CustomFromDateValue" @onchange="OnCustomFromChanged" />
+                                <div class="cp-date-label">Od</div>
+                                <input type="date" class="form-control form-control-sm" value="@CustomFromDateValue" @onchange="OnCustomFromChanged" />
                             </div>
                             <div>
-                                <input type="date" class="form-control form-control-sm bg-light" value="@CustomToDateValue" @onchange="OnCustomToChanged" />
+                                <div class="cp-date-label">Do</div>
+                                <input type="date" class="form-control form-control-sm" value="@CustomToDateValue" @onchange="OnCustomToChanged" />
                             </div>
                         </div>
                     }
@@ -562,181 +606,188 @@
                     {
                         <div class="small text-muted mt-1">Anchor: poslední data focus uzlu</div>
                     }
+                    @* Weather context — integrated into interval section *@
+                    <div class="cp-weather-context">
+                        <i class="bi bi-thermometer-half me-1"></i>
+                        @if (SupportsWeatherExplanation(_selectedFacilityNode?.NodeKey) && weatherSummary?.IsAvailable == true)
+                        {
+                            <span>@GetWeatherExplanationStatusText(weatherSummary.Status) · @FormatSigned(weatherSummary.DeltaOutdoorTempC, "N1") °C delta</span>
+                        }
+                        else
+                        {
+                            <span>Weather: N/A pro aktuální focus</span>
+                        }
+                    </div>
                 </div>
 
-                <div class="overview-widget widget-col-6">
-                    <h6>Deviation Alerty</h6>
-                    <div class="d-flex align-items-end justify-content-between mb-2">
-                        <div>
-                            <div class="metric-value">@ActiveAlertCount</div>
-                            <div class="metric-caption">Aktivní deviation alerty</div>
+                @* ── SELECTION — compact summary ── *@
+                <div class="cp-section cp-selection-section">
+                    <div class="cp-section-label">Selection</div>
+                    <div class="cp-selection-row">
+                        <div class="cp-selection-count">
+                            <span class="cp-count-big">@SelectionCount</span>
+                            <span class="cp-count-label">vybraných uzlů</span>
                         </div>
+                        @if (HasSelectedNodes)
+                        {
+                            <button class="btn btn-sm btn-outline-secondary cp-clear-btn" @onclick="ClearWorkspaceSelection" title="Zrušit celý výběr">
+                                <i class="bi bi-x-lg me-1"></i>Zrušit výběr
+                            </button>
+                        }
                     </div>
-                    <div class="d-flex flex-wrap gap-2 mb-2">
-                        <span class="badge bg-danger-subtle text-danger-emphasis">High: @GlobalAlertSummaryService.Current.HighCount</span>
-                        <span class="badge bg-warning-subtle text-warning-emphasis">Elevated: @GlobalAlertSummaryService.Current.ElevatedCount</span>
-                    </div>
-                    @if (ActiveAlertCount == 0)
+                    @if (HasSelectedNodes)
                     {
-                        <div class="small text-muted">Bez aktivních deviation alertů.</div>
+                        var roleGroups = SelectionSummaryItems
+                            .Select(n => ResolveNodeRole(n))
+                            .GroupBy(r => r)
+                            .OrderByDescending(g => g.Count())
+                            .Take(3)
+                            .ToList();
+                        var totalRoleTypes = SelectionSummaryItems.Select(n => ResolveNodeRole(n)).Distinct().Count();
+                        <div class="d-flex flex-wrap gap-1 mt-1">
+                            @foreach (var grp in roleGroups)
+                            {
+                                <span class="badge rounded-pill border @GetFacilityRoleBadgeClass(grp.Key)">@grp.Count() × @GetFacilityRoleCompactLabel(grp.Key)</span>
+                            }
+                            @if (totalRoleTypes > 3)
+                            {
+                                <span class="badge rounded-pill border text-secondary-emphasis bg-light-subtle">+@(totalRoleTypes - 3) rolí</span>
+                            }
+                        </div>
                     }
                     else
                     {
-                        <div class="small text-muted">Deviation-only signal pro aktuální interval.</div>
+                        <div class="small text-muted mt-1">Výběr je prázdný — klikněte na uzel ve schématu.</div>
                     }
                 </div>
 
-                <div class="overview-widget widget-col-6">
-                    <h6>Weather</h6>
-                    @if (SupportsWeatherExplanation(_selectedFacilityNode?.NodeKey) && weatherSummary?.IsAvailable == true)
+                @* ── WORKFLOW TOOLS — Semantic Selection + Working Sets ── *@
+                <div class="cp-section cp-tools-section">
+                    <div class="cp-tools-tab-bar">
+                        <button class="cp-tools-tab @(_workflowTab == "semantic" ? "cp-tools-tab-active" : "")"
+                                @onclick='() => _workflowTab = "semantic"'>
+                            <i class="bi bi-magic me-1"></i>Semantic Selection
+                        </button>
+                        <button class="cp-tools-tab @(_workflowTab == "workingsets" ? "cp-tools-tab-active" : "")"
+                                @onclick='() => _workflowTab = "workingsets"'>
+                            <i class="bi bi-bookmark-fill me-1"></i>Working Sets@(_savedWorkingSets.Count > 0 ? $" ({_savedWorkingSets.Count})" : "")
+                        </button>
+                    </div>
+
+                    @if (_workflowTab == "semantic")
                     {
-                        <div class="fw-semibold small">@GetWeatherExplanationStatusText(weatherSummary.Status)</div>
-                        <div class="metric-value mt-1">@FormatSigned(weatherSummary.DeltaOutdoorTempC, "N1") °C</div>
-                        <div class="metric-caption">Delta teploty</div>
+                        <div class="cp-tools-content">
+                            @* Row 1: Preset + Mutation mode *@
+                            <div class="cp-sem-row1">
+                                <select class="form-select form-select-sm bg-light" @bind="_semanticPreset">
+                                    @foreach (var preset in SemanticPresetOptions)
+                                    {
+                                        <option value="@preset">@FacilityNodeSemantics.GetPresetLabel(preset)</option>
+                                    }
+                                </select>
+                                <select class="form-select form-select-sm bg-light" @bind="_semanticSelectionMutationMode">
+                                    @foreach (var mode in SemanticSelectionMutationModeOptions)
+                                    {
+                                        <option value="@mode">@GetSemanticMutationModeLabel(mode)</option>
+                                    }
+                                </select>
+                            </div>
+                            @* Row 2: Role + Type *@
+                            <div class="cp-sem-filters">
+                                <select class="form-select form-select-sm bg-light" @bind="_semanticQueryRoleFilterValue">
+                                    <option value="">Any role</option>
+                                    @foreach (var role in SemanticRoleOptions)
+                                    {
+                                        <option value="@role">@FacilityNodeSemantics.GetRoleLabel(role)</option>
+                                    }
+                                </select>
+                                <select class="form-select form-select-sm bg-light" @bind="_semanticQueryTypeFilterValue">
+                                    <option value="">Any type</option>
+                                    @foreach (var semanticType in SemanticTypeOptions)
+                                    {
+                                        <option value="@semanticType">@FacilityNodeSemantics.GetSemanticTypeLabel(semanticType)</option>
+                                    }
+                                </select>
+                            </div>
+                            @* Row 3: Tags *@
+                            <input class="form-control form-control-sm bg-light mb-1" @bind="_semanticQueryTagInput" placeholder="Tagy (hvac, production…)" />
+                            @* Row 4: Checkbox + Apply + Preset apply + Reset *@
+                            <div class="cp-sem-actions">
+                                <div class="cp-sem-checkbox">
+                                    <input id="semantic-supported-only-cp" class="form-check-input mt-0" type="checkbox" @bind="_semanticSelectionSupportedOnly" />
+                                    <label class="mb-0" for="semantic-supported-only-cp">Jen podporované</label>
+                                </div>
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="ApplySemanticPresetAsync" disabled="@(_facility is null)" title="Použít preset">
+                                        <i class="bi bi-magic"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" @onclick="ApplySemanticQueryAsync" disabled="@(_facility is null)" title="Použít filtr">
+                                        <i class="bi bi-funnel"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-link text-decoration-none p-0 text-muted" @onclick="ClearSemanticQueryFilters" title="Reset">
+                                        ×
+                                    </button>
+                                </div>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(_semanticSelectionStatusMessage))
+                            {
+                                <div class="small text-muted mt-1">@_semanticSelectionStatusMessage</div>
+                            }
+                        </div>
                     }
                     else
                     {
-                        <div class="small text-muted">N/A pro aktuální focus.</div>
-                    }
-                </div>
-            </div>
-
-            <div class="overview-grid tools-widgets-grid @(HasSelectedNodes ? string.Empty : "tools-widgets-grid-empty")">
-                <div class="overview-widget overview-widget-soft tools-widget">
-                    <h6>Selection Tools</h6>
-                    <div class="small fw-semibold text-secondary mb-2">Semantic Selection</div>
-
-                    <div class="d-flex flex-wrap gap-1 mb-2">
-                        <select class="form-select form-select-sm bg-light" style="min-width: 8.5rem; max-width: 10.5rem;" @bind="_semanticPreset">
-                            @foreach (var preset in SemanticPresetOptions)
+                        <div class="cp-tools-content">
+                            @* Create row: name + optional description + save *@
+                            <div class="cp-wset-create-row">
+                                <input class="form-control form-control-sm bg-light" @bind="_workingSetNameInput" maxlength="80" placeholder="Název setu…" />
+                                <button class="btn btn-sm btn-outline-secondary" title="Uložit aktuální selection" @onclick="SaveCurrentWorkingSetAsync" disabled="@(_facility is null)">
+                                    <i class="bi bi-bookmark-plus"></i>
+                                </button>
+                            </div>
+                            @if (_showWorkingSetDescription)
                             {
-                                <option value="@preset">@FacilityNodeSemantics.GetPresetLabel(preset)</option>
+                                <input class="form-control form-control-sm bg-light mb-1" @bind="_workingSetDescriptionInput" maxlength="180" placeholder="Popis (volitelné)" />
                             }
-                        </select>
-
-                        <select class="form-select form-select-sm bg-light" style="min-width: 8rem; max-width: 10rem;" @bind="_semanticSelectionMutationMode">
-                            @foreach (var mode in SemanticSelectionMutationModeOptions)
+                            <button class="btn btn-link btn-sm p-0 mb-1 cp-wset-desc-toggle" @onclick="() => _showWorkingSetDescription = !_showWorkingSetDescription">
+                                @(_showWorkingSetDescription ? "− skrýt popis" : "+ popis")
+                            </button>
+                            @* Saved sets list *@
+                            @if (_savedWorkingSets.Count == 0)
                             {
-                                <option value="@mode">@GetSemanticMutationModeLabel(mode)</option>
+                                <div class="small text-muted mt-1">Žádné uložené sety.</div>
                             }
-                        </select>
-
-                        <button class="btn btn-sm btn-outline-primary" @onclick="ApplySemanticPresetAsync" disabled="@(_facility is null)">
-                            <i class="bi bi-magic me-1"></i>Preset
-                        </button>
-                    </div>
-
-                    <div class="d-flex align-items-center gap-2 mb-2">
-                        <input id="semantic-supported-only" class="form-check-input mt-0" type="checkbox" @bind="_semanticSelectionSupportedOnly" />
-                        <label class="small text-muted mb-0" for="semantic-supported-only">Pouze analyticky podporované</label>
-                    </div>
-
-                    <div class="d-flex flex-wrap gap-1 mb-2">
-                        <select class="form-select form-select-sm bg-light" style="min-width: 8rem; max-width: 10.5rem;" @bind="_semanticQueryRoleFilterValue">
-                            <option value="">Any role</option>
-                            @foreach (var role in SemanticRoleOptions)
+                            else
                             {
-                                <option value="@role">@FacilityNodeSemantics.GetRoleLabel(role)</option>
-                            }
-                        </select>
-
-                        <select class="form-select form-select-sm bg-light" style="min-width: 8rem; max-width: 10.5rem;" @bind="_semanticQueryTypeFilterValue">
-                            <option value="">Any semantic type</option>
-                            @foreach (var semanticType in SemanticTypeOptions)
-                            {
-                                <option value="@semanticType">@FacilityNodeSemantics.GetSemanticTypeLabel(semanticType)</option>
-                            }
-                        </select>
-                    </div>
-
-                    <input class="form-control form-control-sm bg-light" @bind="_semanticQueryTagInput" placeholder="Tagy (např. hvac, production, zone:workshop)" />
-
-                    <div class="d-flex justify-content-between align-items-center mt-2">
-                        <button class="btn btn-sm btn-outline-secondary" @onclick="ApplySemanticQueryAsync" disabled="@(_facility is null)">
-                            <i class="bi bi-funnel me-1"></i>Použít query
-                        </button>
-
-                        <button class="btn btn-sm btn-link text-decoration-none p-0" @onclick="ClearSemanticQueryFilters">
-                            Reset filtrů
-                        </button>
-                    </div>
-
-                    @if (!string.IsNullOrWhiteSpace(_semanticSelectionStatusMessage))
-                    {
-                        <div class="small text-muted mt-2">@_semanticSelectionStatusMessage</div>
-                    }
-                </div>
-
-                <div class="overview-widget overview-widget-soft tools-widget">
-                    <h6>Working Sets</h6>
-                    <div class="small fw-semibold text-secondary mb-2">Saved Working Sets</div>
-                    <div class="mb-2">
-                        <input class="form-control form-control-sm bg-light" @bind="_workingSetNameInput" maxlength="80" placeholder="Název working setu" />
-                    </div>
-                    <div class="mb-2">
-                        <input class="form-control form-control-sm bg-light" @bind="_workingSetDescriptionInput" maxlength="180" placeholder="Popis (volitelné)" />
-                    </div>
-                    <button class="btn btn-sm btn-outline-secondary" @onclick="SaveCurrentWorkingSetAsync" disabled="@(_facility is null)">
-                        <i class="bi bi-bookmark-plus me-1"></i>Uložit aktuální selection set
-                    </button>
-
-                    @if (_savedWorkingSets.Count == 0)
-                    {
-                        <div class="small text-muted mt-2">Zatím není uložen žádný working set.</div>
-                    }
-                    else
-                    {
-                        <div class="d-flex flex-column gap-1 mt-2">
-                            @foreach (var workingSet in _savedWorkingSets)
-                            {
-                                <div class="border rounded p-2 bg-light-subtle">
-                                    <div class="d-flex justify-content-between align-items-start gap-2">
-                                        <div class="small">
-                                            <div class="fw-semibold text-dark">@workingSet.Name</div>
-                                            @if (!string.IsNullOrWhiteSpace(workingSet.Description))
-                                            {
-                                                <div class="text-muted">@workingSet.Description</div>
-                                            }
-                                            <div class="text-muted">Uzly: @workingSet.NodeKeys.Count · aktualizováno @workingSet.UpdatedUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</div>
+                                <div class="cp-wset-list">
+                                    @foreach (var workingSet in _savedWorkingSets)
+                                    {
+                                        <div class="border rounded px-2 py-1 bg-light-subtle">
+                                            <div class="d-flex justify-content-between align-items-center gap-1">
+                                                <div class="small min-w-0">
+                                                    <div class="fw-semibold text-dark text-truncate" style="font-size:0.78rem">@workingSet.Name</div>
+                                                    <div class="text-muted" style="font-size:0.68rem">@workingSet.NodeKeys.Count n · @workingSet.UpdatedUtc.ToLocalTime().ToString("dd.MM.")</div>
+                                                </div>
+                                                <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                                                    <button class="btn btn-sm btn-outline-primary py-0 px-1" title="Aplikovat" @onclick="() => ApplyWorkingSetAsync(workingSet.Name)">
+                                                        <i class="bi bi-check2-circle"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-danger py-0 px-1" title="Smazat" @onclick="() => DeleteWorkingSetAsync(workingSet.Name)">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div class="d-flex align-items-center gap-1">
-                                            <button class="btn btn-sm btn-outline-primary" title="Aplikovat working set" @onclick="() => ApplyWorkingSetAsync(workingSet.Name)">
-                                                <i class="bi bi-check2-circle"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-danger" title="Smazat working set" @onclick="() => DeleteWorkingSetAsync(workingSet.Name)">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
+                                    }
                                 </div>
                             }
+                            @if (!string.IsNullOrWhiteSpace(_workingSetStatusMessage))
+                            {
+                                <div class="small text-muted mt-1">@_workingSetStatusMessage</div>
+                            }
                         </div>
                     }
-
-                    @if (!string.IsNullOrWhiteSpace(_workingSetStatusMessage))
-                    {
-                        <div class="small text-muted mt-2">@_workingSetStatusMessage</div>
-                    }
                 </div>
-            </div>
-
-            @if (!HasSelectedNodes)
-            {
-                <div class="overview-grid">
-                    <div class="overview-widget widget-col-12">
-                        <div class="empty-selection-callout">
-                            <div class="empty-selection-title">Selection Set je prázdný</div>
-                            <div class="small text-muted">Vyberte uzly přímo ve schématu a aktivujte aggregate overview KPI, disaggregation i časové řady.</div>
-                            <div class="empty-selection-hints">
-                                <div><i class="bi bi-cursor-fill me-1"></i>Single select: klik na uzel</div>
-                                <div><i class="bi bi-diagram-3-fill me-1"></i>Subtree: focus na strukturální node</div>
-                                <div><i class="bi bi-plus-circle me-1"></i>Multi-select: postupně přidejte další uzly</div>
-                                <div><i class="bi bi-bar-chart-line-fill me-1"></i>Analytics se zobrazí po prvním validním výběru</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            }
 
             </div> @* closes wb-overview *@
         </div> @* closes wb-workspace-row *@
@@ -747,9 +798,18 @@
             @if (!HasSelectedNodes)
             {
                 <div class="wb-analytics-empty-state">
-                    <div class="empty-analytics-hint">
-                        <i class="bi bi-bar-chart-line me-2 opacity-50"></i>
-                        Vyberte uzly ve schématu pro aktivaci analytics — disaggregace, contribution intelligence, KPI a časové řady.
+                    <div class="analytics-empty-card">
+                        <div class="analytics-empty-icon"><i class="bi bi-bar-chart-line"></i></div>
+                        <div class="analytics-empty-title">Analytics připraveny</div>
+                        <div class="analytics-empty-sub">
+                            Vyberte uzly ve schématu pro spuštění aggregate analytics, disaggregace, KPI a časových řad.
+                        </div>
+                        <div class="analytics-empty-hints">
+                            <div class="analytics-hint-item"><i class="bi bi-cursor-fill me-1 text-primary"></i>Klikněte na uzel — single select</div>
+                            <div class="analytics-hint-item"><i class="bi bi-diagram-3-fill me-1 text-primary"></i>Klikněte na strukturální uzel — výběr celého subtree</div>
+                            <div class="analytics-hint-item"><i class="bi bi-magic me-1 text-primary"></i>Použijte Semantic Selection v panelu vpravo</div>
+                            <div class="analytics-hint-item"><i class="bi bi-bookmark-fill me-1 text-primary"></i>Aplikujte uložený Working Set</div>
+                        </div>
                     </div>
                 </div>
             }
@@ -1498,7 +1558,7 @@
                     </div>
                 </div>
 
-                @if (hasFocusNode)
+                @if (SessionService.SelectedElementType == EditorSelectionType.FacilityNode && _selectedFacilityNode is not null)
                 {
                     @if (_isCuratedNode)
                     {
@@ -1673,11 +1733,15 @@
     private readonly List<FacilitySavedWorkingSet> _savedWorkingSets = [];
     private bool _isSchematicEditorEnabled;
     private string _editorLabelInput = string.Empty;
+    private string _editorNodeTypeInput = string.Empty;
+    private string _editorZoneInput = string.Empty;
     private string _editorTagsInput = string.Empty;
     private string _editorNoteInput = string.Empty;
     private string? _editorStatusMessage;
     private bool _isReconnectMode;
     private string _reconnectParentNodeKeyInput = string.Empty;
+    private bool _reconnectChildrenWarningConfirmed;
+    private string _editorActiveTab = "edit";
     private string _newNodeKeyInput = string.Empty;
     private string _newNodeLabelInput = string.Empty;
     private string _newNodeTypeInput = "subzone";
@@ -1689,6 +1753,8 @@
     private string _workingSetDescriptionInput = string.Empty;
     private string? _workingSetStatusMessage;
     private bool _isPreviewLoading;
+    private string _workflowTab = "semantic"; // "semantic" | "workingsets"
+    private bool _showWorkingSetDescription;
 
     // ── Edit mode draft/staging state ────────────────────────────────────────
     /// <summary>JSON snapshot stavu editoru pořízený při vstupu do edit mode pro cancel/restore.</summary>
@@ -2203,6 +2269,7 @@
 
         await ReloadData(preserveSelection: true, preferredFocusNodeKey: nodeKey);
         _isReconnectMode = false;
+        _reconnectChildrenWarningConfirmed = false;
         await ReloadPreviewDataAsync();
     }
 
@@ -2375,6 +2442,8 @@
         if (_selectedFacilityNode is null)
         {
             _editorLabelInput = string.Empty;
+            _editorNodeTypeInput = string.Empty;
+            _editorZoneInput = string.Empty;
             _editorTagsInput = string.Empty;
             _editorNoteInput = string.Empty;
             _reconnectParentNodeKeyInput = string.Empty;
@@ -2382,14 +2451,20 @@
         }
 
         _editorLabelInput = _selectedFacilityNode.Label ?? string.Empty;
+        _editorNodeTypeInput = _selectedFacilityNode.NodeType ?? string.Empty;
+        _editorZoneInput = _selectedFacilityNode.Zone ?? string.Empty;
         _reconnectParentNodeKeyInput = _selectedFacilityNode.ParentNodeKey ?? string.Empty;
 
         if (_editorNodeStatesByKey.TryGetValue(_selectedFacilityNode.NodeKey, out var nodeState))
         {
             if (!string.IsNullOrWhiteSpace(nodeState.Label))
-            {
                 _editorLabelInput = nodeState.Label;
-            }
+
+            if (!string.IsNullOrWhiteSpace(nodeState.NodeType))
+                _editorNodeTypeInput = nodeState.NodeType;
+
+            if (!string.IsNullOrWhiteSpace(nodeState.Zone))
+                _editorZoneInput = nodeState.Zone;
 
             _editorTagsInput = string.Join(", ", nodeState.Tags);
             _editorNoteInput = nodeState.Note ?? string.Empty;
@@ -2425,6 +2500,8 @@
 
         var nodeKey = _selectedFacilityNode.NodeKey;
         var label = NormalizeOptionalText(_editorLabelInput) ?? _selectedFacilityNode.Label;
+        var nodeType = NormalizeOptionalText(_editorNodeTypeInput);
+        var zone = NormalizeOptionalText(_editorZoneInput);
         var tags = FacilityNodeSemantics.ParseTagQuery(_editorTagsInput);
         var note = NormalizeOptionalText(_editorNoteInput);
 
@@ -2434,6 +2511,8 @@
         {
             NodeKey = nodeKey,
             Label = label,
+            NodeType = nodeType,
+            Zone = zone,
             Tags = tags,
             Note = note,
             XHint = existingState?.XHint ?? _selectedFacilityNode.XHint,
@@ -2445,6 +2524,26 @@
         var snapshot = await SnapshotEditStateAsync();
 
         await FacilityEditorStateService.SaveNodeStatesAsync([nextState]);
+
+        // Handle parent change if it differs from current
+        var requestedParent = NormalizeOptionalText(_reconnectParentNodeKeyInput);
+        var currentParent = NormalizeOptionalText(_selectedFacilityNode.ParentNodeKey);
+        if (!string.Equals(requestedParent ?? string.Empty, currentParent ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+        {
+            var parentMap = BuildCurrentParentMap();
+            var reconnectResult = await FacilityEditorStateService.TryReconnectNodeAsync(
+                nodeKey,
+                requestedParent,
+                parentMap);
+
+            if (!reconnectResult.Success)
+            {
+                _editorStatusMessage = $"Metadata uložena, ale změna parenta selhala: {reconnectResult.Message}";
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+            _reconnectChildrenWarningConfirmed = false;
+        }
 
         PushEditUndoSnapshot(snapshot, $"Metadata \"{label ?? nodeKey}\"");
 
@@ -2468,7 +2567,8 @@
             _editorLabelInput = label;
         }
 
-        _editorStatusMessage = $"Metadata uzlu {nodeKey} byla uložena.";
+        await ReloadData(preserveSelection: true, preferredFocusNodeKey: nodeKey);
+        _editorStatusMessage = $"Uzel {nodeKey} byl uložen.";
         await InvokeAsync(StateHasChanged);
     }
 
@@ -2952,6 +3052,12 @@
             _selectedInterval = s;
             await ReloadPreviewDataAsync();
         }
+    }
+
+    private async Task SetIntervalPreset(string preset)
+    {
+        _selectedInterval = preset;
+        await ReloadPreviewDataAsync();
     }
 
     private async Task OnCustomFromChanged(ChangeEventArgs e)
@@ -3607,74 +3713,75 @@
 
     private IReadOnlySet<string> GetSelectedSubtreeNodeKeysForCanvas()
     {
-        if (_selectionSet.Count == 0 || _selectedFacilityNode is null || !IsStructuralNode(_selectedFacilityNode.NodeKey))
+        if (_selectionSet.Count == 0)
         {
             return EmptyNodeKeySet;
         }
 
-        var focusedNodeKey = _selectedFacilityNode.NodeKey;
-        var reachableFromFocus = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            focusedNodeKey
-        };
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        var stack = new Stack<string>();
-        stack.Push(focusedNodeKey);
-
-        while (stack.Count > 0)
+        // Step 1: If the focused node is structural, build its subtree highlight path (existing behavior).
+        if (_selectedFacilityNode is not null && IsStructuralNode(_selectedFacilityNode.NodeKey))
         {
-            var currentNodeKey = stack.Pop();
-            if (!_childrenByParentKey.TryGetValue(currentNodeKey, out var children) || children.Count == 0)
+            var focusedNodeKey = _selectedFacilityNode.NodeKey;
+            var reachableFromFocus = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { focusedNodeKey };
+
+            var stack = new Stack<string>();
+            stack.Push(focusedNodeKey);
+            while (stack.Count > 0)
             {
-                continue;
+                var curr = stack.Pop();
+                if (_childrenByParentKey.TryGetValue(curr, out var ch))
+                    foreach (var child in ch)
+                        if (reachableFromFocus.Add(child.NodeKey))
+                            stack.Push(child.NodeKey);
             }
 
-            foreach (var child in children)
+            result.Add(focusedNodeKey);
+            foreach (var selKey in _selectionSet.Where(reachableFromFocus.Contains))
             {
-                if (reachableFromFocus.Add(child.NodeKey))
+                var cursor = selKey;
+                while (!string.IsNullOrWhiteSpace(cursor) && reachableFromFocus.Contains(cursor))
                 {
-                    stack.Push(child.NodeKey);
-                }
-            }
-        }
-
-        var highlightNodeKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            focusedNodeKey
-        };
-
-        var selectedReachableNodes = _selectionSet
-            .Where(reachableFromFocus.Contains)
-            .ToList();
-
-        if (selectedReachableNodes.Count == 0)
-        {
-            return highlightNodeKeys;
-        }
-
-        foreach (var selectedNodeKey in selectedReachableNodes)
-        {
-            var cursor = selectedNodeKey;
-            while (!string.IsNullOrWhiteSpace(cursor) && reachableFromFocus.Contains(cursor))
-            {
-                if (!highlightNodeKeys.Add(cursor))
-                {
+                    if (!result.Add(cursor)) break;
+                    if (!string.Equals(cursor, focusedNodeKey, StringComparison.OrdinalIgnoreCase)
+                        && _nodesByKey.TryGetValue(cursor, out var n)
+                        && !string.IsNullOrWhiteSpace(n.ParentNodeKey))
+                    {
+                        cursor = n.ParentNodeKey;
+                        continue;
+                    }
                     break;
                 }
-
-                if (!string.Equals(cursor, focusedNodeKey, StringComparison.OrdinalIgnoreCase)
-                    && _nodesByKey.TryGetValue(cursor, out var node)
-                    && !string.IsNullOrWhiteSpace(node.ParentNodeKey))
-                {
-                    cursor = node.ParentNodeKey;
-                    continue;
-                }
-
-                break;
             }
         }
 
-        return highlightNodeKeys;
+        // Step 2: For selected nodes outside the focused subtree, walk up to their nearest
+        // structural ancestor and include it. This prevents structural parent zones from being
+        // visually dimmed (opacity 0.35) when their leaf descendants are selected but focus
+        // is elsewhere — fixing the additive multi-subtree visual bug.
+        foreach (var key in _selectionSet)
+        {
+            if (result.Contains(key)) continue; // Already covered by focused subtree path
+
+            if (!_nodesByKey.TryGetValue(key, out var node)) continue;
+
+            var parentKey = node.ParentNodeKey;
+            while (!string.IsNullOrWhiteSpace(parentKey))
+            {
+                if (!_nodesByKey.TryGetValue(parentKey, out var ancestor)) break;
+
+                result.Add(parentKey);
+
+                // Stop at the first structural node (zone/area parent) to avoid
+                // flooding the entire tree with subtree highlight colour.
+                if (IsStructuralNode(parentKey)) break;
+
+                parentKey = ancestor.ParentNodeKey;
+            }
+        }
+
+        return result;
     }
 
     private void ClearFocusNodeState()
@@ -3720,6 +3827,7 @@
         _isEditModeOpen = !_isEditModeOpen;
         _isSchematicEditorEnabled = _isEditModeOpen;
         _editorActiveTool = "select";
+        _editorActiveTab = "edit";
         if (_isEditModeOpen)
         {
             _isSchematicFullscreen = false;
@@ -3752,6 +3860,32 @@
             return;
         }
         DoExitEditMode();
+    }
+
+    private void SwitchEditorTab(string tab)
+    {
+        _editorActiveTab = tab;
+        if (tab == "edit")
+        {
+            _reconnectChildrenWarningConfirmed = false;
+            if (_selectedFacilityNode is not null && CanEditFocusedNode)
+                _reconnectParentNodeKeyInput = _selectedFacilityNode.ParentNodeKey ?? string.Empty;
+        }
+        else if (tab == "add")
+        {
+            if (_selectedFacilityNode is not null && CanEditFocusedNode)
+                _newNodeParentNodeKeyInput = _selectedFacilityNode.NodeKey;
+        }
+        StateHasChanged();
+    }
+
+    private async Task SaveEditModeChangesAsync()
+    {
+        // Commit: mark current state as the saved baseline (clears dirty, keeps edit mode open)
+        _editModeDraftSnapshot = await FacilityEditorStateService.GetRawStateAsync();
+        _editUndoStack.Clear();
+        _editRedoStack.Clear();
+        StateHasChanged();
     }
 
     private async Task DiscardAndExitAsync()

@@ -31,28 +31,6 @@
                   width="@Fmt(Layout.CanvasWidth)" height="@Fmt(Layout.CanvasHeight)"
                   fill="white" pointer-events="none" />
 
-            @* ── Subtree highlight bands (subtle) ─────────── *@
-            @if (SelectedSubtreeNodeKeys.Count > 0)
-            {
-                var subtreeNodes = Layout.Nodes
-                    .Where(n => SelectedSubtreeNodeKeys.Contains(n.NodeKey))
-                    .ToList();
-
-                if (subtreeNodes.Count > 1)
-                {
-                    var stMinX = subtreeNodes.Min(n => n.X) - 22;
-                    var stMaxX = subtreeNodes.Max(n => n.X) + 22;
-                    var stMinY = subtreeNodes.Min(n => n.Y) - 22;
-                    var stMaxY = subtreeNodes.Max(n => n.Y) + 22;
-
-                    <rect x="@Fmt(stMinX)" y="@Fmt(stMinY)"
-                          width="@Fmt(stMaxX - stMinX)" height="@Fmt(stMaxY - stMinY)"
-                          rx="12" fill="#dbeafe" fill-opacity="0.22"
-                          stroke="#93c5fd" stroke-width="1.2" stroke-opacity="0.5"
-                          pointer-events="none" />
-                }
-            }
-
             @* ── Links ──────────────────────────────────────── *@
             @foreach (var link in Layout.Links)
             {

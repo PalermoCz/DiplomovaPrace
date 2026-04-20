@@ -56,6 +56,16 @@ public class FacilityQueryService
                 node.Label = nodeState.Label;
             }
 
+            if (!string.IsNullOrWhiteSpace(nodeState.NodeType))
+            {
+                node.NodeType = nodeState.NodeType;
+            }
+
+            if (!string.IsNullOrWhiteSpace(nodeState.Zone))
+            {
+                node.Zone = nodeState.Zone;
+            }
+
             if (nodeState.XHint.HasValue)
             {
                 node.XHint = Math.Clamp(nodeState.XHint.Value, 0.0, 1.0);

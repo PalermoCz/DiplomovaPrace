@@ -7,6 +7,8 @@ public sealed class FacilityNodeEditorState
 {
     public required string NodeKey { get; init; }
     public string? Label { get; init; }
+    public string? NodeType { get; init; }
+    public string? Zone { get; init; }
     public IReadOnlyList<string> Tags { get; init; } = [];
     public string? Note { get; init; }
     public double? XHint { get; init; }
@@ -705,6 +707,8 @@ public sealed class FacilityEditorStateService
     private static bool HasNodePayload(FacilityNodeEditorState nodeState)
     {
         return !string.IsNullOrWhiteSpace(nodeState.Label)
+            || !string.IsNullOrWhiteSpace(nodeState.NodeType)
+            || !string.IsNullOrWhiteSpace(nodeState.Zone)
             || nodeState.XHint.HasValue
             || nodeState.YHint.HasValue
             || !string.IsNullOrWhiteSpace(nodeState.Note)
@@ -723,6 +727,8 @@ public sealed class FacilityEditorStateService
         {
             NodeKey = nodeKey,
             Label = NormalizeOptionalText(nodeState.Label),
+            NodeType = NormalizeOptionalText(nodeState.NodeType),
+            Zone = NormalizeOptionalText(nodeState.Zone),
             Tags = NormalizeTags(nodeState.Tags),
             Note = NormalizeOptionalText(nodeState.Note),
             XHint = NormalizeHint(nodeState.XHint),

@@ -2,6 +2,59 @@ html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
+/* ══════════════════════════════════════════════════════════
+   EDITOR PANEL DESIGN TOKENS — global scope
+   CSS custom properties for the ep- class system.
+   Defined here (not in scoped CSS) so :root works correctly.
+   ══════════════════════════════════════════════════════════ */
+:root {
+    /* surfaces */
+    --ep-bg-panel: #ffffff;
+    --ep-bg-content: #f8fafc;
+    --ep-bg-section: #ffffff;
+    --ep-bg-header: #eff6ff;
+    --ep-bg-header-placeholder: #f8fafc;
+    --ep-bg-field-readonly: #f1f5f9;
+    --ep-bg-chip: #f1f5f9;
+    --ep-bg-placeholder: #f8fafc;
+    /* borders */
+    --ep-border-panel: #e2e8f0;
+    --ep-border-section: #f0f4f8;
+    --ep-border-header-accent: #2563eb;
+    --ep-border-chip: #e2e8f0;
+    --ep-border-placeholder: #cbd5e1;
+    /* text */
+    --ep-text-primary: #0f172a;
+    --ep-text-secondary: #334155;
+    --ep-text-muted: #64748b;
+    --ep-text-hint: #94a3b8;
+    --ep-text-header-label: #1e293b;
+    --ep-text-header-key: #6366f1;
+    --ep-text-section-label: #475569;
+    --ep-text-danger: #dc2626;
+    /* accent */
+    --ep-accent: #2563eb;
+    --ep-accent-subtle: #eff6ff;
+    /* dirty save */
+    --ep-dirty-bg: #ea580c;
+    --ep-dirty-color: #ffffff;
+    --ep-dirty-border: #c2410c;
+    --ep-dirty-hover-bg: #c2410c;
+    /* tabs */
+    --ep-tab-border: #e2e8f0;
+    --ep-tab-active-color: #2563eb;
+    --ep-tab-active-indicator: #2563eb;
+    --ep-tab-bg: #f8fafc;
+    --ep-tab-hover-bg: #f1f5f9;
+    /* warning */
+    --ep-warn-bg: #fef3c7;
+    --ep-warn-border: #fde68a;
+    --ep-warn-color: #92400e;
+    /* footer */
+    --ep-footer-border: #e8edf3;
+    --ep-footer-bg: #f8fafc;
+}
+
 a, .btn-link {
     color: #006bb7;
 }

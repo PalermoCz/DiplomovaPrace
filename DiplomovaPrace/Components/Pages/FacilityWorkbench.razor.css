@@ -1,3 +1,11 @@
+/* Sjednocená velikost a zarovnání SVG ikon v toolbaru */
+.wb-toolbar-icon-svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+    flex: 0 0 16px;
+}
+
 /* ══════════════════════════════════════════════════════════
    FacilityWorkbench — scoped layout CSS
    ══════════════════════════════════════════════════════════ */
@@ -13,12 +21,12 @@
     position: relative;
 }
 
-/* ── Dashboard workspace row (schematic + overview) ──────── */
+/* ── Dashboard workspace row (schematic strip + control panel) ── */
 .wb-workspace-row {
     display: grid;
-    grid-template-columns: 2.1fr 0.95fr;
-    min-height: 38vh;
-    max-height: 44vh;
+    grid-template-columns: 1.8fr 1.2fr;
+    min-height: 36vh;
+    max-height: 42vh;
     flex-shrink: 0;
     overflow: hidden;
 }
@@ -155,9 +163,10 @@
     flex-direction: column;
     overflow-x: hidden;
     overflow-y: auto;
-    padding: 0.85rem 0.75rem;
+    padding: 0;
     background: #ffffff;
     min-width: 0;
+    border-left: 1px solid #e2e8f0;
 }
 
 .wb-overview > * {
@@ -169,7 +178,7 @@
     flex: 1;
     overflow-x: hidden;
     overflow-y: auto;
-    padding: 0.75rem 1rem;
+    padding: 0.85rem 1rem;
     min-height: 0;
 }
 
@@ -212,9 +221,9 @@
     inset: 0;
     z-index: 100;
     display: grid;
-    grid-template-columns: 1fr auto 24rem;
+    grid-template-columns: 1fr 24rem;
     grid-template-rows: 1fr;
-    grid-template-areas: "canvas rail props";
+    grid-template-areas: "canvas props";
     background: #f8fafc;
     overflow: hidden;
 }
@@ -224,27 +233,48 @@
     border-right: none;
 }
 
-/* ── Editor tools rail ───────────────────────────────────── */
-.wb-editor-rail {
-    grid-area: rail;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.75rem 0.35rem;
-    background: #f1f5f9;
-    border-left: 1px solid #e2e8f0;
-    border-right: 1px solid #e2e8f0;
-    width: 3.0rem;
+/* ── Editor toolbar (edit mode) ──────────────────────────── */
+.wb-editor-toolbar {
+    flex-wrap: nowrap;
 }
 
-/* Rail uses wb-toolbar-icon-btn directly — same token as toolbar */
+.wb-editor-toolbar-right {
+    flex-wrap: nowrap;
+    gap: 0.25rem !important;
+}
 
-.wb-editor-rail .rail-divider {
-    width: 80%;
-    height: 1px;
-    background: #cbd5e1;
-    margin: 0.35rem 0;
+.wb-editor-toolbar-divider {
+    width: 1px;
+    height: 1.5rem;
+    background: #e2e8f0;
+    margin: 0 0.1rem;
+    flex-shrink: 0;
+}
+
+.wb-editor-toolbar-spacer {
+    flex: 1;
+}
+
+/* Save button — FULL orange fill when dirty — unmistakeable */
+.wb-toolbar-icon-btn-save-dirty {
+    background: var(--ep-dirty-bg) !important;
+    color: var(--ep-dirty-color) !important;
+    border-color: var(--ep-dirty-border) !important;
+    box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.25) !important;
+}
+
+.wb-toolbar-icon-btn-save-dirty:hover:not([disabled]):not(:disabled) {
+    background: var(--ep-dirty-hover-bg) !important;
+    color: var(--ep-dirty-color) !important;
+    border-color: var(--ep-dirty-border) !important;
+    box-shadow: 0 0 0 3px rgba(194, 65, 12, 0.3) !important;
+}
+
+/* Close button — subtle danger on hover */
+.wb-toolbar-icon-btn-close:hover:not([disabled]):not(:disabled) {
+    background: #fee2e2;
+    color: #dc2626;
+    border-color: #fca5a5;
 }
 
 /* ── Editor properties panel ─────────────────────────────── */
@@ -253,17 +283,113 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: #ffffff;
+    background: var(--ep-bg-panel);
     min-width: 0;
-    border-left: 1px solid #e2e8f0;
+    border-left: 1px solid var(--ep-border-panel);
 }
 
 .wb-editor-props-content {
     flex: 1;
     overflow-x: hidden;
     overflow-y: auto;
-    padding: 0.85rem 0.85rem 0.5rem;
+    padding: 0;
     min-height: 0;
+    background: var(--ep-bg-content);
+}
+
+/* ── Tab header ───────────────────────────────────────────── */
+.wb-editor-tabs-header {
+    display: flex;
+    flex-direction: row;
+    flex-shrink: 0;
+    border-bottom: 2px solid var(--ep-tab-border);
+    background: var(--ep-tab-bg);
+}
+
+.wb-editor-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex: 1;
+    justify-content: center;
+    padding: 0.55rem 0.3rem;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--ep-text-muted);
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    transition: color 0.12s, border-color 0.12s, background 0.12s;
+    white-space: nowrap;
+}
+
+.wb-editor-tab:hover {
+    color: var(--ep-text-primary);
+    background: var(--ep-tab-hover-bg);
+}
+
+.wb-editor-tab-active {
+    color: var(--ep-tab-active-color);
+    font-weight: 700;
+    border-bottom-color: var(--ep-tab-active-indicator);
+    background: var(--ep-bg-panel);
+}
+
+/* ── Tab footer (action area within each tab) ─────────────── */
+.wb-editor-tab-footer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding-top: 0.65rem;
+    border-top: 1px solid var(--ep-footer-border);
+    padding-left: 0.85rem;
+    padding-right: 0.85rem;
+    padding-bottom: 0.85rem;
+}
+
+/* ── Empty state placeholder in tabs ─────────────────────── */
+.wb-editor-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 2rem 1rem;
+    text-align: center;
+    color: var(--ep-text-hint);
+    font-size: 0.8rem;
+}
+
+.wb-editor-empty-icon {
+    color: #cbd5e1;
+}
+
+/* ── Warning box (used in delete/edit tab parent change) ───── */
+.wb-editor-warning-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.4rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--ep-warn-bg);
+    border: 1px solid var(--ep-warn-border);
+    border-radius: 0.45rem;
+    font-size: 0.78rem;
+    color: var(--ep-warn-color);
+    margin-bottom: 0.5rem;
+}
+
+.ep-warning-block {
+    margin: 0.75rem 0.85rem;
+}
+
+/* ── Field hint text ──────────────────────────────────────── */
+.wb-editor-field-hint {
+    font-size: 0.7rem;
+    color: var(--ep-text-hint);
+    margin-top: 0.15rem;
 }
 
 /* ── Sticky footer inside right panel ────────────────────── */
@@ -311,7 +437,9 @@
 .wb-editor-section {
     margin-bottom: 0.75rem;
     padding-bottom: 0.65rem;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--ep-border-section);
+    padding-left: 0.85rem;
+    padding-right: 0.85rem;
 }
 
 .wb-editor-section:last-of-type {
@@ -319,12 +447,14 @@
 }
 
 .wb-editor-section-title {
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #64748b;
-    font-weight: 600;
-    margin-bottom: 0.45rem;
+    letter-spacing: 0.06em;
+    color: var(--ep-text-section-label);
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
 }
 
 .wb-editor-field {
@@ -333,15 +463,15 @@
 
 .wb-editor-field label {
     display: block;
-    font-size: 0.75rem;
-    color: #475569;
+    font-size: 0.74rem;
+    color: var(--ep-text-secondary);
     margin-bottom: 0.2rem;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .wb-editor-placeholder {
-    background: #f8fafc;
-    border: 1px dashed #cbd5e1;
+    background: var(--ep-bg-placeholder);
+    border: 1px dashed var(--ep-border-placeholder);
     border-radius: 0.5rem;
     padding: 0.75rem;
     text-align: center;
@@ -349,13 +479,13 @@
 
 .wb-editor-placeholder-icon {
     font-size: 1.5rem;
-    color: #94a3b8;
+    color: var(--ep-text-hint);
     margin-bottom: 0.35rem;
 }
 
 .wb-editor-placeholder-text {
     font-size: 0.78rem;
-    color: #64748b;
+    color: var(--ep-text-muted);
     line-height: 1.4;
 }
 
@@ -417,22 +547,23 @@
 
 /* ── Node selection highlight in editor ──────────────────── */
 .wb-editor-node-name {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     font-weight: 700;
-    color: #1e293b;
-    padding: 0.5rem 0.6rem;
-    background: #eff6ff;
-    border-left: 3px solid #2563eb;
+    color: var(--ep-text-header-label);
+    padding: 0.55rem 0.75rem;
+    background: var(--ep-bg-header);
+    border-left: 3px solid var(--ep-border-header-accent);
     border-radius: 0 0.35rem 0.35rem 0;
     margin-bottom: 0.65rem;
 }
 
 .wb-editor-node-name .node-key-sub {
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     font-weight: 400;
-    color: #64748b;
+    color: var(--ep-text-header-key);
     display: block;
-    margin-top: 0.15rem;
+    margin-top: 0.1rem;
+    font-family: monospace;
 }
 
 /* ── Tag chips ───────────────────────────────────────────── */
@@ -448,11 +579,215 @@
     align-items: center;
     gap: 0.25rem;
     padding: 0.18rem 0.5rem;
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
+    background: var(--ep-bg-chip);
+    border: 1px solid var(--ep-border-chip);
     border-radius: 999px;
     font-size: 0.72rem;
-    color: #334155;
+    color: var(--ep-text-secondary);
+}
+
+/* ══════════════════════════════════════════════════════════
+   EDITOR PANEL DESIGN SYSTEM — ep- classes
+   Common shell for all editor tabs.
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Node header block (top of every tab) ────────────────── */
+.ep-node-header {
+    padding: 0.75rem 0.9rem 0.7rem;
+    background: var(--ep-bg-header);
+    border-left: 3px solid var(--ep-border-header-accent);
+    border-bottom: 1px solid var(--ep-border-panel);
+    margin-bottom: 0;
+}
+
+.ep-node-header-placeholder {
+    background: var(--ep-bg-header-placeholder);
+    border-left-color: #cbd5e1;
+}
+
+.ep-node-header-sublabel {
+    font-size: 0.67rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ep-text-muted);
+    font-weight: 700;
+    margin-bottom: 0.15rem;
+}
+
+.ep-node-header-label {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ep-text-header-label);
+    line-height: 1.25;
+}
+
+.ep-node-header-key {
+    font-size: 0.7rem;
+    color: var(--ep-text-header-key);
+    font-family: monospace;
+    margin-top: 0.1rem;
+}
+
+/* ── Section block ────────────────────────────────────────── */
+.ep-section {
+    padding: 0.7rem 0.9rem 0.6rem;
+    border-bottom: 1px solid var(--ep-border-section);
+    background: var(--ep-bg-section);
+}
+
+.ep-section:last-of-type {
+    border-bottom: none;
+}
+
+.ep-section-label {
+    font-size: 0.67rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--ep-text-section-label);
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.ep-section-label-danger {
+    color: var(--ep-text-danger);
+}
+
+/* ── Field ────────────────────────────────────────────────── */
+.ep-field {
+    margin-bottom: 0.5rem;
+}
+
+.ep-field:last-child {
+    margin-bottom: 0;
+}
+
+.ep-field label {
+    display: block;
+    font-size: 0.73rem;
+    color: var(--ep-text-secondary);
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+}
+
+.ep-field-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.ep-field-row .ep-field {
+    flex: 1;
+    min-width: 0;
+    margin-bottom: 0;
+}
+
+/* Readonly input style */
+.ep-input-readonly {
+    background: var(--ep-bg-field-readonly) !important;
+    color: var(--ep-text-muted) !important;
+    cursor: default;
+}
+
+/* ── Hint text ────────────────────────────────────────────── */
+.ep-hint {
+    font-size: 0.69rem;
+    color: var(--ep-text-hint);
+    margin-top: 0.15rem;
+}
+
+.ep-hint-dark {
+    color: var(--ep-text-muted);
+    font-size: 0.75rem;
+}
+
+/* ── Value chip (read-only display value) ─────────────────── */
+.ep-value-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.22rem 0.6rem;
+    background: var(--ep-bg-chip);
+    border: 1px solid var(--ep-border-chip);
+    border-radius: 0.35rem;
+    font-size: 0.78rem;
+    color: var(--ep-text-secondary);
+    font-family: monospace;
+}
+
+/* ── Footer action area ───────────────────────────────────── */
+.ep-footer {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.7rem 0.9rem 0.85rem;
+    background: var(--ep-footer-bg);
+    border-top: 1px solid var(--ep-footer-border);
+    margin-top: auto;
+}
+
+/* Primary action button in footer */
+.ep-btn-save {
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Restore draft link */
+.ep-btn-restore {
+    font-size: 0.75rem;
+    color: var(--ep-text-hint) !important;
+}
+
+.ep-btn-restore:hover {
+    color: var(--ep-text-muted) !important;
+}
+
+/* ── Status message ───────────────────────────────────────── */
+.ep-status-msg {
+    font-size: 0.75rem;
+    color: var(--ep-text-muted);
+    padding: 0.4rem 0.9rem;
+    background: var(--ep-bg-content);
+}
+
+/* ── Info note ────────────────────────────────────────────── */
+.ep-info-note {
+    font-size: 0.78rem;
+    color: var(--ep-text-muted);
+    padding: 0.6rem 0.9rem;
+    background: var(--ep-bg-content);
+    border-left: 2px solid var(--ep-border-panel);
+    margin: 0.75rem 0.9rem;
+    border-radius: 0 0.35rem 0.35rem 0;
+}
+
+/* ── Import placeholder ───────────────────────────────────── */
+.ep-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1.25rem 0.75rem;
+    background: var(--ep-bg-placeholder);
+    border: 1px dashed var(--ep-border-placeholder);
+    border-radius: 0.5rem;
+    text-align: center;
+}
+
+.ep-placeholder-icon {
+    color: var(--ep-text-hint);
+}
+
+.ep-placeholder-text {
+    font-size: 0.8rem;
+    color: var(--ep-text-muted);
+    line-height: 1.5;
+}
+
+.ep-placeholder-sub {
+    font-size: 0.68rem;
+    color: var(--ep-text-hint);
+    margin-top: -0.2rem;
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -971,8 +1306,9 @@
 
 @media (max-width: 1400px) {
     .wb-workspace-row {
-        grid-template-columns: 1.8fr 1fr;
-        min-height: 52vh;
+        grid-template-columns: 1.65fr 1.35fr;
+        min-height: 36vh;
+        max-height: 42vh;
     }
 
     .main-analytics-grid {
@@ -1042,6 +1378,10 @@
         grid-template-columns: 1fr;
         min-height: 45vh;
         max-height: none;
+    }
+
+    .wb-schematic {
+        min-height: 42vh;
     }
 
     .wb-editor-overlay {
@@ -1148,14 +1488,6 @@
     gap: 0.5rem;
 }
 
-/* ── Form field helper text ───────────────────────────────── */
-.wb-editor-field-hint {
-    font-size: 0.69rem;
-    color: #94a3b8;
-    margin-top: 0.2rem;
-    line-height: 1.3;
-}
-
 /* ── Add-node parent preview box ──────────────────────────── */
 .wb-editor-add-parent-preview {
     background: #f0fdf4;
@@ -1165,4 +1497,363 @@
     margin-bottom: 0.6rem;
     font-size: 0.82rem;
     color: #166534;
+}
+
+/* ══════════════════════════════════════════════════════════
+   FOCUS CHIP — in schematic toolbar to show/clear focus
+   ══════════════════════════════════════════════════════════ */
+.wb-focus-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.22rem 0.6rem 0.22rem 0.55rem;
+    background: #eff6ff;
+    border: 1px solid #93c5fd;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #1d4ed8;
+    cursor: pointer;
+    white-space: nowrap;
+    max-width: 14rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background 0.12s, border-color 0.12s;
+}
+
+.wb-focus-chip:hover {
+    background: #dbeafe;
+    border-color: #60a5fa;
+}
+
+/* ══════════════════════════════════════════════════════════
+   CONTROL PANEL — new right panel layout
+   cp-* classes for Interval / Selection / Workflow Tools
+   ══════════════════════════════════════════════════════════ */
+
+/* Section block */
+.cp-section {
+    padding: 0.5rem 0.7rem 0.45rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.cp-section:last-child {
+    border-bottom: none;
+}
+
+.cp-section-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #64748b;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+    display: flex;
+    align-items: center;
+}
+
+/* ── Interval section ─────────────────────────────────────── */
+.cp-interval-section {
+    background: #f0f7ff;
+    border-bottom: 1px solid #bfdbfe;
+    padding: 0.45rem 0.7rem 0.4rem;
+}
+
+.cp-interval-range-display {
+    font-size: 0.75rem;
+    color: #1d4ed8;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.cp-preset-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-bottom: 0.35rem;
+}
+
+.cp-preset-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.2rem 0.55rem;
+    background: #ffffff;
+    border: 1px solid #93c5fd;
+    border-radius: 999px;
+    font-size: 0.69rem;
+    font-weight: 500;
+    color: #1d4ed8;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.cp-preset-btn:hover {
+    background: #dbeafe;
+    border-color: #60a5fa;
+}
+
+.cp-preset-btn-active {
+    background: #1d4ed8 !important;
+    color: #ffffff !important;
+    border-color: #1e40af !important;
+    font-weight: 700;
+}
+
+.cp-custom-date-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+    margin-bottom: 0.4rem;
+    margin-top: 0.25rem;
+}
+
+.cp-date-label {
+    font-size: 0.68rem;
+    color: #64748b;
+    font-weight: 600;
+    margin-bottom: 0.18rem;
+}
+
+.cp-weather-context {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.69rem;
+    color: #475569;
+    margin-top: 0.3rem;
+    padding-top: 0.3rem;
+    border-top: 1px solid #bfdbfe;
+}
+
+/* ── Selection section ────────────────────────────────────── */
+.cp-selection-section {
+    background: #ffffff;
+    padding: 0.4rem 0.7rem 0.35rem;
+}
+
+.cp-selection-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+    margin-bottom: 0.15rem;
+}
+
+.cp-selection-count {
+    display: flex;
+    align-items: baseline;
+    gap: 0.3rem;
+}
+
+.cp-count-big {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1;
+}
+
+.cp-count-label {
+    font-size: 0.68rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.cp-clear-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-size: 0.68rem;
+    padding: 0.15rem 0.45rem;
+}
+
+/* ── Workflow Tools section ───────────────────────────────── */
+.cp-tools-section {
+    background: #ffffff;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    border-bottom: none;
+}
+
+.cp-tools-tab-bar {
+    display: flex;
+    flex-direction: row;
+    border-bottom: 2px solid #e2e8f0;
+    flex-shrink: 0;
+    background: #f8fafc;
+}
+
+.cp-tools-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    padding: 0.38rem 0.3rem;
+    font-size: 0.69rem;
+    font-weight: 500;
+    color: #64748b;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+
+.cp-tools-tab:hover {
+    color: #1e293b;
+    background: #f1f5f9;
+}
+
+.cp-tools-tab-active {
+    color: #1d4ed8;
+    font-weight: 700;
+    border-bottom-color: #2563eb;
+    background: #ffffff;
+}
+
+.cp-tools-content {
+    padding: 0.5rem 0.65rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+}
+
+/* ── Semantic query filter layout ───────────────────────── */
+.cp-sem-row1 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.3rem;
+    margin-bottom: 0.3rem;
+}
+
+.cp-sem-filters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.3rem;
+    margin-bottom: 0.3rem;
+}
+
+.cp-sem-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.35rem;
+    margin-top: 0.3rem;
+}
+
+.cp-sem-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.69rem;
+    color: #475569;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+.cp-sem-checkbox label {
+    margin-bottom: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── Working Sets layout ────────────────────────────────── */
+.cp-wset-create-row {
+    display: flex;
+    gap: 0.3rem;
+    align-items: center;
+    margin-bottom: 0.3rem;
+}
+
+.cp-wset-create-row input {
+    flex: 1;
+    min-width: 0;
+}
+
+.cp-wset-desc-toggle {
+    font-size: 0.69rem !important;
+    color: #94a3b8 !important;
+    text-decoration: none !important;
+}
+
+.cp-wset-desc-toggle:hover {
+    color: #64748b !important;
+}
+
+.cp-wset-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* ══════════════════════════════════════════════════════════
+   ANALYTICS EMPTY STATE — improved card
+   ══════════════════════════════════════════════════════════ */
+.analytics-empty-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 2.25rem 1.5rem 2rem;
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 1rem;
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    max-width: 640px;
+    margin: 0 auto;
+}
+
+.analytics-empty-icon {
+    font-size: 2.5rem;
+    color: #93c5fd;
+    margin-bottom: 0.75rem;
+    line-height: 1;
+}
+
+.analytics-empty-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 0.35rem;
+}
+
+.analytics-empty-sub {
+    font-size: 0.83rem;
+    color: #64748b;
+    line-height: 1.5;
+    max-width: 480px;
+    margin-bottom: 1.1rem;
+}
+
+.analytics-empty-hints {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem 1rem;
+    text-align: left;
+    width: 100%;
+    max-width: 420px;
+}
+
+.analytics-hint-item {
+    font-size: 0.78rem;
+    color: #334155;
+    line-height: 1.35;
+}
+
+@media (max-width: 600px) {
+    .analytics-empty-hints {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
