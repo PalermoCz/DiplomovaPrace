@@ -790,6 +790,67 @@
     margin-top: -0.2rem;
 }
 
+/* ── Layout tab — align/distribute tools ─────────────────── */
+.ep-layout-empty {
+    margin: 0.75rem 0.9rem;
+}
+
+.ep-align-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.35rem;
+}
+
+.ep-align-btn {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    padding: 0.35rem 0.25rem;
+    font-size: 0.68rem;
+    font-weight: 550;
+    color: var(--ep-text-secondary, #334155);
+    background: var(--ep-bg-chip, #f1f5f9);
+    border: 1px solid var(--ep-border-chip, #e2e8f0);
+    border-radius: 0.35rem;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+    line-height: 1.2;
+    text-align: center;
+}
+
+.ep-align-btn:hover:not(:disabled) {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+}
+
+.ep-align-btn:active:not(:disabled) {
+    background: #bfdbfe;
+}
+
+.ep-align-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Tab count badge */
+.wb-editor-tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1rem;
+    height: 1rem;
+    padding: 0 0.25rem;
+    font-size: 0.6rem;
+    font-weight: 700;
+    background: #2563eb;
+    color: white;
+    border-radius: 0.5rem;
+    vertical-align: middle;
+}
+
 /* ══════════════════════════════════════════════════════════
    OVERVIEW WIDGETS (shared between dashboard overview pane
    and analytics section)

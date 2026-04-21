@@ -25,6 +25,8 @@ window.editorCanvas = (function () {
     var _gridEnabled = false;
     var _gridSize    = 20;
     var _facilityNodeDragEnabled = false;
+    var _selectedNodeKeys = new Set();      // Blazor-driven selected node keys (group drag detection)
+    var _suppressNextClick = false;         // Prevents onClick from clearing selection after rectSelect
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -138,6 +140,7 @@ window.editorCanvas = (function () {
                 var nodeEl = findWithData(e.target, 'nodeKey');
                 if (nodeEl) {
                     e.stopPropagation();
+                    var clickedKey = nodeEl.dataset.nodeKey;
                     var origNodeX = parseFloat(nodeEl.dataset.nodeX);
                     var origNodeY = parseFloat(nodeEl.dataset.nodeY);
 
@@ -146,13 +149,38 @@ window.editorCanvas = (function () {
                         origNodeY = pos.y;
                     }
 
-                    _state = {
-                        type: 'dragFacilityNode',
-                        nodeKey: nodeEl.dataset.nodeKey,
-                        startCX: pos.x, startCY: pos.y,
-                        origX: origNodeX, origY: origNodeY,
-                        el: nodeEl, moved: false
-                    };
+                    // Group drag: clicked node is in selected set AND 2+ nodes selected
+                    if (_selectedNodeKeys.size > 1 && _selectedNodeKeys.has(clickedKey)) {
+                        var groupEls = [];
+                        document.querySelectorAll('g[data-node-key]').forEach(function (el) {
+                            if (_selectedNodeKeys.has(el.dataset.nodeKey)) {
+                                var nx = parseFloat(el.dataset.nodeX);
+                                var ny = parseFloat(el.dataset.nodeY);
+                                if (!Number.isNaN(nx) && !Number.isNaN(ny))
+                                    groupEls.push({ el: el, nodeKey: el.dataset.nodeKey, origX: nx, origY: ny });
+                            }
+                        });
+                        _state = { type: 'groupDrag', anchorKey: clickedKey, startCX: pos.x, startCY: pos.y, groupEls: groupEls, moved: false };
+                    } else {
+                        _state = { type: 'dragFacilityNode', nodeKey: clickedKey, startCX: pos.x, startCY: pos.y, origX: origNodeX, origY: origNodeY, el: nodeEl, moved: false };
+                    }
+                    return;
+                }
+                // No node hit → start rectangle selection
+                {
+                    e.preventDefault();
+                    var selG = getContent();
+                    var selR = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    selR.setAttribute('id', _svgId + '-sel-rect');
+                    selR.setAttribute('x', pos.x); selR.setAttribute('y', pos.y);
+                    selR.setAttribute('width', '0'); selR.setAttribute('height', '0');
+                    selR.setAttribute('fill', 'rgba(37,99,235,0.08)');
+                    selR.setAttribute('stroke', '#2563eb');
+                    selR.setAttribute('stroke-width', String(1.5 / _transform.scale));
+                    selR.setAttribute('stroke-dasharray', String(4 / _transform.scale) + ',' + String(2 / _transform.scale));
+                    selR.setAttribute('pointer-events', 'none');
+                    if (selG) selG.appendChild(selR);
+                    _state = { type: 'rectSelect', startX: pos.x, startY: pos.y, currX: pos.x, currY: pos.y, ctrlKey: (e.ctrlKey || e.metaKey) };
                     return;
                 }
             }
@@ -205,6 +233,32 @@ window.editorCanvas = (function () {
             if (_state.moved) {
                 _state.el.setAttribute('transform', 'translate(' + ndx + ' ' + ndy + ')');
             }
+            return;
+        }
+
+        if (_state.type === 'groupDrag') {
+            var gdx = pos.x - _state.startCX;
+            var gdy = pos.y - _state.startCY;
+            if (Math.abs(gdx) > 2 || Math.abs(gdy) > 2) _state.moved = true;
+            if (_state.moved) {
+                _state.groupEls.forEach(function (item) {
+                    item.el.setAttribute('transform', 'translate(' + gdx + ' ' + gdy + ')');
+                });
+            }
+            return;
+        }
+
+        if (_state.type === 'rectSelect') {
+            _state.currX = pos.x; _state.currY = pos.y;
+            var selRectEl = document.getElementById(_svgId + '-sel-rect');
+            if (selRectEl) {
+                var rx = Math.min(_state.startX, pos.x);
+                var ry = Math.min(_state.startY, pos.y);
+                var rw = Math.abs(pos.x - _state.startX);
+                var rh = Math.abs(pos.y - _state.startY);
+                selRectEl.setAttribute('x', rx); selRectEl.setAttribute('y', ry);
+                selRectEl.setAttribute('width', rw); selRectEl.setAttribute('height', rh);
+            }
         }
     }
 
@@ -239,6 +293,7 @@ window.editorCanvas = (function () {
                 var finalX = Math.max(0, Math.min(_floorBounds.w, s.origCx + (pos.x - s.startCX)));
                 var finalY = Math.max(0, Math.min(_floorBounds.h, s.origCy + (pos.y - s.startCY)));
                 if (_dotNet) _dotNet.invokeMethodAsync('JsOnDeviceDragEnd', s.deviceId, finalX, finalY);
+                _suppressNextClick = true;
             }
             return;
         }
@@ -247,16 +302,52 @@ window.editorCanvas = (function () {
             s.el.removeAttribute('transform');
             if (s.moved) {
                 var nodePos = clientToContent(e.clientX, e.clientY);
-                var finalNodeX = Math.max(0, Math.min(_floorBounds.w, s.origX + (nodePos.x - s.startCX)));
-                var finalNodeY = Math.max(0, Math.min(_floorBounds.h, s.origY + (nodePos.y - s.startCY)));
+                var rawX = s.origX + (nodePos.x - s.startCX);
+                var rawY = s.origY + (nodePos.y - s.startCY);
+                var finalNodeX = snapToGrid(rawX);
+                var finalNodeY = snapToGrid(rawY);
                 if (_dotNet) _dotNet.invokeMethodAsync('JsOnFacilityNodeDragEnd', s.nodeKey, finalNodeX, finalNodeY);
+                _suppressNextClick = true;
             }
+            return;
+        }
+
+        if (s.type === 'groupDrag') {
+            s.groupEls.forEach(function (item) { item.el.removeAttribute('transform'); });
+            if (s.moved) {
+                var gPos = clientToContent(e.clientX, e.clientY);
+                var rawDx = gPos.x - s.startCX;
+                var rawDy = gPos.y - s.startCY;
+                var anchorEl = s.groupEls.find(function (g) { return g.nodeKey === s.anchorKey; }) || s.groupEls[0];
+                var snappedAnchorX = snapToGrid(anchorEl.origX + rawDx);
+                var snappedAnchorY = snapToGrid(anchorEl.origY + rawDy);
+                var snappedDx = snappedAnchorX - anchorEl.origX;
+                var snappedDy = snappedAnchorY - anchorEl.origY;
+                if (_dotNet) _dotNet.invokeMethodAsync('JsOnFacilityGroupDragEnd', snappedDx, snappedDy);
+                _suppressNextClick = true;
+            }
+            return;
+        }
+
+        if (s.type === 'rectSelect') {
+            var selRectEl2 = document.getElementById(_svgId + '-sel-rect');
+            if (selRectEl2) selRectEl2.remove();
+            var x1 = Math.min(s.startX, s.currX);
+            var y1 = Math.min(s.startY, s.currY);
+            var x2 = Math.max(s.startX, s.currX);
+            var y2 = Math.max(s.startY, s.currY);
+            if ((x2 - x1) > 4 && (y2 - y1) > 4) {
+                _suppressNextClick = true;  // prevent onClick from firing JsOnElementClicked('','None')
+                if (_dotNet) _dotNet.invokeMethodAsync('JsOnRectSelectEnd', x1, y1, x2, y2, s.ctrlKey);
+            }
+            return;
         }
     }
 
     function onClick(e) {
         // Zpracuje kliknutí, která nejsou součástí kreslení/tahu
         // (draw/drag se uzavírají v onMouseUp)
+        if (_suppressNextClick) { _suppressNextClick = false; return; }
         if (_state) return; // stále v interakci (pan)
         var pos = clientToContent(e.clientX, e.clientY);
 
@@ -269,7 +360,12 @@ window.editorCanvas = (function () {
             } else if (roomEl) {
                 if (_dotNet) _dotNet.invokeMethodAsync('JsOnElementClicked', roomEl.dataset.roomId, 'Room');
             } else if (nodeEl) {
-                if (_dotNet) _dotNet.invokeMethodAsync('JsOnElementClicked', nodeEl.dataset.nodeKey, 'FacilityNode');
+                if ((e.ctrlKey || e.metaKey) && _facilityNodeDragEnabled) {
+                    // Ctrl+click: additive selection toggle in edit mode
+                    if (_dotNet) _dotNet.invokeMethodAsync('JsOnFacilityNodeCtrlClicked', nodeEl.dataset.nodeKey);
+                } else {
+                    if (_dotNet) _dotNet.invokeMethodAsync('JsOnElementClicked', nodeEl.dataset.nodeKey, 'FacilityNode');
+                }
             } else {
                 if (_dotNet) _dotNet.invokeMethodAsync('JsOnElementClicked', '', 'None');
             }
@@ -323,6 +419,10 @@ window.editorCanvas = (function () {
             if (svg) svg.style.cursor = 'grab';
             e.preventDefault();
         }
+        // Esc: clear selection when in edit mode (drag enabled)
+        if (e.code === 'Escape' && !e.repeat && !e.target.matches('input, textarea') && _facilityNodeDragEnabled) {
+            if (_dotNet) _dotNet.invokeMethodAsync('JsOnKeyboardShortcut', 'escape');
+        }
     }
 
     function onKeyUp(e) {
@@ -363,6 +463,12 @@ window.editorCanvas = (function () {
                         _state.el.removeAttribute('transform');
                     if (_state && _state.type === 'dragFacilityNode' && _state.el)
                         _state.el.removeAttribute('transform');
+                    if (_state && _state.type === 'groupDrag' && _state.groupEls)
+                        _state.groupEls.forEach(function (item) { item.el.removeAttribute('transform'); });
+                    if (_state && _state.type === 'rectSelect') {
+                        var sr = document.getElementById(_svgId + '-sel-rect');
+                        if (sr) sr.remove();
+                    }
                     if (_state && _state.type === 'pan') svg.style.cursor = cursorForTool(_tool);
                     _state = null;
                 },
@@ -523,6 +629,26 @@ window.editorCanvas = (function () {
 
         setFacilityNodeDragEnabled: function (enabled) {
             _facilityNodeDragEnabled = !!enabled;
+            if (!enabled) _selectedNodeKeys = new Set();
+        },
+
+        /** Synchronizes the set of selected facility node keys from Blazor (used for group drag detection). */
+        setSelectedNodes: function (keys) {
+            _selectedNodeKeys = new Set(Array.isArray(keys) ? keys : []);
+        },
+
+        /** Pans the viewport so that the given canvas point (x, y) is visible near the top-third of the view. */
+        panToNode: function (x, y, scale) {
+            var svg = getSvg();
+            if (!svg) return;
+            var rect = svg.getBoundingClientRect();
+            var vw = rect.width > 10 ? rect.width : 800;
+            var vh = rect.height > 10 ? rect.height : 600;
+            var s = (scale > 0) ? scale : 1.4;
+            _transform.tx = vw / 2 - x * s;
+            _transform.ty = vh / 3 - y * s;
+            _transform.scale = s;
+            applyTransform();
         },
 
         dispose: function (svgId) {

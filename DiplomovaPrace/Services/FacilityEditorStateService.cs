@@ -803,12 +803,9 @@ public sealed class FacilityEditorStateService
 
     private static double? NormalizeHint(double? hint)
     {
-        if (!hint.HasValue)
-        {
+        if (!hint.HasValue || !double.IsFinite(hint.Value))
             return null;
-        }
-
-        return Math.Clamp(hint.Value, 0.0, 1.0);
+        return hint.Value;
     }
 
     private sealed class FacilityEditorStateDocument

@@ -64,7 +64,8 @@
                                       SelectedSubtreeNodeKeys="@SelectedSubtreeNodeKeysForCanvas"
                                       FacilityNodeAlertSeverities="@AlertSeverityByNodeKey"
                                       OnElementSelected="HandleElementSelected"
-                                      OnCanvasClicked="HandleCanvasClicked" />
+                                      OnCanvasClicked="HandleCanvasClicked"
+                                      OnNodeDragEnd="HandleNodeDragEndAsync" />
                     }
                 </div>
             </div>
@@ -94,11 +95,13 @@
                         @* ── Structure tools ── *@
                         <button class="wb-toolbar-icon-btn @(_editorActiveTab == "add" ? "wb-toolbar-icon-btn-active" : "")"
                                 title="@(_selectedFacilityNode is not null && CanEditFocusedNode ? $"Přidat child uzel pod '{_selectedFacilityNode.Label}'" : "Přidat uzel")"
+                            disabled="@IsEditorMultiSelectActive"
                                 @onclick="@(() => SwitchEditorTab("add"))">
                             <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 1"/></svg>
                         </button>
                         <button class="wb-toolbar-icon-btn @(_editorActiveTab == "delete" ? "wb-toolbar-icon-btn-active" : "") @(CanRemoveFocusedLeafNode ? "wb-toolbar-icon-btn-danger" : "")"
                                 title="Smazat vybraný uzel"
+                            disabled="@IsEditorMultiSelectActive"
                                 @onclick="@(() => SwitchEditorTab("delete"))">
                             <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg>
                         </button>
@@ -120,6 +123,7 @@
                         @* ── Import Data ── *@
                         <button class="wb-toolbar-icon-btn @(_editorActiveTab == "import" ? "wb-toolbar-icon-btn-active" : "")"
                                 title="Import dat"
+                            disabled="@IsEditorMultiSelectActive"
                                 @onclick="@(() => SwitchEditorTab("import"))">
                             <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></svg>
                         </button>
@@ -155,13 +159,19 @@
                     {
                         <FacilitySchematicV2 @ref="_canvasV2"
                                       Layout="_schematicLayout"
-                                      InitialFitMode="edit"
+                                      InitialFitMode="home"
                                       SelectedElementId="@SessionService.SelectedElementId"
                                       SelectedElementIds="@_selectionSet"
                                       SelectedSubtreeNodeKeys="@SelectedSubtreeNodeKeysForCanvas"
                                       FacilityNodeAlertSeverities="@AlertSeverityByNodeKey"
+                                      ShowGrid="true"
                                       OnElementSelected="HandleElementSelected"
-                                      OnCanvasClicked="HandleCanvasClicked" />
+                                      OnCanvasClicked="HandleCanvasClicked"
+                                      OnNodeDragEnd="HandleNodeDragEndAsync"
+                                      OnRectSelectEnd="HandleRectSelectEndAsync"
+                                      OnGroupDragEnd="HandleGroupDragEndAsync"
+                                      OnNodeCtrlClicked="HandleNodeCtrlClickedAsync"
+                                      OnKeyboardShortcut="HandleKeyboardShortcutAsync" />
                     }
                 </div>
             </div>
@@ -171,32 +181,47 @@
 
                 @* Tab header *@
                 <div class="wb-editor-tabs-header">
-                    <button class="wb-editor-tab @(_editorActiveTab == "edit" ? "wb-editor-tab-active" : "")"
-                            @onclick="@(() => SwitchEditorTab("edit"))">
-                        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/></svg>
-                        Edit
-                    </button>
-                    <button class="wb-editor-tab @(_editorActiveTab == "add" ? "wb-editor-tab-active" : "")"
-                            @onclick="@(() => SwitchEditorTab("add"))">
-                        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 1"/></svg>
-                        Add node
-                    </button>
-                    <button class="wb-editor-tab @(_editorActiveTab == "delete" ? "wb-editor-tab-active" : "")"
-                            @onclick="@(() => SwitchEditorTab("delete"))">
-                        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg>
-                        Delete
-                    </button>
-                    <button class="wb-editor-tab @(_editorActiveTab == "import" ? "wb-editor-tab-active" : "")"
-                            @onclick="@(() => SwitchEditorTab("import"))">
-                        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></svg>
-                        Import
-                    </button>
+                    @if (IsEditorMultiSelectActive)
+                    {
+                        <button class="wb-editor-tab @(_editorActiveTab == "layout" ? "wb-editor-tab-active" : "")"
+                                @onclick="@(() => SwitchEditorTab("layout"))"
+                                title="Rozvržení — @_selectionSet.Count uzlů vybráno">
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5z"/></svg>
+                            Layout
+                            <span class="wb-editor-tab-count ms-1">@_selectionSet.Count</span>
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="wb-editor-tab @(_editorActiveTab == "edit" ? "wb-editor-tab-active" : "")"
+                                @onclick="@(() => SwitchEditorTab("edit"))">
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/></svg>
+                            Edit
+                        </button>
+                        <button class="wb-editor-tab @(_editorActiveTab == "add" ? "wb-editor-tab-active" : "")"
+                                @onclick="@(() => SwitchEditorTab("add"))">
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 1"/></svg>
+                            Add node
+                        </button>
+                        <button class="wb-editor-tab @(_editorActiveTab == "delete" ? "wb-editor-tab-active" : "")"
+                                @onclick="@(() => SwitchEditorTab("delete"))">
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg>
+                            Delete
+                        </button>
+                        <button class="wb-editor-tab @(_editorActiveTab == "import" ? "wb-editor-tab-active" : "")"
+                                @onclick="@(() => SwitchEditorTab("import"))">
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></svg>
+                            Import
+                        </button>
+                    }
                 </div>
 
                 @* Tab content *@
                 <div class="wb-editor-props-content">
                 @{
-                    var editorHasFocusNode = SessionService.SelectedElementType == EditorSelectionType.FacilityNode && _selectedFacilityNode is not null;
+                    var editorHasFocusNode = !IsEditorMultiSelectActive
+                        && SessionService.SelectedElementType == EditorSelectionType.FacilityNode
+                        && _selectedFacilityNode is not null;
                 }
 
                 @* ══ TAB: EDIT ══════════════════════════════════════════ *@
@@ -327,7 +352,7 @@
                 @* ══ TAB: ADD NODE ══════════════════════════════════════ *@
                 else if (_editorActiveTab == "add")
                 {
-                    @if (_selectedFacilityNode is null || !CanEditFocusedNode)
+                    @if (!editorHasFocusNode || !CanEditFocusedNode)
                     {
                         <div class="ep-node-header ep-node-header-placeholder">
                             <div class="ep-node-header-label">Add node</div>
@@ -474,6 +499,66 @@
                     </div>
                 }
 
+                @* ══ TAB: LAYOUT ════════════════════════════════════════ *@
+                else if (_editorActiveTab == "layout")
+                {
+                    <div class="ep-node-header ep-node-header-placeholder">
+                        <div class="ep-node-header-label">Rozvržení</div>
+                        <div class="ep-node-header-key">Zarovnat a rozložit uzly</div>
+                    </div>
+                    @if (_selectionSet.Count < 2)
+                    {
+                        <div class="ep-placeholder ep-layout-empty">
+                            <svg width="24" height="24" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" class="ep-placeholder-icon"><path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5z"/></svg>
+                            <div class="ep-placeholder-text">Vyberte 2 nebo více uzlů</div>
+                            <div class="ep-placeholder-sub">Ctrl+klik pro přidání do výběru, nebo přetáhněte výběrový rámeček na prázdném místě schématu.</div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="ep-section">
+                            <div class="ep-section-label">@_selectionSet.Count uzlů vybráno</div>
+                            <div class="ep-hint ep-hint-dark">Zarovnání se aplikuje na všechny vybrané uzly. Pohyb je zaznamenán do undo historii.</div>
+                        </div>
+                        <div class="ep-section">
+                            <div class="ep-section-label">Zarovnat na osu X</div>
+                            <div class="ep-align-grid">
+                                <button class="ep-align-btn" @onclick="@(() => AlignSelectedNodesAsync("center-h"))" title="Zarovnat na střed (průměr X)">
+                                    <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a.5.5 0 0 1 .5.5V3H13a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H8.5v1H11a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H8.5v1.5a.5.5 0 0 1-1 0V13H5a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1h2.5V8H3a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h4.5V1.5A.5.5 0 0 1 8 1"/></svg>
+                                    Na střed X
+                                </button>
+                            </div>
+                        </div>
+                        <div class="ep-section">
+                            <div class="ep-section-label">Zarovnat na osu Y</div>
+                            <div class="ep-align-grid">
+                                <button class="ep-align-btn" @onclick="@(() => AlignSelectedNodesAsync("center-v"))" title="Zarovnat na střed (průměr Y)">
+                                    <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2 8a.5.5 0 0 1 .5-.5H4V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2.5h2V6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2.5h1.5a.5.5 0 0 1 0 1H14V12a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V9.5H8V12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5H2.5A.5.5 0 0 1 2 9z"/></svg>
+                                    Na střed Y
+                                </button>
+                            </div>
+                        </div>
+                        <div class="ep-section">
+                            <div class="ep-section-label">Rozložit rovnoměrně</div>
+                            <div class="ep-hint ep-hint-dark">Potřeba alespoň 3 uzly. Pořadí se odvozuje od aktuální polohy.</div>
+                            <div class="ep-align-grid mt-1">
+                                <button class="ep-align-btn" disabled="@(_selectionSet.Count < 3)"
+                                        @onclick="@(() => DistributeSelectedNodesAsync("horizontal"))"
+                                        title="Rovnoměrně horizontálně (seřazeno dle X)">
+                                    <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2 1a1 1 0 0 1 1-1h.5a.5.5 0 0 1 0 1H3v12h.5a.5.5 0 0 1 0 1H3a1 1 0 0 1-1-1zm12 0a1 1 0 0 0-1-1h-.5a.5.5 0 0 0 0 1H13v12h-.5a.5.5 0 0 0 0 1H13a1 1 0 0 0 1-1zM6 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1z"/></svg>
+                                    Horizontálně
+                                </button>
+                                <button class="ep-align-btn" disabled="@(_selectionSet.Count < 3)"
+                                        @onclick="@(() => DistributeSelectedNodesAsync("vertical"))"
+                                        title="Rovnoměrně vertikálně (seřazeno dle Y)">
+                                    <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M1 2a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V1.5a.5.5 0 0 0-1 0V2H2V1.5a.5.5 0 0 0-1 0zm0 12a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v.5a.5.5 0 0 1-1 0V14H2v.5a.5.5 0 0 1-1 0zM4 6a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/></svg>
+                                    Vertikálně
+                                </button>
+                            </div>
+                        </div>
+                    }
+                }
+
                 </div>@* end wb-editor-props-content *@
             </div>@* end wb-editor-props *@
 
@@ -556,7 +641,8 @@
                                       SelectedSubtreeNodeKeys="@SelectedSubtreeNodeKeysForCanvas"
                                       FacilityNodeAlertSeverities="@AlertSeverityByNodeKey"
                                       OnElementSelected="HandleElementSelected"
-                                      OnCanvasClicked="HandleCanvasClicked" />
+                                      OnCanvasClicked="HandleCanvasClicked"
+                                      OnNodeDragEnd="HandleNodeDragEndAsync" />
                     }
                 </div>
             </div>
@@ -1770,8 +1856,10 @@
     private bool _editModeCanUndo => _editUndoStack.Count > 0;
     private bool _editModeCanRedo => _editRedoStack.Count > 0;
     private bool _isCuratedNode;
+    private const double EditorGridSize = 20.0;
     private bool CanEditFocusedNode => _selectedFacilityNode is not null && !FacilityNodeSemantics.IsWeatherContextNode(_selectedFacilityNode.NodeKey);
     private bool CanRemoveFocusedLeafNode => _selectedFacilityNode is not null && CanEditFocusedNode && !HasChildren(_selectedFacilityNode.NodeKey);
+    private bool IsEditorMultiSelectActive => _isEditModeOpen && _selectionSet.Count > 1;
     
     // UI State
     private bool _isSchematicFullscreen = false;
@@ -1957,6 +2045,11 @@
                 ? previousFocusNodeKey
                 : GetFallbackFocusNodeKey();
 
+            if (previousSelectionOrder.Count > 1 && string.IsNullOrWhiteSpace(previousFocusNodeKey))
+            {
+                nextFocusNodeKey = null;
+            }
+
             if (string.IsNullOrWhiteSpace(nextFocusNodeKey))
             {
                 SessionService.ClearSelection();
@@ -1997,7 +2090,8 @@
                 
                 if (_selectedFacilityNode != null)
                 {
-                    _isCuratedNode = _selectedFacilityNode.NodeKey is "pv_main" or "chp_main" or "cooling_main" or "heating_main";
+                    _isCuratedNode = !string.IsNullOrEmpty(_selectedFacilityNode.MeterUrn)
+                        || _selectedFacilityNode.NodeKey is "pv_main" or "chp_main" or "cooling_main" or "heating_main";
                     await ReloadPreviewDataAsync();
                 }
                 else
@@ -2008,6 +2102,14 @@
         }
         else
         {
+            if (_isEditModeOpen && _selectionSet.Count > 0)
+            {
+                ClearFocusNodeState();
+                _compareSetStatusMessage = null;
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
             ClearSelectionSetState();
             ClearFocusNodeState();
             _compareSetStatusMessage = null;
@@ -3391,6 +3493,224 @@
         ClearWorkspaceSelection();
     }
 
+    private async Task HandleNodeDragEndAsync((string NodeKey, double X, double Y) args)
+    {
+        // Drag positioning only applies inside editor mode.
+        if (!_isEditModeOpen) return;
+
+        // Snapshot before change so the move is undoable and marks the graph dirty.
+        var snapshot = await SnapshotEditStateAsync();
+
+        var existing = _editorNodeStatesByKey.TryGetValue(args.NodeKey, out var cached) ? cached : null;
+        var updated = new FacilityNodeEditorState
+        {
+            NodeKey = args.NodeKey,
+            Label = existing?.Label,
+            NodeType = existing?.NodeType,
+            Zone = existing?.Zone,
+            Note = existing?.Note,
+            Tags = existing?.Tags ?? [],
+            // XHint/YHint > 1.0 are treated as absolute pixel positions by SchematicComposerV2.
+            XHint = Math.Round(args.X, 1),
+            YHint = Math.Round(args.Y, 1),
+        };
+        await FacilityEditorStateService.SaveNodeStatesAsync([updated]);
+
+        // Push to undo stack → marks EditModeDirty = true → orange save diskette activates.
+        PushEditUndoSnapshot(snapshot, $"Přesun \"{args.NodeKey}\"");
+
+        await ReloadData(preserveSelection: true);
+    }
+
+    private async Task HandleRectSelectEndAsync((double X1, double Y1, double X2, double Y2, bool Additive) args)
+    {
+        if (!_isEditModeOpen || _schematicLayout is null) return;
+
+        if (!args.Additive)
+            ClearSelectionSetState();
+
+        foreach (var node in _schematicLayout.Nodes)
+        {
+            if (node.X >= args.X1 && node.X <= args.X2 && node.Y >= args.Y1 && node.Y <= args.Y2)
+                AddNodeToSelectionSet(node.NodeKey);
+        }
+
+        SyncEditorFocusFromSelectionSet();
+
+        await SyncEditorSelectionToJsAsync();
+        if (_selectionSet.Count > 1)
+            SwitchEditorTab("layout");
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleGroupDragEndAsync((double DeltaX, double DeltaY) args)
+    {
+        if (!_isEditModeOpen || _selectionSet.Count == 0 || _schematicLayout is null) return;
+
+        var snapshot = await SnapshotEditStateAsync();
+
+        var nodesByKey = _schematicLayout.Nodes.ToDictionary(n => n.NodeKey, StringComparer.OrdinalIgnoreCase);
+        var updatedStates = new List<FacilityNodeEditorState>();
+        foreach (var nodeKey in _selectionSet)
+        {
+            if (!nodesByKey.TryGetValue(nodeKey, out var layoutNode)) continue;
+            var existing = _editorNodeStatesByKey.TryGetValue(nodeKey, out var c) ? c : null;
+            updatedStates.Add(new FacilityNodeEditorState
+            {
+                NodeKey = nodeKey,
+                Label = existing?.Label, NodeType = existing?.NodeType,
+                Zone = existing?.Zone, Note = existing?.Note, Tags = existing?.Tags ?? [],
+                XHint = Math.Round(SnapToEditorGrid(layoutNode.X + args.DeltaX), 1),
+                YHint = Math.Round(SnapToEditorGrid(layoutNode.Y + args.DeltaY), 1),
+            });
+        }
+
+        if (updatedStates.Count == 0) return;
+        await FacilityEditorStateService.SaveNodeStatesAsync(updatedStates);
+        PushEditUndoSnapshot(snapshot, $"Přesun skupiny ({_selectionSet.Count} uzlů)");
+        await ReloadData(preserveSelection: true);
+        await SyncEditorSelectionToJsAsync();
+    }
+
+    private async Task HandleNodeCtrlClickedAsync(string nodeKey)
+    {
+        if (!_isEditModeOpen) return;
+
+        if (_selectionSet.Contains(nodeKey))
+        {
+            RemoveNodeFromSelectionSet(nodeKey);
+        }
+        else
+        {
+            AddNodeToSelectionSet(nodeKey);
+        }
+
+        SyncEditorFocusFromSelectionSet();
+
+        await SyncEditorSelectionToJsAsync();
+        if (_selectionSet.Count > 1)
+            SwitchEditorTab("layout");
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleKeyboardShortcutAsync(string shortcut)
+    {
+        if (shortcut == "undo")
+        {
+            await UndoEditAsync();
+        }
+        else if (shortcut == "redo")
+        {
+            await RedoEditAsync();
+        }
+        else if (shortcut == "escape" && _isEditModeOpen)
+        {
+            ClearSelectionSetState();
+            ApplyFocusNode(null);
+            await SyncEditorSelectionToJsAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task SyncEditorSelectionToJsAsync()
+    {
+        await JSRuntime.InvokeVoidAsync("editorCanvas.setSelectedNodes", _selectionSet.ToArray());
+    }
+
+    private async Task AlignSelectedNodesAsync(string direction)
+    {
+        if (!_isEditModeOpen || _selectionSet.Count < 2 || _schematicLayout is null) return;
+
+        var snapshot = await SnapshotEditStateAsync();
+        var selectedLayouts = _schematicLayout.Nodes.Where(n => _selectionSet.Contains(n.NodeKey)).ToList();
+        if (selectedLayouts.Count < 2) return;
+
+        double alignValue = direction switch
+        {
+            "center-h" => selectedLayouts.Average(n => n.X),
+            "center-v" => selectedLayouts.Average(n => n.Y),
+            _ => double.NaN
+        };
+
+        if (double.IsNaN(alignValue)) return;
+        alignValue = SnapToEditorGrid(alignValue);
+
+        bool alignX = direction == "center-h";
+
+        var updatedStates = selectedLayouts.Select(layoutNode =>
+        {
+            var existing = _editorNodeStatesByKey.TryGetValue(layoutNode.NodeKey, out var ex) ? ex : null;
+            return new FacilityNodeEditorState
+            {
+                NodeKey = layoutNode.NodeKey,
+                Label = existing?.Label, NodeType = existing?.NodeType,
+                Zone = existing?.Zone, Note = existing?.Note, Tags = existing?.Tags ?? [],
+                XHint = alignX ? Math.Round(alignValue, 1) : Math.Round(layoutNode.X, 1),
+                YHint = alignX ? Math.Round(layoutNode.Y, 1) : Math.Round(alignValue, 1),
+            };
+        }).ToList();
+
+        await FacilityEditorStateService.SaveNodeStatesAsync(updatedStates);
+        PushEditUndoSnapshot(snapshot, $"Zarovnat {direction} ({_selectionSet.Count} uzlů)");
+        await ReloadData(preserveSelection: true);
+        await SyncEditorSelectionToJsAsync();
+    }
+
+    private async Task DistributeSelectedNodesAsync(string direction)
+    {
+        if (!_isEditModeOpen || _selectionSet.Count < 3 || _schematicLayout is null) return;
+
+        var snapshot = await SnapshotEditStateAsync();
+        var selectedLayouts = _schematicLayout.Nodes.Where(n => _selectionSet.Contains(n.NodeKey)).ToList();
+        if (selectedLayouts.Count < 3) return;
+
+        List<FacilityNodeEditorState> updatedStates;
+
+        if (direction == "horizontal")
+        {
+            var sorted = selectedLayouts.OrderBy(n => n.X).ToList();
+            var minX = sorted.First().X;
+            var maxX = sorted.Last().X;
+            var step = (maxX - minX) / (sorted.Count - 1);
+            updatedStates = sorted.Select((n, i) =>
+            {
+                var existing = _editorNodeStatesByKey.TryGetValue(n.NodeKey, out var ex) ? ex : null;
+                return new FacilityNodeEditorState
+                {
+                    NodeKey = n.NodeKey,
+                    Label = existing?.Label, NodeType = existing?.NodeType,
+                    Zone = existing?.Zone, Note = existing?.Note, Tags = existing?.Tags ?? [],
+                    XHint = Math.Round(SnapToEditorGrid(minX + step * i), 1),
+                    YHint = Math.Round(n.Y, 1)
+                };
+            }).ToList();
+        }
+        else // vertical
+        {
+            var sorted = selectedLayouts.OrderBy(n => n.Y).ToList();
+            var minY = sorted.First().Y;
+            var maxY = sorted.Last().Y;
+            var step = (maxY - minY) / (sorted.Count - 1);
+            updatedStates = sorted.Select((n, i) =>
+            {
+                var existing = _editorNodeStatesByKey.TryGetValue(n.NodeKey, out var ex) ? ex : null;
+                return new FacilityNodeEditorState
+                {
+                    NodeKey = n.NodeKey,
+                    Label = existing?.Label, NodeType = existing?.NodeType,
+                    Zone = existing?.Zone, Note = existing?.Note, Tags = existing?.Tags ?? [],
+                    XHint = Math.Round(n.X, 1),
+                    YHint = Math.Round(SnapToEditorGrid(minY + step * i), 1)
+                };
+            }).ToList();
+        }
+
+        await FacilityEditorStateService.SaveNodeStatesAsync(updatedStates);
+        PushEditUndoSnapshot(snapshot, $"Rozložit {direction} ({_selectionSet.Count} uzlů)");
+        await ReloadData(preserveSelection: true);
+        await SyncEditorSelectionToJsAsync();
+    }
+
     private void HandleFacilityNodeClicked(string nodeKey)
     {
         if (!_nodesByKey.TryGetValue(nodeKey, out var node))
@@ -3399,7 +3719,7 @@
             return;
         }
 
-        // V edit mode: vždy single-select — žádný multiselect, žádný subtree batch výběr
+        // V edit mode: single-select (Ctrl+click additive goes through HandleNodeCtrlClickedAsync)
         if (_isEditModeOpen)
         {
             ClearSelectionSetState();
@@ -3409,6 +3729,7 @@
             {
                 InvokeAsync(async () => await ReloadPreviewDataAsync());
             }
+            InvokeAsync(SyncEditorSelectionToJsAsync);
             return;
         }
 
@@ -3502,6 +3823,25 @@
 
         SessionService.SelectElement(nodeKey, EditorSelectionType.FacilityNode);
         return true;
+    }
+
+    private bool SyncEditorFocusFromSelectionSet()
+    {
+        if (_selectionSet.Count == 1)
+        {
+            if (_editorActiveTab == "layout")
+                _editorActiveTab = "edit";
+            var focusedKey = _selectionOrder.LastOrDefault(k => _selectionSet.Contains(k));
+            return ApplyFocusNode(focusedKey);
+        }
+
+        if (_selectionSet.Count > 1)
+            _editorActiveTab = "layout";
+
+        var changed = ApplyFocusNode(null);
+        if (_selectionSet.Count > 1)
+            ClearFocusNodeState();
+        return changed;
     }
 
     private bool ToggleLeafSelection(string nodeKey)
@@ -3718,6 +4058,14 @@
             return EmptyNodeKeySet;
         }
 
+        // In multi-select mode, highlight only the actual selected set.
+        // This keeps single and multi modes mutually exclusive and prevents
+        // unrelated structural ancestors from appearing as selected.
+        if (IsEditorMultiSelectActive)
+        {
+            return new HashSet<string>(_selectionSet, StringComparer.OrdinalIgnoreCase);
+        }
+
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         // Step 1: If the focused node is structural, build its subtree highlight path (existing behavior).
@@ -3757,9 +4105,7 @@
         }
 
         // Step 2: For selected nodes outside the focused subtree, walk up to their nearest
-        // structural ancestor and include it. This prevents structural parent zones from being
-        // visually dimmed (opacity 0.35) when their leaf descendants are selected but focus
-        // is elsewhere — fixing the additive multi-subtree visual bug.
+        // structural ancestor and include it.
         foreach (var key in _selectionSet)
         {
             if (result.Contains(key)) continue; // Already covered by focused subtree path
@@ -3827,7 +4173,7 @@
         _isEditModeOpen = !_isEditModeOpen;
         _isSchematicEditorEnabled = _isEditModeOpen;
         _editorActiveTool = "select";
-        _editorActiveTab = "edit";
+        _editorActiveTab = _selectionSet.Count > 1 ? "layout" : "edit";
         if (_isEditModeOpen)
         {
             _isSchematicFullscreen = false;
@@ -3838,15 +4184,24 @@
             _showDiscardGuard = false;
         }
         StateHasChanged();
-        if (_isEditModeOpen)
+        var enteringEdit = _isEditModeOpen;
+        if (enteringEdit)
         {
             Task.Delay(80).ContinueWith(_ => InvokeAsync(async () =>
-                await JSRuntime.InvokeVoidAsync("editorCanvas.fitToView", "edit")));
+            {
+                await JSRuntime.InvokeVoidAsync("editorCanvas.setGrid", true, 20);
+                await JSRuntime.InvokeVoidAsync("editorCanvas.setFacilityNodeDragEnabled", true);
+                await GoHomeAsync();
+            }));
         }
         else
         {
             Task.Delay(80).ContinueWith(_ => InvokeAsync(async () =>
-                await JSRuntime.InvokeVoidAsync("editorCanvas.goHome")));
+            {
+                await JSRuntime.InvokeVoidAsync("editorCanvas.setGrid", false, 20);
+                await JSRuntime.InvokeVoidAsync("editorCanvas.setFacilityNodeDragEnabled", false);
+                await JSRuntime.InvokeVoidAsync("editorCanvas.goHome");
+            }));
         }
     }
 
@@ -3864,6 +4219,12 @@
 
     private void SwitchEditorTab(string tab)
     {
+        if (IsEditorMultiSelectActive && tab != "layout")
+            tab = "layout";
+
+        if (!IsEditorMultiSelectActive && tab == "layout")
+            tab = "edit";
+
         _editorActiveTab = tab;
         if (tab == "edit")
         {
@@ -3923,7 +4284,61 @@
 
     private async Task GoHomeAsync()
     {
+        if (_schematicLayout?.Nodes.Count > 0)
+        {
+            var rootNode = ResolveHomeTargetNode(_schematicLayout.Nodes);
+            if (rootNode is not null)
+            {
+                await JSRuntime.InvokeVoidAsync("editorCanvas.panToNode", rootNode.X, rootNode.Y, 1.4);
+                return;
+            }
+        }
         await JSRuntime.InvokeVoidAsync("editorCanvas.goHome");
+    }
+
+    private static SchematicNodeLayoutV2? ResolveHomeTargetNode(IReadOnlyList<SchematicNodeLayoutV2> nodes)
+    {
+        if (nodes.Count == 0)
+            return null;
+
+        var nodeByKey = nodes.ToDictionary(n => n.NodeKey, StringComparer.OrdinalIgnoreCase);
+        var childrenByParent = new Dictionary<string, List<SchematicNodeLayoutV2>>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var node in nodes)
+        {
+            if (string.IsNullOrWhiteSpace(node.ParentNodeKey) || !nodeByKey.ContainsKey(node.ParentNodeKey))
+                continue;
+
+            if (!childrenByParent.TryGetValue(node.ParentNodeKey, out var children))
+            {
+                children = [];
+                childrenByParent[node.ParentNodeKey] = children;
+            }
+
+            children.Add(node);
+        }
+
+        var roots = nodes
+            .Where(n => string.IsNullOrWhiteSpace(n.ParentNodeKey) || !nodeByKey.ContainsKey(n.ParentNodeKey))
+            .OrderBy(n => n.Y)
+            .ThenBy(n => n.X)
+            .ToList();
+
+        if (roots.Count == 0)
+            return nodes.OrderBy(n => n.Y).ThenBy(n => n.X).FirstOrDefault();
+
+        var current = roots[0];
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { current.NodeKey };
+        while (childrenByParent.TryGetValue(current.NodeKey, out var nextChildren) && nextChildren.Count == 1)
+        {
+            var next = nextChildren[0];
+            if (!visited.Add(next.NodeKey))
+                break;
+
+            current = next;
+        }
+
+        return current;
     }
 
     private void SetEditorTool(string tool)
@@ -3962,6 +4377,9 @@
 
     private async Task<string> SnapshotEditStateAsync()
         => await FacilityEditorStateService.GetRawStateAsync();
+
+    private static double SnapToEditorGrid(double value)
+        => Math.Round(value / EditorGridSize) * EditorGridSize;
 
     private void PushEditUndoSnapshot(string snapshot, string description)
     {

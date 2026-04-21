@@ -68,12 +68,12 @@ public class FacilityQueryService
 
             if (nodeState.XHint.HasValue)
             {
-                node.XHint = Math.Clamp(nodeState.XHint.Value, 0.0, 1.0);
+                node.XHint = nodeState.XHint.Value;
             }
 
             if (nodeState.YHint.HasValue)
             {
-                node.YHint = Math.Clamp(nodeState.YHint.Value, 0.0, 1.0);
+                node.YHint = nodeState.YHint.Value;
             }
         }
 

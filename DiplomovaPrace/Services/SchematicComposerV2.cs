@@ -158,7 +158,18 @@ public static class SchematicComposerV2
             }
         }
 
-        // ── 6. Normalize coordinates (add padding, compute canvas) ───────
+        // ── 6. Apply pinned positions (outside 0..1 range → absolute pixel override) ───
+        var pinnedByKey = allNodes
+            .Where(n =>
+                n.XHint.HasValue && n.YHint.HasValue &&
+                (n.XHint.Value < 0.0 || n.XHint.Value > 1.0 || n.YHint.Value < 0.0 || n.YHint.Value > 1.0))
+            .ToDictionary(n => n.NodeKey, n => (X: n.XHint!.Value, Y: n.YHint!.Value),
+                StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (key, pinned) in pinnedByKey)
+            positions[key] = (pinned.X, pinned.Y);
+
+        // ── 7. Normalize coordinates (add padding, compute canvas) ───────
         if (positions.Count == 0)
             return EmptyLayout();
 
@@ -169,25 +180,33 @@ public static class SchematicComposerV2
         var minY = allY.Min();
         var maxY = allY.Max();
 
-        var offsetX = PaddingX - minX;
-        var offsetY = PaddingY - minY;
+        // Pinned nodes use absolute coords — don't offset them, but still pad tree-placed nodes.
+        // If any pinned positions exist, we lay out the canvas without the negative-coordinate offset trick.
+        var hasAnyPinned = pinnedByKey.Count > 0;
+        var offsetX = hasAnyPinned ? 0 : PaddingX - minX;
+        var offsetY = hasAnyPinned ? 0 : PaddingY - minY;
         var canvasWidth = Math.Max(MinCanvasWidth, (maxX - minX) + PaddingX * 2);
         var canvasHeight = Math.Max(MinCanvasHeight, (maxY - minY) + PaddingY * 2);
 
-        // ── 7. Build output layout nodes ─────────────────────────────────
+        // ── 8. Build output layout nodes ─────────────────────────────────
         var layoutNodes = allNodes.Select(n =>
         {
             var pos = positions.GetValueOrDefault(n.NodeKey, (canvasWidth / 2, canvasHeight / 2));
+            var isPinned = pinnedByKey.ContainsKey(n.NodeKey);
             var hasChildren = childrenMap.TryGetValue(n.NodeKey, out var ch) && ch.Count > 0;
             var layer = ClassifyLayer(n, hasChildren);
 
+            // Pinned nodes keep their absolute position; tree nodes get padding offset applied.
+            var finalX = isPinned ? pos.Item1 : pos.Item1 + offsetX;
+            var finalY = isPinned ? pos.Item2 : pos.Item2 + offsetY;
+
             return new SchematicNodeLayoutV2(
                 n.NodeKey, n.Label, n.NodeType, n.Zone, n.MeterUrn, n.ParentNodeKey,
-                pos.Item1 + offsetX, pos.Item2 + offsetY,
+                finalX, finalY,
                 layer, hasChildren);
         }).ToList();
 
-        // ── 8. Build links ───────────────────────────────────────────────
+        // ── 9. Build links ───────────────────────────────────────────────
         var links = BuildLinks(allNodes, facility.Edges, nodeByKey, childrenMap);
 
         return new SchematicLayoutV2

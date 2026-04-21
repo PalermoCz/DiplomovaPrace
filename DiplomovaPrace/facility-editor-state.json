@@ -1,6 +1,216 @@
-﻿{
+{
   "schemaVersion": 2,
-  "nodeEdits": [],
+  "nodeEdits": [
+    {
+      "nodeKey": "design_studio",
+      "label": null,
+      "nodeType": null,
+      "zone": null,
+      "tags": [],
+      "note": null,
+      "xHint": 2040,
+      "yHint": 380,
+      "updatedUtc": "2026-04-21T12:48:19.7544148Z"
+    },
+    {
+      "nodeKey": "design_studio_bus",
+      "label": null,
+      "nodeType": null,
+      "zone": null,
+      "tags": [],
+      "note": null,
+      "xHint": 2080,
+      "yHint": 580,
+      "updatedUtc": "2026-04-21T12:48:19.754419Z"
+    },
+    {
+      "nodeKey": "electricity_root",
+      "label": null,
+      "nodeType": null,
+      "zone": null,
+      "tags": [],
+      "note": null,
+      "xHint": 2260,
+      "yHint": 80,
+      "updatedUtc": "2026-04-21T11:58:38.507162Z"
+    },
+    {
+      "nodeKey": "external_grid",
+      "label": null,
+      "nodeType": null,
+      "zone": null,
+      "tags": [],
+      "note": null,
+      "xHint": 3420,
+      "yHint": 0,
+      "updatedUtc": "2026-04-21T13:00:34.8910948Z"
+    },
+    {
+      "nodeKey": "facility_root",
+      "label": null,
+      "nodeType": null,
+      "zone": null,
+      "tags": [],
+      "note": null,
+      "xHint": 2500,
+      "yHint": 0,
+      "updatedUtc": "2026-04-21T13:31:20.705376Z"
+    },
+    {
+      "nodeKey": "main_h2_bus",
+      "label": null,
+      "nodeType": null,
+      "zone": null,
+      "tags": [],
+      "note": null,
+      "xHint": 2220,
+      "yHint": 340,
+      "updatedUtc": "2026-04-21T12:03:17.7252102Z"
+    },
+    {
+      "nodeKey": "meter__h2_t_z31",
+      "label": null,
+      "nodeType": null,
+      "zone": null,
+      "tags": [],
+      "note": null,
+      "xHint": 2620,
+      "yHint": 380,
+      "updatedUtc": "2026-04-21T11:59:34.7190739Z"
+    },
+    {
+      "nodeKey": "meter__h2_t_z32",
+      "label": null,
+      "nodeType": null,
+      "zone": null,
+      "tags": [],
+      "note": null,
+      "xHint": 2740,
+      "yHint": 380,
+      "updatedUtc": "2026-04-21T11:59:42.6719722Z"
+    },
+    {
+      "nodeKey": "meter__h2_t_z33",
+      "label": null,
+      "nodeType": null,
+      "zone": null,
+      "tags": [],
+      "note": null,
+      "xHint": 2120,
+      "yHint": 480,
+      "updatedUtc": "2026-04-21T12:48:19.7544186Z"
+    },
+    {
+      "nodeKey": "meter__h2_z311",
+      "label": null,
+      "nodeType": null,
+      "zone": null,
+      "tags": [],
+      "note": null,
+      "xHint": 2860,
+      "yHint": 380,
+      "updatedUtc": "2026-04-21T11:59:45.9624463Z"
+    },
+    {
+      "nodeKey": "meter__h2_z35",
+      "label": null,
+      "nodeType": null,
+      "zone": null,
+      "tags": [],
+      "note": null,
+      "xHint": 2020,
+      "yHint": 200,
+      "updatedUtc": "2026-04-21T13:31:10.3441716Z"
+    },
+    {
+      "nodeKey": "meter__h2_z351",
+      "label": null,
+      "nodeType": null,
+      "zone": null,
+      "tags": [],
+      "note": null,
+      "xHint": 7200,
+      "yHint": 360,
+      "updatedUtc": "2026-04-21T12:02:48.2659731Z"
+    },
+    {
+      "nodeKey": "meter__h3_z43",
+      "label": null,
+      "nodeType": null,
+      "zone": null,
+      "tags": [],
+      "note": null,
+      "xHint": 1920,
+      "yHint": 700,
+      "updatedUtc": "2026-04-21T12:41:44.0643511Z"
+    },
+    {
+      "nodeKey": "meter__v_z84",
+      "label": null,
+      "nodeType": null,
+      "zone": null,
+      "tags": [],
+      "note": null,
+      "xHint": 1860,
+      "yHint": 220,
+      "updatedUtc": "2026-04-21T14:19:14.3337701Z"
+    },
+    {
+      "nodeKey": "meter__v_ze84",
+      "label": null,
+      "nodeType": null,
+      "zone": null,
+      "tags": [],
+      "note": null,
+      "xHint": 1800,
+      "yHint": 220,
+      "updatedUtc": "2026-04-21T14:19:16.4788267Z"
+    },
+    {
+      "nodeKey": "other_pv",
+      "label": null,
+      "nodeType": null,
+      "zone": null,
+      "tags": [],
+      "note": null,
+      "xHint": 1920,
+      "yHint": 220,
+      "updatedUtc": "2026-04-21T14:19:12.5560033Z"
+    },
+    {
+      "nodeKey": "pv_roof_branch",
+      "label": null,
+      "nodeType": null,
+      "zone": null,
+      "tags": [],
+      "note": null,
+      "xHint": 1860,
+      "yHint": 160,
+      "updatedUtc": "2026-04-21T14:19:30.523314Z"
+    },
+    {
+      "nodeKey": "transformer_pair_h2_a",
+      "label": null,
+      "nodeType": null,
+      "zone": null,
+      "tags": [],
+      "note": null,
+      "xHint": 2260,
+      "yHint": 160,
+      "updatedUtc": "2026-04-21T11:56:15.6438665Z"
+    },
+    {
+      "nodeKey": "workshop",
+      "label": null,
+      "nodeType": null,
+      "zone": null,
+      "tags": [],
+      "note": null,
+      "xHint": 4808.9,
+      "yHint": 434,
+      "updatedUtc": "2026-04-21T11:19:29.8049753Z"
+    }
+  ],
   "workingSets": [],
   "structure": {
     "addedNodes": [],

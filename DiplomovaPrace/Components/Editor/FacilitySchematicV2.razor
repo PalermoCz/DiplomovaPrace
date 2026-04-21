@@ -31,6 +31,17 @@
                   width="@Fmt(Layout.CanvasWidth)" height="@Fmt(Layout.CanvasHeight)"
                   fill="white" pointer-events="none" />
 
+            @* ── Editor grid (shown only in edit mode) ──────── *@
+            @if (ShowGrid)
+            {
+                @((MarkupString)$@"<defs>
+  <pattern id=""{_svgId}-grid"" width=""20"" height=""20"" patternUnits=""userSpaceOnUse"">
+    <path d=""M 20 0 L 0 0 0 20"" fill=""none"" stroke=""#e2e8f0"" stroke-width=""0.5""/>
+  </pattern>
+</defs>
+<rect x=""-100000"" y=""-100000"" width=""200000"" height=""200000"" fill=""url(#{_svgId}-grid)"" pointer-events=""none""/>")
+            }
+
             @* ── Links ──────────────────────────────────────── *@
             @foreach (var link in Layout.Links)
             {
@@ -231,6 +242,12 @@
 
     [Parameter] public EventCallback<(string Id, EditorSelectionType Type)> OnElementSelected { get; set; }
     [Parameter] public EventCallback<(double X, double Y)> OnCanvasClicked { get; set; }
+    [Parameter] public EventCallback<(string NodeKey, double X, double Y)> OnNodeDragEnd { get; set; }
+    [Parameter] public EventCallback<(double X1, double Y1, double X2, double Y2, bool Additive)> OnRectSelectEnd { get; set; }
+    [Parameter] public EventCallback<(double DeltaX, double DeltaY)> OnGroupDragEnd { get; set; }
+    [Parameter] public EventCallback<string> OnNodeCtrlClicked { get; set; }
+    [Parameter] public EventCallback<string> OnKeyboardShortcut { get; set; }
+    [Parameter] public bool ShowGrid { get; set; } = false;
 
     private readonly string _svgId = "schematic-v2-svg";
     private DotNetObjectReference<FacilitySchematicV2>? _dotNetRef;
@@ -281,7 +298,11 @@
     public Task JsOnDeviceDragEnd(string deviceId, double x, double y) => Task.CompletedTask;
 
     [JSInvokable]
-    public Task JsOnFacilityNodeDragEnd(string nodeKey, double x, double y) => Task.CompletedTask;
+    public async Task JsOnFacilityNodeDragEnd(string nodeKey, double x, double y)
+    {
+        if (OnNodeDragEnd.HasDelegate)
+            await OnNodeDragEnd.InvokeAsync((nodeKey, x, y));
+    }
 
     [JSInvokable]
     public async Task JsOnElementClicked(string id, string typeName)
@@ -299,7 +320,32 @@
     public Task JsOnDeleteClicked(string id, string typeName) => Task.CompletedTask;
 
     [JSInvokable]
-    public Task JsOnKeyboardShortcut(string shortcut) => Task.CompletedTask;
+    public async Task JsOnKeyboardShortcut(string shortcut)
+    {
+        if (OnKeyboardShortcut.HasDelegate)
+            await OnKeyboardShortcut.InvokeAsync(shortcut);
+    }
+
+    [JSInvokable]
+    public async Task JsOnRectSelectEnd(double x1, double y1, double x2, double y2, bool additive)
+    {
+        if (OnRectSelectEnd.HasDelegate)
+            await OnRectSelectEnd.InvokeAsync((x1, y1, x2, y2, additive));
+    }
+
+    [JSInvokable]
+    public async Task JsOnFacilityGroupDragEnd(double deltaX, double deltaY)
+    {
+        if (OnGroupDragEnd.HasDelegate)
+            await OnGroupDragEnd.InvokeAsync((deltaX, deltaY));
+    }
+
+    [JSInvokable]
+    public async Task JsOnFacilityNodeCtrlClicked(string nodeKey)
+    {
+        if (OnNodeCtrlClicked.HasDelegate)
+            await OnNodeCtrlClicked.InvokeAsync(nodeKey);
+    }
 
     // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -314,7 +360,9 @@
         && string.Equals(SelectedElementId, key, StringComparison.OrdinalIgnoreCase);
 
     private bool IsElementSelected(string key) =>
-        IsFocusElement(key) || SelectedElementIds.Contains(key);
+        SelectedElementIds.Count > 1
+            ? SelectedElementIds.Contains(key)
+            : IsFocusElement(key) || SelectedElementIds.Contains(key);
 
     private static bool IsEnergyAlertNode(string nodeKey) =>
         nodeKey is "pv_main" or "chp_main" or "cooling_main" or "heating_main";
