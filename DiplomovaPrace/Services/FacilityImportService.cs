@@ -4,6 +4,7 @@ using CsvHelper.Configuration;
 using DiplomovaPrace.Persistence;
 using DiplomovaPrace.Persistence.Schematic;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace DiplomovaPrace.Services;
 
@@ -14,9 +15,10 @@ namespace DiplomovaPrace.Services;
 ///
 /// Idempotentní: pokud facility "Smart Company Facility" již existuje, seed se přeskočí.
 ///
-/// Hledá CSV soubory v tomto pořadí:
-///   1. DataSet/Facility/ (vedle složky DiplomovaPrace projektu)
-///   2. ContentRoot projektu (záložní umístění)
+/// Cesty k CSV souborům (v prioritním pořadí):
+///   1. Facility:NodesCsvPath / Facility:EdgesCsvPath z konfigurace (appsettings.Local.json)
+///   2. DataSet/Facility/ (vedle složky DiplomovaPrace projektu)
+///   3. ContentRoot projektu (záložní umístění)
 /// </summary>
 public class FacilityImportService
 {
@@ -24,13 +26,16 @@ public class FacilityImportService
 
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
     private readonly ILogger<FacilityImportService> _logger;
+    private readonly IConfiguration _config;
 
     public FacilityImportService(
         IDbContextFactory<AppDbContext> dbFactory,
-        ILogger<FacilityImportService> logger)
+        ILogger<FacilityImportService> logger,
+        IConfiguration config)
     {
         _dbFactory = dbFactory;
         _logger = logger;
+        _config = config;
     }
 
     /// <summary>
@@ -185,9 +190,19 @@ public class FacilityImportService
 
     // ── Lokalizace CSV souborů ────────────────────────────────────────────────
 
-    private static (string NodesPath, string EdgesPath) ResolveCsvPaths(string contentRootPath)
+    private (string NodesPath, string EdgesPath) ResolveCsvPaths(string contentRootPath)
     {
-        // Preferovaná cesta: DataSet/Facility/ (vedle složky projektu)
+        // 1. Cesty z konfigurace (appsettings.Local.json — nejvyšší priorita)
+        var configNodes = _config["Facility:NodesCsvPath"];
+        var configEdges = _config["Facility:EdgesCsvPath"];
+        if (!string.IsNullOrEmpty(configNodes) && !string.IsNullOrEmpty(configEdges)
+            && File.Exists(configNodes) && File.Exists(configEdges))
+        {
+            _logger.LogInformation("Používám konfigurační CSV cesty: {Nodes}, {Edges}", configNodes, configEdges);
+            return (configNodes, configEdges);
+        }
+
+        // 2. Preferovaná cesta: DataSet/Facility/ (vedle složky projektu)
         var datasetFolder = Path.Combine(contentRootPath, "..", "DataSet", "Facility");
         var preferredNodes = Path.GetFullPath(Path.Combine(datasetFolder, "mvp_nodes.csv"));
         var preferredEdges = Path.GetFullPath(Path.Combine(datasetFolder, "mvp_edges.csv"));
@@ -195,7 +210,7 @@ public class FacilityImportService
         if (File.Exists(preferredNodes) && File.Exists(preferredEdges))
             return (preferredNodes, preferredEdges);
 
-        // Záložní: ContentRoot projektu (pro starší umístění během vývoje)
+        // 3. Záložní: ContentRoot projektu
         var fallbackNodes = Path.Combine(contentRootPath, "mvp_nodes.csv");
         var fallbackEdges = Path.Combine(contentRootPath, "mvp_edges.csv");
 
@@ -253,5 +268,15 @@ public class FacilityImportService
 
         [CsvHelper.Configuration.Attributes.Name("target_node_id")]
         public string TargetNodeId { get; set; } = string.Empty;
+
+        // Volitelné sloupce v mvp_edges_schematic.csv (tolerovány přes MissingFieldFound = null)
+        [CsvHelper.Configuration.Attributes.Name("edge_kind")]
+        public string EdgeKind { get; set; } = string.Empty;
+
+        [CsvHelper.Configuration.Attributes.Name("is_layout_edge")]
+        public string IsLayoutEdge { get; set; } = string.Empty;
+
+        [CsvHelper.Configuration.Attributes.Name("note")]
+        public string Note { get; set; } = string.Empty;
     }
 }

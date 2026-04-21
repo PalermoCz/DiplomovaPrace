@@ -6,6 +6,12 @@ using Radzen;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ── Lokální konfigurace (pouze lokální, není v gitu) ──────────────────────
+// appsettings.Local.json definuje: DatabasePath, Facility:NodesCsvPath,
+// Facility:EdgesCsvPath, Facility:BindingsCsvPath, Facility:DataRootPath,
+// Facility:ForceMigration
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -16,7 +22,9 @@ builder.Services.AddRadzenComponents();
 // ── Databáze: EF Core + SQLite ─────────────────────────────────────────────
 // IDbContextFactory<AppDbContext> (Singleton) — bezpečné pro use ze Singleton služeb.
 // Každá operace si vytvoří vlastní krátkožijící DbContext přes factory.CreateDbContext().
-var dbPath = Path.Combine(builder.Environment.ContentRootPath, "metering.db");
+// DatabasePath: z appsettings.Local.json (D:\DataSet\metering.db) nebo fallback ContentRoot.
+var dbPath = builder.Configuration["DatabasePath"]
+    ?? Path.Combine(builder.Environment.ContentRootPath, "metering.db");
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlite($"Data Source={dbPath}"));
 
@@ -35,6 +43,8 @@ builder.Services.AddScoped<IBaselineService, BaselineService>();
 builder.Services.AddSingleton<FacilityEditorStateService>();
 builder.Services.AddScoped<FacilityImportService>();
 builder.Services.AddScoped<FacilityQueryService>();
+// FacilityDataBindingRegistry: Singleton — načte dataset_bindings_fixed.csv jednou při startu.
+builder.Services.AddSingleton<FacilityDataBindingRegistry>();
 builder.Services.AddScoped<NodeAnalyticsPreviewService>();
 builder.Services.AddScoped<FacilityAlertSummaryService>();
 
@@ -64,6 +74,25 @@ var app = builder.Build();
     await using var db = await factory.CreateDbContextAsync();
     await db.Database.EnsureCreatedAsync();
     app.Logger.LogInformation("Databáze inicializována: {Path}", dbPath);
+
+    // ── Force migration: pokud je nastaven flag, smaž stávající facility před seedem ──
+    // Po úspěšné migraci nastavit Facility:ForceMigration na "false" v appsettings.Local.json.
+    if (app.Configuration["Facility:ForceMigration"] == "true")
+    {
+        await using var dbMigration = await factory.CreateDbContextAsync();
+        var existingFacility = await dbMigration.Facilities
+            .FirstOrDefaultAsync(f => f.Name == "Smart Company Facility");
+        if (existingFacility != null)
+        {
+            dbMigration.Facilities.Remove(existingFacility);
+            await dbMigration.SaveChangesAsync();
+            app.Logger.LogInformation("Force migration: stávající facility odstraněna z DB pro reseed z nových CSV.");
+        }
+        else
+        {
+            app.Logger.LogInformation("Force migration: facility v DB nebyla nalezena (fresh DB nebo již provedeno).");
+        }
+    }
 
     // ── Seed: facility-centric schematic model (Sprint 2) ──────────────────
     var facilityImporter = scope.ServiceProvider.GetRequiredService<FacilityImportService>();

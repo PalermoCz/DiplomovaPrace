@@ -6,6 +6,9 @@
 # dotenv files
 .env
 
+# Local machine-specific configuration (paths to D:\DataSet, etc.) — never commit
+DiplomovaPrace/appsettings.Local.json
+
 # Targeted runtime/build artifacts for this repository
 publish/
 DiplomovaPrace/bin/

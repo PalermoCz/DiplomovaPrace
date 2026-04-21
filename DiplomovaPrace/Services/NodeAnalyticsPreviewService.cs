@@ -1,4 +1,4 @@
-using DiplomovaPrace.Models.Kpi;
+﻿using DiplomovaPrace.Models.Kpi;
 using Microsoft.AspNetCore.Hosting;
 using System.Collections.Concurrent;
 using System.Globalization;
@@ -34,7 +34,7 @@ public sealed class CuratedNodeTimeSeriesResult
     public string YAxisLabel { get; init; } = string.Empty;
     public CuratedNodeTimeSeriesGranularity Granularity { get; init; } = CuratedNodeTimeSeriesGranularity.Raw15Min;
     public string GranularityLabel { get; init; } = "15min detail";
-    public string AggregationMethod { get; init; } = "Bez agregace (raw řada).";
+    public string AggregationMethod { get; init; } = "Bez agregace (raw Ĺ™ada).";
     public string InterpretationNote { get; init; } = string.Empty;
     public CuratedNodeTimeSeriesMode RequestedMode { get; init; } = CuratedNodeTimeSeriesMode.Auto;
     public string RequestedModeLabel { get; init; } = "Auto";
@@ -63,7 +63,7 @@ public sealed class CuratedNodeCompareTimeSeriesResult
     public string YAxisLabel { get; init; } = string.Empty;
     public CuratedNodeTimeSeriesGranularity Granularity { get; init; } = CuratedNodeTimeSeriesGranularity.Raw15Min;
     public string GranularityLabel { get; init; } = "15min detail";
-    public string AggregationMethod { get; init; } = "Bez agregace (raw řada).";
+    public string AggregationMethod { get; init; } = "Bez agregace (raw Ĺ™ada).";
     public string InterpretationNote { get; init; } = string.Empty;
     public CuratedNodeTimeSeriesMode RequestedMode { get; init; } = CuratedNodeTimeSeriesMode.Auto;
     public string RequestedModeLabel { get; init; } = "Auto";
@@ -470,7 +470,7 @@ public sealed class WeatherExplanationSummary
 
 public class NodeAnalyticsPreviewService
 {
-    private const string BaselineMethodology = "Analysis window je vždy přímo vybraný interval uživatele. Baseline strategy je určena separátně: priorita je stejné období v minulých letech, fallback jsou předchozí srovnatelná období stejné délky. U řad s příponou P se před součtem převádí výkon na energii podle kroku časové řady (inferovaný krok, fallback 15 min).";
+    private const string BaselineMethodology = "Analysis window je vĹľdy pĹ™Ă­mo vybranĂ˝ interval uĹľivatele. Baseline strategy je urÄŤena separĂˇtnÄ›: priorita je stejnĂ© obdobĂ­ v minulĂ˝ch letech, fallback jsou pĹ™edchozĂ­ srovnatelnĂˇ obdobĂ­ stejnĂ© dĂ©lky. U Ĺ™ad s pĹ™Ă­ponou P se pĹ™ed souÄŤtem pĹ™evĂˇdĂ­ vĂ˝kon na energii podle kroku ÄŤasovĂ© Ĺ™ady (inferovanĂ˝ krok, fallback 15 min).";
     private const double DefaultPowerSampleStepHours = 0.25;
     private const int MaxHistoricalYearsForBaseline = 3;
     private const int RecentComparableWindowsForBaseline = 4;
@@ -488,13 +488,15 @@ public class NodeAnalyticsPreviewService
 
     private readonly IKpiService _kpiService;
     private readonly IWebHostEnvironment _env;
+    private readonly FacilityDataBindingRegistry _bindingRegistry;
     private readonly ConcurrentDictionary<string, DateTime> _maxTimestampCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, (DateTime MinUtc, DateTime MaxUtc)> _timeDomainCache = new(StringComparer.OrdinalIgnoreCase);
 
-    public NodeAnalyticsPreviewService(IKpiService kpiService, IWebHostEnvironment env)
+    public NodeAnalyticsPreviewService(IKpiService kpiService, IWebHostEnvironment env, FacilityDataBindingRegistry bindingRegistry)
     {
         _kpiService = kpiService;
         _env = env;
+        _bindingRegistry = bindingRegistry;
     }
 
     public async Task<MeterKpiResult?> GetPreviewDataAsync(string meterUrn, DateTime from, DateTime to, CancellationToken ct = default)
@@ -502,7 +504,7 @@ public class NodeAnalyticsPreviewService
         var query = new KpiQuery(meterUrn, from, to);
         var result = await _kpiService.CalculateBasicKpiAsync(query, ct);
 
-        // Pokud nemáme žádná data, vracíme null
+        // Pokud nemĂˇme ĹľĂˇdnĂˇ data, vracĂ­me null
         if (result.RecordCount == 0)
             return null;
 
@@ -517,7 +519,7 @@ public class NodeAnalyticsPreviewService
             return null;
         }
 
-        var filePath = ResolveCuratedFilePath(source.FileName);
+        var filePath = ResolveCuratedFilePath(source);
         if (filePath is null)
         {
             return null;
@@ -540,7 +542,7 @@ public class NodeAnalyticsPreviewService
             return null;
         }
 
-        var filePath = ResolveCuratedFilePath(source.FileName);
+        var filePath = ResolveCuratedFilePath(source);
         if (filePath is null)
         {
             var granularity = ResolveTimeSeriesGranularity(from, to, source, mode);
@@ -560,10 +562,10 @@ public class NodeAnalyticsPreviewService
                 BaselineOverlayAvailable = false,
                 BaselineOverlayMessage = includeBaselineOverlay
                     ? (source.SupportsDeviation
-                        ? "Baseline overlay není dostupný: chybí lokální reduced source."
-                        : "Baseline overlay není pro tento uzel podporován.")
+                        ? "Baseline overlay nenĂ­ dostupnĂ˝: chybĂ­ lokĂˇlnĂ­ reduced source."
+                        : "Baseline overlay nenĂ­ pro tento uzel podporovĂˇn.")
                     : null,
-                NoDataMessage = "Chybí lokální reduced source pro vykreslení časové řady."
+                NoDataMessage = "ChybĂ­ lokĂˇlnĂ­ reduced source pro vykreslenĂ­ ÄŤasovĂ© Ĺ™ady."
             };
         }
 
@@ -644,29 +646,29 @@ public class NodeAnalyticsPreviewService
                 LoadProfile = new CuratedSelectionLoadProfileSummary
                 {
                     IsAvailable = false,
-                    Summary = "Load profile není dostupný, protože selection set neobsahuje podporované energetické uzly.",
-                    Methodology = "Daily profile v1 používá transparentní agregaci aggregate výkonové řady Selection Setu (hour-of-day average nebo fallback interval snapshot).",
-                    DifferenceFromForecast = "Forecast je predikce budoucího průběhu, load profile je popis typického historického chování.",
-                    DifferenceFromMainChart = "Hlavní chart zobrazuje průběh konkrétního intervalu; load profile agreguje opakující se pattern napříč intervalem."
+                    Summary = "Load profile nenĂ­ dostupnĂ˝, protoĹľe selection set neobsahuje podporovanĂ© energetickĂ© uzly.",
+                    Methodology = "Daily profile v1 pouĹľĂ­vĂˇ transparentnĂ­ agregaci aggregate vĂ˝konovĂ© Ĺ™ady Selection Setu (hour-of-day average nebo fallback interval snapshot).",
+                    DifferenceFromForecast = "Forecast je predikce budoucĂ­ho prĹŻbÄ›hu, load profile je popis typickĂ©ho historickĂ©ho chovĂˇnĂ­.",
+                    DifferenceFromMainChart = "HlavnĂ­ chart zobrazuje prĹŻbÄ›h konkrĂ©tnĂ­ho intervalu; load profile agreguje opakujĂ­cĂ­ se pattern napĹ™Ă­ÄŤ intervalem."
                 },
                 PeakAnalysis = new CuratedSelectionPeakAnalysisSummary
                 {
                     IsAvailable = false,
-                    Summary = "Peak analysis není dostupná bez podporovaných uzlů.",
-                    Methodology = "Peak analysis v1 vyhodnocuje peak demand, peak generation/export a peak net absolute event z aggregate výkonové řady."
+                    Summary = "Peak analysis nenĂ­ dostupnĂˇ bez podporovanĂ˝ch uzlĹŻ.",
+                    Methodology = "Peak analysis v1 vyhodnocuje peak demand, peak generation/export a peak net absolute event z aggregate vĂ˝konovĂ© Ĺ™ady."
                 },
                 OperatingRegime = new CuratedSelectionOperatingRegimeSummary
                 {
                     IsAvailable = false,
-                    Summary = "Operating regime summary není dostupná bez aggregate časové řady.",
-                    Methodology = "Operating regime v1 používá transparentní heuristiky nad aggregate výkonem: baseload proxy, peak-to-average, variabilitu a weekday/weekend signal."
+                    Summary = "Operating regime summary nenĂ­ dostupnĂˇ bez aggregate ÄŤasovĂ© Ĺ™ady.",
+                    Methodology = "Operating regime v1 pouĹľĂ­vĂˇ transparentnĂ­ heuristiky nad aggregate vĂ˝konem: baseload proxy, peak-to-average, variabilitu a weekday/weekend signal."
                 },
                 EmsEvaluation = new CuratedSelectionEmsEvaluationSummary
                 {
                     IsAvailable = false,
-                    Summary = "EMS evaluation není dostupná: selection set neobsahuje podporované energetické uzly.",
-                    Methodology = "EMS evaluation v1 staví transparentní scorecards pouze nad aggregate load profile, peak a operating regime metrikami.",
-                    DistinctionNote = "Issue = datový/coverage problém, anomaly = odchylka proti baseline, inefficiency = provozní neefektivita režimu."
+                    Summary = "EMS evaluation nenĂ­ dostupnĂˇ: selection set neobsahuje podporovanĂ© energetickĂ© uzly.",
+                    Methodology = "EMS evaluation v1 stavĂ­ transparentnĂ­ scorecards pouze nad aggregate load profile, peak a operating regime metrikami.",
+                    DistinctionNote = "Issue = datovĂ˝/coverage problĂ©m, anomaly = odchylka proti baseline, inefficiency = provoznĂ­ neefektivita reĹľimu."
                 },
                 Disaggregation = emptyDisaggregation,
                 ContributionIntelligence = emptyContributionIntelligence,
@@ -680,10 +682,10 @@ public class NodeAnalyticsPreviewService
                 ForecastDiagnostics = new CuratedSelectionForecastDiagnosticsSummary
                 {
                     Status = CuratedSelectionForecastStatus.Unavailable,
-                    Summary = "Forecast není dostupný, protože selection set neobsahuje podporované energetické uzly.",
-                    ForecastPrinciple = "Comparable windows v1 (transparentní)",
-                    Methodology = "Forecast používá jen historická referenční okna před target intervalem; unsupported uzly se do výpočtu nezahrnují.",
-                    MetricsNote = "Diagnostické metriky MAE/RMSE/Bias/WAPE se počítají pouze při dostupné forecast i actual sérii.",
+                    Summary = "Forecast nenĂ­ dostupnĂ˝, protoĹľe selection set neobsahuje podporovanĂ© energetickĂ© uzly.",
+                    ForecastPrinciple = "Comparable windows v1 (transparentnĂ­)",
+                    Methodology = "Forecast pouĹľĂ­vĂˇ jen historickĂˇ referenÄŤnĂ­ okna pĹ™ed target intervalem; unsupported uzly se do vĂ˝poÄŤtu nezahrnujĂ­.",
+                    MetricsNote = "DiagnostickĂ© metriky MAE/RMSE/Bias/WAPE se poÄŤĂ­tajĂ­ pouze pĹ™i dostupnĂ© forecast i actual sĂ©rii.",
                     SupportedNodeCount = 0,
                     IncludedNodeCount = 0,
                     ForecastProviderNodeCount = 0,
@@ -691,7 +693,7 @@ public class NodeAnalyticsPreviewService
                     UsesTargetLeakage = false,
                     Signals = ["no_supported_nodes"]
                 },
-                Message = "Selection set neobsahuje kompatibilní energetické uzly pro agregaci overview."
+                Message = "Selection set neobsahuje kompatibilnĂ­ energetickĂ© uzly pro agregaci overview."
             };
         }
 
@@ -889,7 +891,7 @@ public class NodeAnalyticsPreviewService
                 Unit = "kWh",
                 SummaryLabel = headlineSemantics.HeadlineLabel,
                 StatsUnit = "kW",
-                StatsLabel = "Agregovaný výkon"
+                StatsLabel = "AgregovanĂ˝ vĂ˝kon"
             };
         }
 
@@ -908,23 +910,23 @@ public class NodeAnalyticsPreviewService
             {
                 if (baselineProviders == 0)
                 {
-                    baselineOverlayMessage = "Baseline overlay není v aggregate režimu dostupný pro žádný podporovaný uzel.";
+                    baselineOverlayMessage = "Baseline overlay nenĂ­ v aggregate reĹľimu dostupnĂ˝ pro ĹľĂˇdnĂ˝ podporovanĂ˝ uzel.";
                 }
                 else if (baselineProviders < timeSeries.Count)
                 {
-                    baselineOverlayMessage = $"Baseline overlay je agregován z {baselineProviders}/{timeSeries.Count} podporovaných uzlů.";
+                    baselineOverlayMessage = $"Baseline overlay je agregovĂˇn z {baselineProviders}/{timeSeries.Count} podporovanĂ˝ch uzlĹŻ.";
                 }
             }
 
             aggregateTimeSeries = new CuratedNodeTimeSeriesResult
             {
                 NodeKey = "selection_set",
-                Title = supportedNodeKeys.Count == 1 ? template.Title : "Aggregate výkon Selection Setu",
+                Title = supportedNodeKeys.Count == 1 ? template.Title : "Aggregate vĂ˝kon Selection Setu",
                 Unit = template.Unit,
                 YAxisLabel = template.YAxisLabel,
                 Granularity = template.Granularity,
                 GranularityLabel = template.GranularityLabel,
-                AggregationMethod = $"{template.AggregationMethod} Selection aggregate: suma výkonů podporovaných uzlů v každém časovém bodě.",
+                AggregationMethod = $"{template.AggregationMethod} Selection aggregate: suma vĂ˝konĹŻ podporovanĂ˝ch uzlĹŻ v kaĹľdĂ©m ÄŤasovĂ©m bodÄ›.",
                 InterpretationNote = ResolveSelectionAggregateInterpretationNote(template.Granularity, energyProfile),
                 RequestedMode = template.RequestedMode,
                 RequestedModeLabel = template.RequestedModeLabel,
@@ -933,7 +935,7 @@ public class NodeAnalyticsPreviewService
                 BaselineOverlayMessage = baselineOverlayMessage,
                 BaselinePoints = baselinePoints,
                 NoDataMessage = points.Count == 0
-                    ? "Pro podporované uzly selection setu nejsou v intervalu dostupné body časové řady."
+                    ? "Pro podporovanĂ© uzly selection setu nejsou v intervalu dostupnĂ© body ÄŤasovĂ© Ĺ™ady."
                     : null,
                 Points = points
             };
@@ -955,7 +957,7 @@ public class NodeAnalyticsPreviewService
         var messageParts = new List<string>();
         if (unsupportedNodeKeys.Count > 0)
         {
-            messageParts.Add($"Ignorováno nepodporovaných uzlů: {unsupportedNodeKeys.Count}");
+            messageParts.Add($"IgnorovĂˇno nepodporovanĂ˝ch uzlĹŻ: {unsupportedNodeKeys.Count}");
         }
 
         if (contextOnlyNodeKeys.Count > 0)
@@ -965,7 +967,7 @@ public class NodeAnalyticsPreviewService
 
         if (noDataNodeKeys.Count > 0)
         {
-            messageParts.Add($"Uzlů bez dat v intervalu: {noDataNodeKeys.Count}");
+            messageParts.Add($"UzlĹŻ bez dat v intervalu: {noDataNodeKeys.Count}");
         }
 
         var message = messageParts.Count > 0
@@ -1039,9 +1041,9 @@ public class NodeAnalyticsPreviewService
     {
         var baseDiagnostics = new CuratedSelectionForecastDiagnosticsSummary
         {
-            ForecastPrinciple = "Comparable windows v1 (transparentní)",
-            Methodology = "Forecast je konstruován z historických referenčních oken (stejné období v minulých letech + recent comparable intervaly). Do forecastu vstupují pouze data dostupná před target intervalem; leakage z target okna není použit.",
-            MetricsNote = "MAE, RMSE a Bias jsou počítány nad podepsaným výkonem (kW). WAPE používá sumu absolutních actual hodnot, takže je robustní i pro mixed-sign selection.",
+            ForecastPrinciple = "Comparable windows v1 (transparentnĂ­)",
+            Methodology = "Forecast je konstruovĂˇn z historickĂ˝ch referenÄŤnĂ­ch oken (stejnĂ© obdobĂ­ v minulĂ˝ch letech + recent comparable intervaly). Do forecastu vstupujĂ­ pouze data dostupnĂˇ pĹ™ed target intervalem; leakage z target okna nenĂ­ pouĹľit.",
+            MetricsNote = "MAE, RMSE a Bias jsou poÄŤĂ­tĂˇny nad podepsanĂ˝m vĂ˝konem (kW). WAPE pouĹľĂ­vĂˇ sumu absolutnĂ­ch actual hodnot, takĹľe je robustnĂ­ i pro mixed-sign selection.",
             SupportedNodeCount = Math.Max(0, coverage.SupportedNodeCount),
             IncludedNodeCount = Math.Max(0, coverage.IncludedNodeCount),
             ForecastProviderNodeCount = Math.Max(0, forecastProviderNodeCount),
@@ -1055,7 +1057,7 @@ public class NodeAnalyticsPreviewService
             return (null, baseDiagnostics with
             {
                 Status = CuratedSelectionForecastStatus.Unavailable,
-                Summary = "Forecast vs actual nelze vyhodnotit, protože aggregate actual řada nemá body.",
+                Summary = "Forecast vs actual nelze vyhodnotit, protoĹľe aggregate actual Ĺ™ada nemĂˇ body.",
                 Signals = ["missing_actual_series"]
             });
         }
@@ -1067,7 +1069,7 @@ public class NodeAnalyticsPreviewService
                 Status = CuratedSelectionForecastStatus.LimitedData,
                 ActualPointCount = aggregateActualTimeSeries.Points.Count,
                 ForecastPointCount = 0,
-                Summary = "Forecast reference není pro aktuální interval dostupná (nedostatečné historical windows).",
+                Summary = "Forecast reference nenĂ­ pro aktuĂˇlnĂ­ interval dostupnĂˇ (nedostateÄŤnĂ© historical windows).",
                 Signals = ["missing_forecast_reference"]
             });
         }
@@ -1096,7 +1098,7 @@ public class NodeAnalyticsPreviewService
             return (null, baseDiagnostics with
             {
                 Status = CuratedSelectionForecastStatus.LimitedData,
-                Summary = "Actual a forecast řada nemají časový překryv po agregaci.",
+                Summary = "Actual a forecast Ĺ™ada nemajĂ­ ÄŤasovĂ˝ pĹ™ekryv po agregaci.",
                 ActualPointCount = actualPointCount,
                 ForecastPointCount = forecastPointCount,
                 AlignedPointCount = 0,
@@ -1153,11 +1155,11 @@ public class NodeAnalyticsPreviewService
 
         var summary = status switch
         {
-            CuratedSelectionForecastStatus.Stable => "Forecast sedí stabilně, rozdíl actual vs forecast je nízký.",
-            CuratedSelectionForecastStatus.Watch => "Forecast je použitelný, ale odchylka actual vs forecast vyžaduje pozornost.",
-            CuratedSelectionForecastStatus.PoorFit => "Forecast má slabou shodu s actual řadou v aktuálním intervalu.",
-            CuratedSelectionForecastStatus.LimitedData => "Forecast je jen orientační: nízký překryv nebo málo aligned bodů.",
-            _ => "Forecast není dostupný."
+            CuratedSelectionForecastStatus.Stable => "Forecast sedĂ­ stabilnÄ›, rozdĂ­l actual vs forecast je nĂ­zkĂ˝.",
+            CuratedSelectionForecastStatus.Watch => "Forecast je pouĹľitelnĂ˝, ale odchylka actual vs forecast vyĹľaduje pozornost.",
+            CuratedSelectionForecastStatus.PoorFit => "Forecast mĂˇ slabou shodu s actual Ĺ™adou v aktuĂˇlnĂ­m intervalu.",
+            CuratedSelectionForecastStatus.LimitedData => "Forecast je jen orientaÄŤnĂ­: nĂ­zkĂ˝ pĹ™ekryv nebo mĂˇlo aligned bodĹŻ.",
+            _ => "Forecast nenĂ­ dostupnĂ˝."
         };
 
         var signals = new List<string>();
@@ -1199,7 +1201,7 @@ public class NodeAnalyticsPreviewService
         var compareExcludedMessages = new List<string>();
         if (baseDiagnostics.ForecastMissingNodeCount > 0)
         {
-            compareExcludedMessages.Add($"Forecast reference nebyla dostupná pro {baseDiagnostics.ForecastMissingNodeCount}/{Math.Max(1, baseDiagnostics.IncludedNodeCount)} analyticky zahrnutých uzlů.");
+            compareExcludedMessages.Add($"Forecast reference nebyla dostupnĂˇ pro {baseDiagnostics.ForecastMissingNodeCount}/{Math.Max(1, baseDiagnostics.IncludedNodeCount)} analyticky zahrnutĂ˝ch uzlĹŻ.");
         }
 
         var compareData = new CuratedNodeCompareTimeSeriesResult
@@ -1210,8 +1212,8 @@ public class NodeAnalyticsPreviewService
             YAxisLabel = aggregateActualTimeSeries.YAxisLabel,
             Granularity = aggregateActualTimeSeries.Granularity,
             GranularityLabel = aggregateActualTimeSeries.GranularityLabel,
-            AggregationMethod = "Forecast v1: transparent comparable windows (historická okna před target intervalem). Actual i forecast jsou agregované přes Selection Set bez unsupported uzlů.",
-            InterpretationNote = "Forecast je predikce očekávaného průběhu, zatímco baseline/deviation vrstva zůstává samostatný referenční mechanismus pro alerting.",
+            AggregationMethod = "Forecast v1: transparent comparable windows (historickĂˇ okna pĹ™ed target intervalem). Actual i forecast jsou agregovanĂ© pĹ™es Selection Set bez unsupported uzlĹŻ.",
+            InterpretationNote = "Forecast je predikce oÄŤekĂˇvanĂ©ho prĹŻbÄ›hu, zatĂ­mco baseline/deviation vrstva zĹŻstĂˇvĂˇ samostatnĂ˝ referenÄŤnĂ­ mechanismus pro alerting.",
             RequestedMode = aggregateActualTimeSeries.RequestedMode,
             RequestedModeLabel = aggregateActualTimeSeries.RequestedModeLabel,
             Series =
@@ -1302,17 +1304,17 @@ public class NodeAnalyticsPreviewService
 
         var summary = status switch
         {
-            CuratedSelectionAnomalyStatus.DataIssue when hasNoSupportedNodes => "Selection je mimo podporované analytické uzly.",
-            CuratedSelectionAnomalyStatus.DataIssue when hasNoIncludedNodes => "Podporované uzly nemají v intervalu použitelná data.",
-            CuratedSelectionAnomalyStatus.DataIssue => "Datová kvalita je nízká, analytický výstup má omezenou důvěryhodnost.",
-            CuratedSelectionAnomalyStatus.Suspicious when highDeviationCount > 0 => "Detekována silná deviation v části selection setu.",
-            CuratedSelectionAnomalyStatus.Suspicious when hasAbruptShift => "Agregovaná řada obsahuje náhlý skok oproti běžné úrovni.",
-            CuratedSelectionAnomalyStatus.Suspicious => "Kombinace signálů indikuje podezřelé chování.",
-            CuratedSelectionAnomalyStatus.Attention when elevatedDeviationCount > 0 => "Výběr vykazuje zvýšené deviation signály.",
-            CuratedSelectionAnomalyStatus.Attention when hasWeakCoverage => "Coverage je oslabené, interpretujte výsledek opatrně.",
-            CuratedSelectionAnomalyStatus.Attention when hasMixedSignedSelection => "Selection kombinuje spotřebu i výrobu, netto vyžaduje opatrnou interpretaci.",
-            CuratedSelectionAnomalyStatus.Attention => "Výběr vyžaduje zvýšenou pozornost.",
-            _ => "Bez zjevné anomálie, deviation i coverage jsou stabilní."
+            CuratedSelectionAnomalyStatus.DataIssue when hasNoSupportedNodes => "Selection je mimo podporovanĂ© analytickĂ© uzly.",
+            CuratedSelectionAnomalyStatus.DataIssue when hasNoIncludedNodes => "PodporovanĂ© uzly nemajĂ­ v intervalu pouĹľitelnĂˇ data.",
+            CuratedSelectionAnomalyStatus.DataIssue => "DatovĂˇ kvalita je nĂ­zkĂˇ, analytickĂ˝ vĂ˝stup mĂˇ omezenou dĹŻvÄ›ryhodnost.",
+            CuratedSelectionAnomalyStatus.Suspicious when highDeviationCount > 0 => "DetekovĂˇna silnĂˇ deviation v ÄŤĂˇsti selection setu.",
+            CuratedSelectionAnomalyStatus.Suspicious when hasAbruptShift => "AgregovanĂˇ Ĺ™ada obsahuje nĂˇhlĂ˝ skok oproti bÄ›ĹľnĂ© Ăşrovni.",
+            CuratedSelectionAnomalyStatus.Suspicious => "Kombinace signĂˇlĹŻ indikuje podezĹ™elĂ© chovĂˇnĂ­.",
+            CuratedSelectionAnomalyStatus.Attention when elevatedDeviationCount > 0 => "VĂ˝bÄ›r vykazuje zvĂ˝ĹˇenĂ© deviation signĂˇly.",
+            CuratedSelectionAnomalyStatus.Attention when hasWeakCoverage => "Coverage je oslabenĂ©, interpretujte vĂ˝sledek opatrnÄ›.",
+            CuratedSelectionAnomalyStatus.Attention when hasMixedSignedSelection => "Selection kombinuje spotĹ™ebu i vĂ˝robu, netto vyĹľaduje opatrnou interpretaci.",
+            CuratedSelectionAnomalyStatus.Attention => "VĂ˝bÄ›r vyĹľaduje zvĂ˝Ĺˇenou pozornost.",
+            _ => "Bez zjevnĂ© anomĂˇlie, deviation i coverage jsou stabilnĂ­."
         };
 
         var signals = new List<string>();
@@ -1390,10 +1392,10 @@ public class NodeAnalyticsPreviewService
             return new CuratedSelectionLoadProfileSummary
             {
                 IsAvailable = false,
-                Summary = "Load profile není dostupný: aggregate časová řada nemá dost bodů.",
-                Methodology = "Daily profile v1 používá average by hour-of-day nad aggregate výkonovou řadou Selection Setu; při krátkém intervalu přechází na transparentní interval snapshot.",
-                DifferenceFromForecast = "Forecast je predikce očekávaného budoucího průběhu, load profile popisuje typický historický pattern.",
-                DifferenceFromMainChart = "Hlavní chart ukazuje konkrétní průběh v čase, load profile ukazuje opakující se tvar dne v agregovaném pohledu."
+                Summary = "Load profile nenĂ­ dostupnĂ˝: aggregate ÄŤasovĂˇ Ĺ™ada nemĂˇ dost bodĹŻ.",
+                Methodology = "Daily profile v1 pouĹľĂ­vĂˇ average by hour-of-day nad aggregate vĂ˝konovou Ĺ™adou Selection Setu; pĹ™i krĂˇtkĂ©m intervalu pĹ™echĂˇzĂ­ na transparentnĂ­ interval snapshot.",
+                DifferenceFromForecast = "Forecast je predikce oÄŤekĂˇvanĂ©ho budoucĂ­ho prĹŻbÄ›hu, load profile popisuje typickĂ˝ historickĂ˝ pattern.",
+                DifferenceFromMainChart = "HlavnĂ­ chart ukazuje konkrĂ©tnĂ­ prĹŻbÄ›h v ÄŤase, load profile ukazuje opakujĂ­cĂ­ se tvar dne v agregovanĂ©m pohledu."
             };
         }
 
@@ -1446,10 +1448,10 @@ public class NodeAnalyticsPreviewService
                 return new CuratedSelectionLoadProfileSummary
                 {
                     IsAvailable = false,
-                    Summary = "Load profile není dostupný: po hourly bucketizaci nezbyly žádné validní body.",
-                    Methodology = "Daily profile v1 používá average by hour-of-day nad aggregate výkonovou řadou Selection Setu; při krátkém intervalu přechází na transparentní interval snapshot.",
-                    DifferenceFromForecast = "Forecast je predikce očekávaného budoucího průběhu, load profile popisuje typický historický pattern.",
-                    DifferenceFromMainChart = "Hlavní chart ukazuje konkrétní průběh v čase, load profile ukazuje opakující se tvar dne v agregovaném pohledu."
+                    Summary = "Load profile nenĂ­ dostupnĂ˝: po hourly bucketizaci nezbyly ĹľĂˇdnĂ© validnĂ­ body.",
+                    Methodology = "Daily profile v1 pouĹľĂ­vĂˇ average by hour-of-day nad aggregate vĂ˝konovou Ĺ™adou Selection Setu; pĹ™i krĂˇtkĂ©m intervalu pĹ™echĂˇzĂ­ na transparentnĂ­ interval snapshot.",
+                    DifferenceFromForecast = "Forecast je predikce oÄŤekĂˇvanĂ©ho budoucĂ­ho prĹŻbÄ›hu, load profile popisuje typickĂ˝ historickĂ˝ pattern.",
+                    DifferenceFromMainChart = "HlavnĂ­ chart ukazuje konkrĂ©tnĂ­ prĹŻbÄ›h v ÄŤase, load profile ukazuje opakujĂ­cĂ­ se tvar dne v agregovanĂ©m pohledu."
                 };
             }
 
@@ -1458,8 +1460,8 @@ public class NodeAnalyticsPreviewService
                 .First();
 
             var summary = hasMixedSigns
-                ? $"Daily profile (hour-of-day) z {distinctDayCount} dní a {orderedPoints.Count} bodů ({selectionScope}). Mixed-sign semantika je zachována (+ load, - generation/export)."
-                : $"Daily profile (hour-of-day) z {distinctDayCount} dní a {orderedPoints.Count} bodů ({selectionScope}). Nejvýraznější hodinový bucket: {peakBucket.Label}.";
+                ? $"Daily profile (hour-of-day) z {distinctDayCount} dnĂ­ a {orderedPoints.Count} bodĹŻ ({selectionScope}). Mixed-sign semantika je zachovĂˇna (+ load, - generation/export)."
+                : $"Daily profile (hour-of-day) z {distinctDayCount} dnĂ­ a {orderedPoints.Count} bodĹŻ ({selectionScope}). NejvĂ˝raznÄ›jĹˇĂ­ hodinovĂ˝ bucket: {peakBucket.Label}.";
 
             return new CuratedSelectionLoadProfileSummary
             {
@@ -1471,9 +1473,9 @@ public class NodeAnalyticsPreviewService
                 DistinctDayCount = distinctDayCount,
                 HasMixedSigns = hasMixedSigns,
                 Summary = summary,
-                Methodology = "Profil je transparentní průměr aggregate výkonu (kW) podle hodiny dne nad zvoleným intervalem. Bez black-box modelu.",
-                DifferenceFromForecast = "Forecast vrstva odhaduje budoucí průběh; load profile vrstva shrnuje typické opakující se chování v rámci dne.",
-                DifferenceFromMainChart = "Hlavní chart drží chronologii konkrétních bodů intervalu; profile ztrácí konkrétní datum a zachovává jen typický intradenní pattern.",
+                Methodology = "Profil je transparentnĂ­ prĹŻmÄ›r aggregate vĂ˝konu (kW) podle hodiny dne nad zvolenĂ˝m intervalem. Bez black-box modelu.",
+                DifferenceFromForecast = "Forecast vrstva odhaduje budoucĂ­ prĹŻbÄ›h; load profile vrstva shrnuje typickĂ© opakujĂ­cĂ­ se chovĂˇnĂ­ v rĂˇmci dne.",
+                DifferenceFromMainChart = "HlavnĂ­ chart drĹľĂ­ chronologii konkrĂ©tnĂ­ch bodĹŻ intervalu; profile ztrĂˇcĂ­ konkrĂ©tnĂ­ datum a zachovĂˇvĂˇ jen typickĂ˝ intradennĂ­ pattern.",
                 Buckets = hourlyBuckets
             };
         }
@@ -1525,10 +1527,10 @@ public class NodeAnalyticsPreviewService
             PointCount = orderedPoints.Count,
             DistinctDayCount = distinctDayCount,
             HasMixedSigns = hasMixedSigns,
-            Summary = $"Interval je krátký ({distinctDayCount} den/dny), proto je použit snapshot po {fallbackBucketCount} segmentech místo typického denního profilu.",
-            Methodology = "Fallback profil používá průměr aggregate výkonu (kW) v rovnoměrných segmentech aktuálního intervalu; nevydává se za typický denní profil.",
-            DifferenceFromForecast = "Forecast vrstva predikuje další vývoj, fallback profile je pouze transparentní strukturace aktuálního krátkého intervalu.",
-            DifferenceFromMainChart = "Hlavní chart ukazuje každý bod; fallback profile zhušťuje interval do několika segmentů pro rychlé čtení provozního tvaru.",
+            Summary = $"Interval je krĂˇtkĂ˝ ({distinctDayCount} den/dny), proto je pouĹľit snapshot po {fallbackBucketCount} segmentech mĂ­sto typickĂ©ho dennĂ­ho profilu.",
+            Methodology = "Fallback profil pouĹľĂ­vĂˇ prĹŻmÄ›r aggregate vĂ˝konu (kW) v rovnomÄ›rnĂ˝ch segmentech aktuĂˇlnĂ­ho intervalu; nevydĂˇvĂˇ se za typickĂ˝ dennĂ­ profil.",
+            DifferenceFromForecast = "Forecast vrstva predikuje dalĹˇĂ­ vĂ˝voj, fallback profile je pouze transparentnĂ­ strukturace aktuĂˇlnĂ­ho krĂˇtkĂ©ho intervalu.",
+            DifferenceFromMainChart = "HlavnĂ­ chart ukazuje kaĹľdĂ˝ bod; fallback profile zhuĹˇĹĄuje interval do nÄ›kolika segmentĹŻ pro rychlĂ© ÄŤtenĂ­ provoznĂ­ho tvaru.",
             Buckets = snapshotBuckets
         };
     }
@@ -1563,8 +1565,8 @@ public class NodeAnalyticsPreviewService
             return new CuratedSelectionPeakAnalysisSummary
             {
                 IsAvailable = false,
-                Summary = "Peak analysis není dostupná bez aggregate časové řady.",
-                Methodology = "Peak analysis v1 vyhodnocuje peak demand, peak generation/export a peak net absolute event z aggregate výkonové řady Selection Setu."
+                Summary = "Peak analysis nenĂ­ dostupnĂˇ bez aggregate ÄŤasovĂ© Ĺ™ady.",
+                Methodology = "Peak analysis v1 vyhodnocuje peak demand, peak generation/export a peak net absolute event z aggregate vĂ˝konovĂ© Ĺ™ady Selection Setu."
             };
         }
 
@@ -1620,10 +1622,10 @@ public class NodeAnalyticsPreviewService
 
         var summary = energyProfile switch
         {
-            CuratedAggregateEnergyProfile.ConsumptionOnly => "Selection je consumption-only: hlavní event je demand peak a jeho významnost vůči typickému loadu.",
-            CuratedAggregateEnergyProfile.GenerationOnly => "Selection je generation-only: hlavní event je generation/export peak a jeho významnost.",
-            CuratedAggregateEnergyProfile.MixedSigned => "Selection je mixed-sign: sledují se odděleně demand peak, generation peak i net absolute peak event.",
-            _ => "Peak analysis je pouze orientační, protože selection nemá výrazné energetické body."
+            CuratedAggregateEnergyProfile.ConsumptionOnly => "Selection je consumption-only: hlavnĂ­ event je demand peak a jeho vĂ˝znamnost vĹŻÄŤi typickĂ©mu loadu.",
+            CuratedAggregateEnergyProfile.GenerationOnly => "Selection je generation-only: hlavnĂ­ event je generation/export peak a jeho vĂ˝znamnost.",
+            CuratedAggregateEnergyProfile.MixedSigned => "Selection je mixed-sign: sledujĂ­ se oddÄ›lenÄ› demand peak, generation peak i net absolute peak event.",
+            _ => "Peak analysis je pouze orientaÄŤnĂ­, protoĹľe selection nemĂˇ vĂ˝raznĂ© energetickĂ© body."
         };
 
         return new CuratedSelectionPeakAnalysisSummary
@@ -1637,7 +1639,7 @@ public class NodeAnalyticsPreviewService
             SignificanceRatio = significanceRatio,
             SignificanceLevel = significanceLevel,
             Summary = summary,
-            Methodology = "Peak analysis není jen KPI min/max: explicitně mapuje peak eventy na konkrétní timestampy a porovnává jejich magnitudu s typickou |kW| úrovní aggregate řady (medián |kW|)."
+            Methodology = "Peak analysis nenĂ­ jen KPI min/max: explicitnÄ› mapuje peak eventy na konkrĂ©tnĂ­ timestampy a porovnĂˇvĂˇ jejich magnitudu s typickou |kW| ĂşrovnĂ­ aggregate Ĺ™ady (mediĂˇn |kW|)."
         };
     }
 
@@ -1650,8 +1652,8 @@ public class NodeAnalyticsPreviewService
             return new CuratedSelectionOperatingRegimeSummary
             {
                 IsAvailable = false,
-                Summary = "Operating regime summary není dostupná: aggregate řada je příliš krátká.",
-                Methodology = "Operating regime v1 používá transparentní heuristiky nad aggregate výkonem: baseload proxy, peak-to-average, variabilitu a weekday/weekend signal."
+                Summary = "Operating regime summary nenĂ­ dostupnĂˇ: aggregate Ĺ™ada je pĹ™Ă­liĹˇ krĂˇtkĂˇ.",
+                Methodology = "Operating regime v1 pouĹľĂ­vĂˇ transparentnĂ­ heuristiky nad aggregate vĂ˝konem: baseload proxy, peak-to-average, variabilitu a weekday/weekend signal."
             };
         }
 
@@ -1717,22 +1719,22 @@ public class NodeAnalyticsPreviewService
         }
 
         var summary = peakToAverage >= 2.4 || variability >= 0.90
-            ? "Výběr má výrazně špičkový profil."
+            ? "VĂ˝bÄ›r mĂˇ vĂ˝raznÄ› ĹˇpiÄŤkovĂ˝ profil."
             : (baseload / Math.Max(0.25, averageAbs)) >= 0.75 && variability < 0.45
-                ? "Výběr má stabilní baseload charakter."
+                ? "VĂ˝bÄ›r mĂˇ stabilnĂ­ baseload charakter."
                 : variability >= 0.60
-                    ? "Výběr má výraznou denní variabilitu."
-                    : "Výběr má vyvážený provozní režim bez extrémní špičkovosti.";
+                    ? "VĂ˝bÄ›r mĂˇ vĂ˝raznou dennĂ­ variabilitu."
+                    : "VĂ˝bÄ›r mĂˇ vyvĂˇĹľenĂ˝ provoznĂ­ reĹľim bez extrĂ©mnĂ­ ĹˇpiÄŤkovosti.";
 
         if (weekdayWeekendDeltaPercent.HasValue && Math.Abs(weekdayWeekendDeltaPercent.Value) >= 20.0)
         {
             var direction = weekdayWeekendDeltaPercent.Value > 0 ? "weekday" : "weekend";
-            summary += $" Výrazný weekday/weekend rozdíl ({direction} dominantní).";
+            summary += $" VĂ˝raznĂ˝ weekday/weekend rozdĂ­l ({direction} dominantnĂ­).";
         }
 
         if (energyProfile == CuratedAggregateEnergyProfile.MixedSigned)
         {
-            summary += " Selection je mixed-sign, metriky jsou proto počítány nad |kW|.";
+            summary += " Selection je mixed-sign, metriky jsou proto poÄŤĂ­tĂˇny nad |kW|.";
         }
 
         return new CuratedSelectionOperatingRegimeSummary
@@ -1748,7 +1750,7 @@ public class NodeAnalyticsPreviewService
             WeekdaySampleCount = weekdayAbs.Count,
             WeekendSampleCount = weekendAbs.Count,
             Summary = summary,
-            Methodology = "Regime heuristika v1: baseload proxy = 20. percentil |kW|, peak-to-average = max(|kW|)/avg(|kW|), variability = std(|kW|)/avg(|kW|), weekday/weekend signal = rozdíl průměrů normalizovaný avg(|kW|).",
+            Methodology = "Regime heuristika v1: baseload proxy = 20. percentil |kW|, peak-to-average = max(|kW|)/avg(|kW|), variability = std(|kW|)/avg(|kW|), weekday/weekend signal = rozdĂ­l prĹŻmÄ›rĹŻ normalizovanĂ˝ avg(|kW|).",
             Signals = signals
         };
     }
@@ -1775,9 +1777,9 @@ public class NodeAnalyticsPreviewService
                 HasMixedSigns = hasMixedSigns,
                 HasConsumption = hasConsumption,
                 HasGeneration = hasGeneration,
-                Summary = "EMS evaluation v1 není dostupná: aggregate řada je příliš krátká nebo chybí operating regime metriky.",
-                Methodology = "EMS evaluation v1 používá transparentní pravidla nad load profile, peak analysis a operating regime vrstvou.",
-                DistinctionNote = "Issue = datový/coverage problém, anomaly = odchylka proti baseline, inefficiency = provozní neefektivita režimu."
+                Summary = "EMS evaluation v1 nenĂ­ dostupnĂˇ: aggregate Ĺ™ada je pĹ™Ă­liĹˇ krĂˇtkĂˇ nebo chybĂ­ operating regime metriky.",
+                Methodology = "EMS evaluation v1 pouĹľĂ­vĂˇ transparentnĂ­ pravidla nad load profile, peak analysis a operating regime vrstvou.",
+                DistinctionNote = "Issue = datovĂ˝/coverage problĂ©m, anomaly = odchylka proti baseline, inefficiency = provoznĂ­ neefektivita reĹľimu."
             };
         }
 
@@ -1890,11 +1892,11 @@ public class NodeAnalyticsPreviewService
                     Thresholds = "Watch >= 45 %, Issue >= 70 %",
                     Summary = status switch
                     {
-                        CuratedOperationalScorecardStatus.Issue => "Mimo aktivní hodiny přetrvává vysoký load.",
-                        CuratedOperationalScorecardStatus.Watch => "Mimo aktivní hodiny je load zvýšený.",
-                        _ => "Mimo aktivní hodiny load výrazně klesá."
+                        CuratedOperationalScorecardStatus.Issue => "Mimo aktivnĂ­ hodiny pĹ™etrvĂˇvĂˇ vysokĂ˝ load.",
+                        CuratedOperationalScorecardStatus.Watch => "Mimo aktivnĂ­ hodiny je load zvĂ˝ĹˇenĂ˝.",
+                        _ => "Mimo aktivnĂ­ hodiny load vĂ˝raznÄ› klesĂˇ."
                     },
-                    Methodology = $"Průměr aggregate loadu mimo 07:00-19:00 vůči průměru v aktivních hodinách. Sample count active/off: {activeCount}/{offCount}."
+                    Methodology = $"PrĹŻmÄ›r aggregate loadu mimo 07:00-19:00 vĹŻÄŤi prĹŻmÄ›ru v aktivnĂ­ch hodinĂˇch. Sample count active/off: {activeCount}/{offCount}."
                 });
             }
             else
@@ -1904,8 +1906,8 @@ public class NodeAnalyticsPreviewService
                     Key = "off_hours_load",
                     Label = "Off-hours load indicator",
                     Status = CuratedOperationalScorecardStatus.Unavailable,
-                    Summary = "Nedostatek bodů pro spolehlivé vyhodnocení off-hours loadu.",
-                    Methodology = "Vyžadováno alespoň 4 body v aktivních i mimoaktivních hodinách."
+                    Summary = "Nedostatek bodĹŻ pro spolehlivĂ© vyhodnocenĂ­ off-hours loadu.",
+                    Methodology = "VyĹľadovĂˇno alespoĹ 4 body v aktivnĂ­ch i mimoaktivnĂ­ch hodinĂˇch."
                 });
             }
 
@@ -1925,11 +1927,11 @@ public class NodeAnalyticsPreviewService
                     Thresholds = "Watch >= 55 %, Issue >= 80 %",
                     Summary = status switch
                     {
-                        CuratedOperationalScorecardStatus.Issue => "Víkendový load se blíží pracovnímu režimu.",
-                        CuratedOperationalScorecardStatus.Watch => "Víkendový load je zvýšený oproti očekávání.",
-                        _ => "Víkendový load je jasně oddělen od pracovních dní."
+                        CuratedOperationalScorecardStatus.Issue => "VĂ­kendovĂ˝ load se blĂ­ĹľĂ­ pracovnĂ­mu reĹľimu.",
+                        CuratedOperationalScorecardStatus.Watch => "VĂ­kendovĂ˝ load je zvĂ˝ĹˇenĂ˝ oproti oÄŤekĂˇvĂˇnĂ­.",
+                        _ => "VĂ­kendovĂ˝ load je jasnÄ› oddÄ›len od pracovnĂ­ch dnĂ­."
                     },
-                    Methodology = $"Poměr průměrného weekend loadu ku průměrnému weekday loadu. Sample count weekday/weekend: {weekdayCount}/{weekendCount}."
+                    Methodology = $"PomÄ›r prĹŻmÄ›rnĂ©ho weekend loadu ku prĹŻmÄ›rnĂ©mu weekday loadu. Sample count weekday/weekend: {weekdayCount}/{weekendCount}."
                 });
             }
             else
@@ -1939,8 +1941,8 @@ public class NodeAnalyticsPreviewService
                     Key = "weekend_load",
                     Label = "Weekend load indicator",
                     Status = CuratedOperationalScorecardStatus.Unavailable,
-                    Summary = "Nedostatek weekday/weekend dat pro stabilní weekend indikátor.",
-                    Methodology = "Vyžadováno alespoň 4 body ve weekday i weekend vzorku."
+                    Summary = "Nedostatek weekday/weekend dat pro stabilnĂ­ weekend indikĂˇtor.",
+                    Methodology = "VyĹľadovĂˇno alespoĹ 4 body ve weekday i weekend vzorku."
                 });
             }
 
@@ -1962,11 +1964,11 @@ public class NodeAnalyticsPreviewService
                     Thresholds = "Watch >= 50 %, Issue >= 72 %",
                     Summary = status switch
                     {
-                        CuratedOperationalScorecardStatus.Issue => "Baseload tvoří dominantní část průměrného loadu.",
-                        CuratedOperationalScorecardStatus.Watch => "Baseload je zvýšený a omezuje denní flexibilitu.",
-                        _ => "Baseload intenzita je přiměřená vůči průměrnému loadu."
+                        CuratedOperationalScorecardStatus.Issue => "Baseload tvoĹ™Ă­ dominantnĂ­ ÄŤĂˇst prĹŻmÄ›rnĂ©ho loadu.",
+                        CuratedOperationalScorecardStatus.Watch => "Baseload je zvĂ˝ĹˇenĂ˝ a omezuje dennĂ­ flexibilitu.",
+                        _ => "Baseload intenzita je pĹ™imÄ›Ĺ™enĂˇ vĹŻÄŤi prĹŻmÄ›rnĂ©mu loadu."
                     },
-                    Methodology = "Poměr baseload proxy (20. percentil |kW|) ku avg(|kW|) z operating regime vrstvy."
+                    Methodology = "PomÄ›r baseload proxy (20. percentil |kW|) ku avg(|kW|) z operating regime vrstvy."
                 });
             }
             else
@@ -1977,7 +1979,7 @@ public class NodeAnalyticsPreviewService
                     Label = "Baseload intensity indicator",
                     Status = CuratedOperationalScorecardStatus.Unavailable,
                     Summary = "Baseload intensity nelze vyhodnotit bez operating regime metrik.",
-                    Methodology = "Využívá metriky baseload proxy a avg(|kW|)."
+                    Methodology = "VyuĹľĂ­vĂˇ metriky baseload proxy a avg(|kW|)."
                 });
             }
         }
@@ -1988,24 +1990,24 @@ public class NodeAnalyticsPreviewService
                 Key = "off_hours_load",
                 Label = "Off-hours load indicator",
                 Status = CuratedOperationalScorecardStatus.Unavailable,
-                Summary = "Selection je generation-only, load indikátor se nepoužije.",
-                Methodology = "V1 load indikátory jsou určeny pro selection s nenulovou spotřebou."
+                Summary = "Selection je generation-only, load indikĂˇtor se nepouĹľije.",
+                Methodology = "V1 load indikĂˇtory jsou urÄŤeny pro selection s nenulovou spotĹ™ebou."
             });
             scorecards.Add(new CuratedSelectionOperationalScorecard
             {
                 Key = "weekend_load",
                 Label = "Weekend load indicator",
                 Status = CuratedOperationalScorecardStatus.Unavailable,
-                Summary = "Selection je generation-only, weekend load indikátor se nepoužije.",
-                Methodology = "V1 load indikátory jsou určeny pro selection s nenulovou spotřebou."
+                Summary = "Selection je generation-only, weekend load indikĂˇtor se nepouĹľije.",
+                Methodology = "V1 load indikĂˇtory jsou urÄŤeny pro selection s nenulovou spotĹ™ebou."
             });
             scorecards.Add(new CuratedSelectionOperationalScorecard
             {
                 Key = "baseload_intensity",
                 Label = "Baseload intensity indicator",
                 Status = CuratedOperationalScorecardStatus.Unavailable,
-                Summary = "Selection je generation-only, baseload intensity se nepoužije.",
-                Methodology = "V1 baseload intensity je určena primárně pro load režim."
+                Summary = "Selection je generation-only, baseload intensity se nepouĹľije.",
+                Methodology = "V1 baseload intensity je urÄŤena primĂˇrnÄ› pro load reĹľim."
             });
         }
 
@@ -2029,11 +2031,11 @@ public class NodeAnalyticsPreviewService
                 Thresholds = "Watch >= 1.9x, Issue >= 2.7x",
                 Summary = peakStatus switch
                 {
-                    CuratedOperationalScorecardStatus.Issue => "Režim je výrazně špičkový a zatěžující.",
-                    CuratedOperationalScorecardStatus.Watch => "Peak stress je zvýšený a může zvyšovat provozní náklady.",
-                    _ => "Peak stress zůstává v běžném provozním pásmu."
+                    CuratedOperationalScorecardStatus.Issue => "ReĹľim je vĂ˝raznÄ› ĹˇpiÄŤkovĂ˝ a zatÄ›ĹľujĂ­cĂ­.",
+                    CuratedOperationalScorecardStatus.Watch => "Peak stress je zvĂ˝ĹˇenĂ˝ a mĹŻĹľe zvyĹˇovat provoznĂ­ nĂˇklady.",
+                    _ => "Peak stress zĹŻstĂˇvĂˇ v bÄ›ĹľnĂ©m provoznĂ­m pĂˇsmu."
                 },
-                Methodology = "Transparentně kombinuje peak significance ratio (peak analysis) a peak-to-average ratio (operating regime)."
+                Methodology = "TransparentnÄ› kombinuje peak significance ratio (peak analysis) a peak-to-average ratio (operating regime)."
             });
         }
         else
@@ -2044,7 +2046,7 @@ public class NodeAnalyticsPreviewService
                 Label = "Peak stress indicator",
                 Status = CuratedOperationalScorecardStatus.Unavailable,
                 Summary = "Peak stress nelze vyhodnotit bez peak/regime metrik.",
-                Methodology = "Vyžaduje dostupný peak significance nebo peak-to-average ratio."
+                Methodology = "VyĹľaduje dostupnĂ˝ peak significance nebo peak-to-average ratio."
             });
         }
 
@@ -2066,11 +2068,11 @@ public class NodeAnalyticsPreviewService
                 Thresholds = "Watch <= 65 %, Issue <= 40 %",
                 Summary = generationStatus switch
                 {
-                    CuratedOperationalScorecardStatus.Issue => "Selection má výraznou exportní tendenci a nízkou lokální využitelnost výroby.",
-                    CuratedOperationalScorecardStatus.Watch => "Lokální využití výroby je omezené, export se objevuje častěji.",
-                    _ => "Výroba je převážně využita lokálně v rámci selection setu."
+                    CuratedOperationalScorecardStatus.Issue => "Selection mĂˇ vĂ˝raznou exportnĂ­ tendenci a nĂ­zkou lokĂˇlnĂ­ vyuĹľitelnost vĂ˝roby.",
+                    CuratedOperationalScorecardStatus.Watch => "LokĂˇlnĂ­ vyuĹľitĂ­ vĂ˝roby je omezenĂ©, export se objevuje ÄŤastÄ›ji.",
+                    _ => "VĂ˝roba je pĹ™evĂˇĹľnÄ› vyuĹľita lokĂˇlnÄ› v rĂˇmci selection setu."
                 },
-                Methodology = "Local utilization = 1 - export share, kde export share je odhadnut z netto záporné bilance vůči celkové výrobě v intervalu."
+                Methodology = "Local utilization = 1 - export share, kde export share je odhadnut z netto zĂˇpornĂ© bilance vĹŻÄŤi celkovĂ© vĂ˝robÄ› v intervalu."
             });
         }
         else
@@ -2080,8 +2082,8 @@ public class NodeAnalyticsPreviewService
                 Key = "local_generation_utilization",
                 Label = "Local generation utilization indicator",
                 Status = CuratedOperationalScorecardStatus.Unavailable,
-                Summary = "Selection nemá významnou výrobu, generation utilization indikátor se nepoužije.",
-                Methodology = "Aktivní pouze pro selection s nenulovou generation složkou."
+                Summary = "Selection nemĂˇ vĂ˝znamnou vĂ˝robu, generation utilization indikĂˇtor se nepouĹľije.",
+                Methodology = "AktivnĂ­ pouze pro selection s nenulovou generation sloĹľkou."
             });
         }
 
@@ -2098,9 +2100,9 @@ public class NodeAnalyticsPreviewService
                     ? CuratedSelectionInefficiencySeverity.Issue
                     : CuratedSelectionInefficiencySeverity.Watch,
                 IsTriggered = true,
-                Summary = "Mimo aktivní hodiny zůstává load vyšší, než je žádoucí pro efektivní schedule.",
+                Summary = "Mimo aktivnĂ­ hodiny zĹŻstĂˇvĂˇ load vyĹˇĹˇĂ­, neĹľ je ĹľĂˇdoucĂ­ pro efektivnĂ­ schedule.",
                 Evidence = offHoursCard.MetricDisplay,
-                Methodology = "Odvozeno přímo z Off-hours load indicatoru."
+                Methodology = "Odvozeno pĹ™Ă­mo z Off-hours load indicatoru."
             });
         }
 
@@ -2115,9 +2117,9 @@ public class NodeAnalyticsPreviewService
                     ? CuratedSelectionInefficiencySeverity.Issue
                     : CuratedSelectionInefficiencySeverity.Watch,
                 IsTriggered = true,
-                Summary = "Víkendový režim se příliš podobá pracovnímu provozu.",
+                Summary = "VĂ­kendovĂ˝ reĹľim se pĹ™Ă­liĹˇ podobĂˇ pracovnĂ­mu provozu.",
                 Evidence = weekendCard.MetricDisplay,
-                Methodology = "Odvozeno přímo z Weekend load indicatoru."
+                Methodology = "Odvozeno pĹ™Ă­mo z Weekend load indicatoru."
             });
         }
 
@@ -2132,7 +2134,7 @@ public class NodeAnalyticsPreviewService
                     ? CuratedSelectionInefficiencySeverity.Issue
                     : CuratedSelectionInefficiencySeverity.Watch,
                 IsTriggered = true,
-                Summary = "Profil má zvýšenou špičkovost vůči typickému loadu.",
+                Summary = "Profil mĂˇ zvĂ˝Ĺˇenou ĹˇpiÄŤkovost vĹŻÄŤi typickĂ©mu loadu.",
                 Evidence = peakCard.MetricDisplay,
                 Methodology = "Odvozeno z peak significance a peak-to-average metriky."
             });
@@ -2150,7 +2152,7 @@ public class NodeAnalyticsPreviewService
                 Label = "Weak active/inactive separation",
                 Severity = severity,
                 IsTriggered = true,
-                Summary = "Rozdíl mezi aktivními a neaktivními hodinami je slabý.",
+                Summary = "RozdĂ­l mezi aktivnĂ­mi a neaktivnĂ­mi hodinami je slabĂ˝.",
                 Evidence = (activeInactiveSeparation.Value * 100.0).ToString("N0") + " % separation",
                 Methodology = "Separation = 1 - min(1, off-hours/active ratio) z aggregate loadu."
             });
@@ -2167,9 +2169,9 @@ public class NodeAnalyticsPreviewService
                     ? CuratedSelectionInefficiencySeverity.Issue
                     : CuratedSelectionInefficiencySeverity.Watch,
                 IsTriggered = true,
-                Summary = "Výroba není dost využita lokálně a selection má exportní charakter.",
+                Summary = "VĂ˝roba nenĂ­ dost vyuĹľita lokĂˇlnÄ› a selection mĂˇ exportnĂ­ charakter.",
                 Evidence = generationCard.MetricDisplay,
-                Methodology = "Odvozeno z local generation utilization indikátoru a signed energy bilance."
+                Methodology = "Odvozeno z local generation utilization indikĂˇtoru a signed energy bilance."
             });
         }
 
@@ -2183,11 +2185,11 @@ public class NodeAnalyticsPreviewService
         {
             var opportunity = inefficiency.Key switch
             {
-                "elevated_off_hours_load" => "Výběr vykazuje zvýšený load mimo pracovní hodiny.",
-                "elevated_weekend_load" => "Víkendový režim se blíží pracovnímu provozu.",
-                "excessive_peak_stress" => "Výběr má výrazně špičkový profil.",
-                "weak_active_inactive_separation" => "Oddělení aktivních a neaktivních hodin je slabé.",
-                "export_tendency" => "Selection má výrazný exportní charakter.",
+                "elevated_off_hours_load" => "VĂ˝bÄ›r vykazuje zvĂ˝ĹˇenĂ˝ load mimo pracovnĂ­ hodiny.",
+                "elevated_weekend_load" => "VĂ­kendovĂ˝ reĹľim se blĂ­ĹľĂ­ pracovnĂ­mu provozu.",
+                "excessive_peak_stress" => "VĂ˝bÄ›r mĂˇ vĂ˝raznÄ› ĹˇpiÄŤkovĂ˝ profil.",
+                "weak_active_inactive_separation" => "OddÄ›lenĂ­ aktivnĂ­ch a neaktivnĂ­ch hodin je slabĂ©.",
+                "export_tendency" => "Selection mĂˇ vĂ˝raznĂ˝ exportnĂ­ charakter.",
                 _ => string.Empty
             };
 
@@ -2209,23 +2211,23 @@ public class NodeAnalyticsPreviewService
 
         if (opportunities.Count == 0)
         {
-            opportunities.Add("V aktuálním intervalu se neukazuje výrazný schedule inefficiency kandidát.");
+            opportunities.Add("V aktuĂˇlnĂ­m intervalu se neukazuje vĂ˝raznĂ˝ schedule inefficiency kandidĂˇt.");
         }
 
         var issueCount = orderedInefficiencies.Count(item => item.Severity == CuratedSelectionInefficiencySeverity.Issue);
         var watchCount = orderedInefficiencies.Count(item => item.Severity == CuratedSelectionInefficiencySeverity.Watch);
 
         var summary = issueCount > 0
-            ? $"EMS evaluation detekuje {issueCount} schedule inefficiency issue a {watchCount} watch signálů."
+            ? $"EMS evaluation detekuje {issueCount} schedule inefficiency issue a {watchCount} watch signĂˇlĹŻ."
             : watchCount > 0
-                ? $"EMS evaluation eviduje {watchCount} schedule inefficiency watch signálů bez tvrdého issue."
-                : "EMS evaluation neukazuje výraznou schedule inefficiency v aktuálním intervalu.";
+                ? $"EMS evaluation eviduje {watchCount} schedule inefficiency watch signĂˇlĹŻ bez tvrdĂ©ho issue."
+                : "EMS evaluation neukazuje vĂ˝raznou schedule inefficiency v aktuĂˇlnĂ­m intervalu.";
 
-        var methodology = "EMS evaluation v1 kombinuje transparentní scorecards nad existujícími metrikami: off-hours/active ratio, weekend/weekday ratio, baseload/avg ratio, peak stress ratio a local generation utilization. Bez black-box skóre a bez optimalizačního enginu.";
+        var methodology = "EMS evaluation v1 kombinuje transparentnĂ­ scorecards nad existujĂ­cĂ­mi metrikami: off-hours/active ratio, weekend/weekday ratio, baseload/avg ratio, peak stress ratio a local generation utilization. Bez black-box skĂłre a bez optimalizaÄŤnĂ­ho enginu.";
 
         if (loadProfile.IsFallback)
         {
-            methodology += " Pro krátké intervaly používá load profile fallback snapshot, takže weekend/off-hours signály mají nižší robustnost.";
+            methodology += " Pro krĂˇtkĂ© intervaly pouĹľĂ­vĂˇ load profile fallback snapshot, takĹľe weekend/off-hours signĂˇly majĂ­ niĹľĹˇĂ­ robustnost.";
         }
 
         return new CuratedSelectionEmsEvaluationSummary
@@ -2236,7 +2238,7 @@ public class NodeAnalyticsPreviewService
             HasGeneration = hasGeneration,
             Summary = summary,
             Methodology = methodology,
-            DistinctionNote = "Issue = datový/coverage problém, anomaly = deviation proti baseline, inefficiency = stabilní provozní neefektivita režimu.",
+            DistinctionNote = "Issue = datovĂ˝/coverage problĂ©m, anomaly = deviation proti baseline, inefficiency = stabilnĂ­ provoznĂ­ neefektivita reĹľimu.",
             Scorecards = scorecards,
             Inefficiencies = orderedInefficiencies,
             Opportunities = opportunities
@@ -2289,7 +2291,7 @@ public class NodeAnalyticsPreviewService
             return null;
         }
 
-        var filePath = ResolveCuratedFilePath(source.FileName);
+        var filePath = ResolveCuratedFilePath(source);
         if (filePath is null)
         {
             return null;
@@ -2317,7 +2319,8 @@ public class NodeAnalyticsPreviewService
         CuratedNodeTimeSeriesMode mode = CuratedNodeTimeSeriesMode.Auto,
         CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(primaryNodeKey) || !ComparePreviewSupportedNodeKeys.Contains(primaryNodeKey))
+        if (string.IsNullOrWhiteSpace(primaryNodeKey)
+            || (!ComparePreviewSupportedNodeKeys.Contains(primaryNodeKey) && !_bindingRegistry.IsSupported(primaryNodeKey)))
         {
             return null;
         }
@@ -2349,9 +2352,9 @@ public class NodeAnalyticsPreviewService
                 continue;
             }
 
-            if (!ComparePreviewSupportedNodeKeys.Contains(rawNodeKey))
+            if (!ComparePreviewSupportedNodeKeys.Contains(rawNodeKey) && !_bindingRegistry.IsSupported(rawNodeKey))
             {
-                excludedNodeMessages.Add($"{rawNodeKey}: compare preview pro tento uzel není v této verzi podporován.");
+                excludedNodeMessages.Add($"{rawNodeKey}: compare preview pro tento uzel nenĂ­ v tĂ©to verzi podporovĂˇn.");
                 continue;
             }
 
@@ -2372,7 +2375,7 @@ public class NodeAnalyticsPreviewService
         }
         else
         {
-            excludedNodeMessages.Add($"{primaryNodeKey}: {primaryTimeSeries.NoDataMessage ?? "v analysis window nejsou dostupná data"}.");
+            excludedNodeMessages.Add($"{primaryNodeKey}: {primaryTimeSeries.NoDataMessage ?? "v analysis window nejsou dostupnĂˇ data"}.");
         }
 
         if (orderedCompareNodeKeys.Count > 0)
@@ -2394,13 +2397,13 @@ public class NodeAnalyticsPreviewService
 
                 if (result is null)
                 {
-                    excludedNodeMessages.Add($"{nodeKey}: nepodařilo se připravit časovou řadu.");
+                    excludedNodeMessages.Add($"{nodeKey}: nepodaĹ™ilo se pĹ™ipravit ÄŤasovou Ĺ™adu.");
                     continue;
                 }
 
                 if (result.Points.Count == 0)
                 {
-                    excludedNodeMessages.Add($"{nodeKey}: {result.NoDataMessage ?? "v analysis window nejsou dostupná data"}.");
+                    excludedNodeMessages.Add($"{nodeKey}: {result.NoDataMessage ?? "v analysis window nejsou dostupnĂˇ data"}.");
                     continue;
                 }
 
@@ -2415,7 +2418,7 @@ public class NodeAnalyticsPreviewService
         }
 
         var noDataMessage = series.Count == 0
-            ? "Compare preview nemá žádnou dostupnou výkonovou řadu pro vybrané uzly a interval."
+            ? "Compare preview nemĂˇ ĹľĂˇdnou dostupnou vĂ˝konovou Ĺ™adu pro vybranĂ© uzly a interval."
             : null;
 
         return new CuratedNodeCompareTimeSeriesResult
@@ -2444,7 +2447,7 @@ public class NodeAnalyticsPreviewService
             return (null, null);
         }
 
-        var filePath = ResolveCuratedFilePath(source.FileName);
+        var filePath = ResolveCuratedFilePath(source);
         if (filePath is null)
         {
             return (null, null);
@@ -2471,9 +2474,9 @@ public class NodeAnalyticsPreviewService
             return new CuratedNodeDeviationSummary
             {
                 IsAvailable = false,
-                Methodology = "Uzel počasí je v tomto sprintu jen vysvětlující faktor, deviation baseline se zde zatím nevyhodnocuje.",
-                Message = "Baseline není pro tento uzel / interval zatím k dispozici.",
-                Unit = "°C"
+                Methodology = "Uzel poÄŤasĂ­ je v tomto sprintu jen vysvÄ›tlujĂ­cĂ­ faktor, deviation baseline se zde zatĂ­m nevyhodnocuje.",
+                Message = "Baseline nenĂ­ pro tento uzel / interval zatĂ­m k dispozici.",
+                Unit = "Â°C"
             };
         }
 
@@ -2484,18 +2487,18 @@ public class NodeAnalyticsPreviewService
             {
                 IsAvailable = false,
                 Methodology = BaselineMethodology,
-                Message = "Baseline není pro tento uzel / interval zatím k dispozici."
+                Message = "Baseline nenĂ­ pro tento uzel / interval zatĂ­m k dispozici."
             };
         }
 
-        var filePath = ResolveCuratedFilePath(source.FileName);
+        var filePath = ResolveCuratedFilePath(source);
         if (filePath is null)
         {
             return new CuratedNodeDeviationSummary
             {
                 IsAvailable = false,
                 Methodology = BaselineMethodology,
-                Message = "Chybí lokální reduced source."
+                Message = "ChybĂ­ lokĂˇlnĂ­ reduced source."
             };
         }
 
@@ -2505,6 +2508,8 @@ public class NodeAnalyticsPreviewService
     private sealed class CuratedNodeSource
     {
         public required string FileName { get; init; }
+        /// <summary>SloĹľka v D:\DataSet\data\ pro binding-based zdroje. Null pro legacy flat CSV.</summary>
+        public string? MeterFolder { get; init; }
         public required string ColumnName { get; init; }
         public required string Title { get; init; }
         public string? NodeTypeHint { get; init; }
@@ -2557,20 +2562,91 @@ public class NodeAnalyticsPreviewService
         CuratedNodeTimeSeriesMode RequestedMode,
         string RequestedModeLabel);
 
+    /// <summary>
+    /// VrĂˇtĂ­ CuratedNodeSource pro danĂ˝ nodeKey.
+    /// PrimĂˇrnÄ›: vyhledĂˇ v FacilityDataBindingRegistry (novĂ˝ dataset).
+    /// Fallback: legacy hardcoded mapping pro starĂ© uzly (pv_main, chp_main, ...).
+    /// </summary>
     private CuratedNodeSource? ResolveCuratedNodeSource(string nodeKey)
     {
+        // â”€â”€ 1. Binding-based lookup (novĂ˝ dataset) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        var binding = _bindingRegistry.GetPrimaryBinding(nodeKey);
+        if (binding is not null)
+        {
+            // UrÄŤenĂ­ signĂˇlnĂ­ho charakteru podle measurement_key
+            var isPowerSignal = binding.MeasurementKey is "P" or "P1" or "P2" or "P3";
+            var isTempSignal = binding.MeasurementKey is "Ta" or "Trl" or "Tvl" or "Tdiff";
+            var isFlowSignal = binding.MeasurementKey is "qv" or "V";
+
+            string unit;
+            string summaryLabel;
+            string statsUnit;
+            string statsLabel;
+
+            if (isPowerSignal)
+            {
+                unit = "kWh";
+                summaryLabel = "IntervalovĂˇ energie";
+                statsUnit = "kW";
+                statsLabel = "VĂ˝kon";
+            }
+            else if (isTempSignal)
+            {
+                unit = "Â°C";
+                summaryLabel = "PrĹŻmÄ›rnĂˇ teplota";
+                statsUnit = "Â°C";
+                statsLabel = "Teplota";
+            }
+            else if (isFlowSignal)
+            {
+                unit = "mÂł";
+                summaryLabel = "Objem";
+                statsUnit = "mÂł";
+                statsLabel = "PrĹŻtok";
+            }
+            else
+            {
+                unit = binding.Category;   // fallback: category jako jednotka
+                summaryLabel = "Hodnota";
+                statsUnit = string.Empty;
+                statsLabel = "Hodnota";
+            }
+
+            // NĂˇzev uzlu: meter_urn je pĹ™irozenĂ˝ identifikĂˇtor pro novĂ˝ dataset
+            var title = string.IsNullOrEmpty(binding.MeterUrn) ? nodeKey : binding.MeterUrn;
+            // Sloupec v CSV: <meter_urn>.<measurement_key>
+            var columnName = $"{binding.MeterUrn}.{binding.MeasurementKey}";
+
+            return new CuratedNodeSource
+            {
+                FileName           = binding.FileName,
+                MeterFolder        = binding.MeterFolder,
+                ColumnName         = columnName,
+                Title              = title,
+                NodeTypeHint       = binding.Category,
+                Unit               = unit,
+                SummaryLabel       = summaryLabel,
+                StatsUnit          = statsUnit,
+                StatsLabel         = statsLabel,
+                IsPowerSignal      = isPowerSignal,
+                PowerToKilowattFactor = isPowerSignal ? 0.001 : 1.0,  // Watts â†’ kW
+                SupportsDeviation  = isPowerSignal,   // jen P-signĂˇly majĂ­ baseline overlay
+            };
+        }
+
+        // â”€â”€ 2. Legacy fallback (starĂ© agregovanĂ© CSV uzly â€” zachovĂˇny pro pĹ™echod) â”€
         return nodeKey switch
         {
             "pv_main" => new CuratedNodeSource
             {
                 FileName = "electricity_P.csv",
                 ColumnName = "PV",
-                Title = "Solární výroba (PV)",
+                Title = "SolĂˇrnĂ­ vĂ˝roba (PV)",
                 NodeTypeHint = "generator_pv",
                 Unit = "kWh",
-                SummaryLabel = "Intervalová energie",
+                SummaryLabel = "IntervalovĂˇ energie",
                 StatsUnit = "kW",
-                StatsLabel = "Výkon",
+                StatsLabel = "VĂ˝kon",
                 IsPowerSignal = true,
                 PowerToKilowattFactor = 0.001,
                 SupportsDeviation = true
@@ -2579,12 +2655,12 @@ public class NodeAnalyticsPreviewService
             {
                 FileName = "electricity_P.csv",
                 ColumnName = "CHP",
-                Title = "Výroba kogenerace (CHP)",
+                Title = "VĂ˝roba kogenerace (CHP)",
                 NodeTypeHint = "generator_chp",
                 Unit = "kWh",
-                SummaryLabel = "Intervalová energie",
+                SummaryLabel = "IntervalovĂˇ energie",
                 StatsUnit = "kW",
-                StatsLabel = "Výkon",
+                StatsLabel = "VĂ˝kon",
                 IsPowerSignal = true,
                 PowerToKilowattFactor = 0.001,
                 SupportsDeviation = true
@@ -2593,12 +2669,12 @@ public class NodeAnalyticsPreviewService
             {
                 FileName = "cooling_P.csv",
                 ColumnName = "total",
-                Title = "Celkové chlazení",
+                Title = "CelkovĂ© chlazenĂ­",
                 NodeTypeHint = "utility_cooling",
                 Unit = "kWh",
-                SummaryLabel = "Intervalová energie",
+                SummaryLabel = "IntervalovĂˇ energie",
                 StatsUnit = "kW",
-                StatsLabel = "Výkon",
+                StatsLabel = "VĂ˝kon",
                 IsPowerSignal = true,
                 PowerToKilowattFactor = 0.001,
                 SupportsDeviation = true
@@ -2607,12 +2683,12 @@ public class NodeAnalyticsPreviewService
             {
                 FileName = "heating_P.csv",
                 ColumnName = "total",
-                Title = "Celkové vytápění",
+                Title = "CelkovĂ© vytĂˇpÄ›nĂ­",
                 NodeTypeHint = "utility_heating",
                 Unit = "kWh",
-                SummaryLabel = "Intervalová energie",
+                SummaryLabel = "IntervalovĂˇ energie",
                 StatsUnit = "kW",
-                StatsLabel = "Výkon",
+                StatsLabel = "VĂ˝kon",
                 IsPowerSignal = true,
                 PowerToKilowattFactor = 0.001,
                 SupportsDeviation = true
@@ -2621,11 +2697,11 @@ public class NodeAnalyticsPreviewService
             {
                 FileName = "weather.csv",
                 ColumnName = "WeatherStation.Weather.Ta",
-                Title = "Okamžitá průměrná teplota",
+                Title = "OkamĹľitĂˇ prĹŻmÄ›rnĂˇ teplota",
                 NodeTypeHint = "weather",
-                Unit = "°C",
-                SummaryLabel = "Průměrná teplota",
-                StatsUnit = "°C",
+                Unit = "Â°C",
+                SummaryLabel = "PrĹŻmÄ›rnĂˇ teplota",
+                StatsUnit = "Â°C",
                 StatsLabel = "Teplota",
                 SupportsDeviation = false
             },
@@ -2633,25 +2709,51 @@ public class NodeAnalyticsPreviewService
         };
     }
 
+    /// <summary>
+    /// OtevĹ™e StreamReader pro CSV soubor â€” automaticky detekuje .gz a obalĂ­ GZipStream.
+    /// VolajĂ­cĂ­ je odpovÄ›dnĂ˝ za dispose (using).
+    /// </summary>
+    private static StreamReader OpenCsvReader(string filePath)
+    {
+        if (filePath.EndsWith(".gz", StringComparison.OrdinalIgnoreCase))
+        {
+            var fileStream = File.OpenRead(filePath);
+            var gzStream = new System.IO.Compression.GZipStream(
+                fileStream, System.IO.Compression.CompressionMode.Decompress);
+            return new StreamReader(gzStream);
+        }
+        return new StreamReader(filePath);
+    }
+
+    /// <summary>
+    /// PĹ™eloĹľĂ­ CuratedNodeSource na cestu k souboru.
+    /// Pro binding-based uzly (MeterFolder != null): DataRootPath/meterFolder/fileName.
+    /// Pro legacy uzly: DataSet/curated, DataSet/data, DataSet.
+    /// </summary>
+    private string? ResolveCuratedFilePath(CuratedNodeSource source)
+    {
+        // Binding-based zdroj (novĂ˝ dataset)
+        if (!string.IsNullOrEmpty(source.MeterFolder))
+        {
+            var bindingPath = _bindingRegistry.ResolveFilePath(source.MeterFolder, source.FileName);
+            if (bindingPath is not null) return bindingPath;
+        }
+
+        // Legacy fallback
+        return ResolveCuratedFilePath(source.FileName);
+    }
+
+    /// <summary>Legacy: hledĂˇ soubor v DataSet/curated, DataSet/data, DataSet.</summary>
     private string? ResolveCuratedFilePath(string fileName)
     {
         var curatedPath = Path.Combine(_env.ContentRootPath, "..", "DataSet", "curated", fileName);
-        if (File.Exists(curatedPath))
-        {
-            return curatedPath;
-        }
+        if (File.Exists(curatedPath)) return curatedPath;
 
         var dataPath = Path.Combine(_env.ContentRootPath, "..", "DataSet", "data", fileName);
-        if (File.Exists(dataPath))
-        {
-            return dataPath;
-        }
+        if (File.Exists(dataPath)) return dataPath;
 
         var rootPath = Path.Combine(_env.ContentRootPath, "..", "DataSet", fileName);
-        if (File.Exists(rootPath))
-        {
-            return rootPath;
-        }
+        if (File.Exists(rootPath)) return rootPath;
 
         return null;
     }
@@ -2666,7 +2768,7 @@ public class NodeAnalyticsPreviewService
                 IsAvailable = false,
                 Unit = source.Unit,
                 Methodology = BaselineMethodology,
-                Message = "Neplatný časový rozsah pro výpočet baseline."
+                Message = "NeplatnĂ˝ ÄŤasovĂ˝ rozsah pro vĂ˝poÄŤet baseline."
             };
         }
 
@@ -2678,13 +2780,13 @@ public class NodeAnalyticsPreviewService
                 IsAvailable = false,
                 Unit = source.Unit,
                 Methodology = BaselineMethodology,
-                Message = "Baseline nelze připravit: chybí referenční baseline okna."
+                Message = "Baseline nelze pĹ™ipravit: chybĂ­ referenÄŤnĂ­ baseline okna."
             };
         }
 
         try
         {
-            using var reader = new StreamReader(filePath);
+            using var reader = OpenCsvReader(filePath);
             var headerLine = await reader.ReadLineAsync(ct);
             if (string.IsNullOrEmpty(headerLine))
             {
@@ -2693,7 +2795,7 @@ public class NodeAnalyticsPreviewService
                     IsAvailable = false,
                     Unit = source.Unit,
                     Methodology = BaselineMethodology,
-                    Message = "Reduced source je prázdný."
+                    Message = "Reduced source je prĂˇzdnĂ˝."
                 };
             }
 
@@ -2711,7 +2813,7 @@ public class NodeAnalyticsPreviewService
                     IsAvailable = false,
                     Unit = source.Unit,
                     Methodology = BaselineMethodology,
-                    Message = "Reduced source neobsahuje očekávaný sloupec pro vybraný uzel."
+                    Message = "Reduced source neobsahuje oÄŤekĂˇvanĂ˝ sloupec pro vybranĂ˝ uzel."
                 };
             }
 
@@ -2792,7 +2894,7 @@ public class NodeAnalyticsPreviewService
                     IsAvailable = false,
                     Unit = source.Unit,
                     Methodology = BaselineMethodology,
-                    Message = "Pro vybraný interval nejsou k dispozici žádná data."
+                    Message = "Pro vybranĂ˝ interval nejsou k dispozici ĹľĂˇdnĂˇ data."
                 };
             }
 
@@ -2818,7 +2920,7 @@ public class NodeAnalyticsPreviewService
                     IsAvailable = false,
                     Unit = source.Unit,
                     Methodology = BaselineMethodology,
-                    Message = "Baseline nelze spočítat: nejsou dostupná referenční baseline okna s dostatečným pokrytím dat."
+                    Message = "Baseline nelze spoÄŤĂ­tat: nejsou dostupnĂˇ referenÄŤnĂ­ baseline okna s dostateÄŤnĂ˝m pokrytĂ­m dat."
                 };
             }
 
@@ -2831,7 +2933,7 @@ public class NodeAnalyticsPreviewService
                     IsAvailable = false,
                     Unit = source.Unit,
                     Methodology = BuildMethodologyText(selectedBaseline.StrategyDescription, from, to, minimumReferenceSamples),
-                    Message = "Baseline je pro tento interval příliš nízká pro stabilní procentní vyhodnocení odchylky."
+                    Message = "Baseline je pro tento interval pĹ™Ă­liĹˇ nĂ­zkĂˇ pro stabilnĂ­ procentnĂ­ vyhodnocenĂ­ odchylky."
                 };
             }
 
@@ -2861,7 +2963,7 @@ public class NodeAnalyticsPreviewService
                 IsAvailable = false,
                 Unit = source.Unit,
                 Methodology = BaselineMethodology,
-                Message = "Nepodařilo se načíst reduced source pro baseline výpočet."
+                Message = "NepodaĹ™ilo se naÄŤĂ­st reduced source pro baseline vĂ˝poÄŤet."
             };
         }
     }
@@ -2887,7 +2989,7 @@ public class NodeAnalyticsPreviewService
                 baselineFrom,
                 baselineTo,
                 BaselineReferenceKind.SamePeriodPreviousYear,
-                $"Stejné období minulého roku (-{yearOffset}y)"));
+                $"StejnĂ© obdobĂ­ minulĂ©ho roku (-{yearOffset}y)"));
         }
 
         for (var offsetIndex = 1; offsetIndex <= RecentComparableWindowsForBaseline; offsetIndex++)
@@ -2916,7 +3018,7 @@ public class NodeAnalyticsPreviewService
                 baselineFrom,
                 baselineTo,
                 BaselineReferenceKind.RecentComparablePeriod,
-                $"Předchozí srovnatelné období (-{offsetIndex}x interval)"));
+                $"PĹ™edchozĂ­ srovnatelnĂ© obdobĂ­ (-{offsetIndex}x interval)"));
         }
 
         return candidates;
@@ -2958,7 +3060,7 @@ public class NodeAnalyticsPreviewService
         {
             return new BaselineSelection(
                 Median(samePeriodReferenceAggregates.Select(x => x.Sum).ToList()),
-                "Stejné období v minulých letech (medián)",
+                "StejnĂ© obdobĂ­ v minulĂ˝ch letech (mediĂˇn)",
                 samePeriodReferenceAggregates.Select(x => x.Candidate).ToList()
             );
         }
@@ -2972,7 +3074,7 @@ public class NodeAnalyticsPreviewService
                 .ToList();
             return new BaselineSelection(
                 (samePeriod * 0.70) + (recentMedian * 0.30),
-                "Hybrid: stejné období minulý rok + recent comparable období",
+                "Hybrid: stejnĂ© obdobĂ­ minulĂ˝ rok + recent comparable obdobĂ­",
                 referenceCandidates
             );
         }
@@ -2981,7 +3083,7 @@ public class NodeAnalyticsPreviewService
         {
             return new BaselineSelection(
                 samePeriodReferenceAggregates[0].Sum,
-                "Stejné období minulý rok",
+                "StejnĂ© obdobĂ­ minulĂ˝ rok",
                 [samePeriodReferenceAggregates[0].Candidate]
             );
         }
@@ -2990,7 +3092,7 @@ public class NodeAnalyticsPreviewService
         {
             return new BaselineSelection(
                 Median(recentComparableReferenceAggregates.Select(x => x.Sum).ToList()),
-                "Předchozí srovnatelná období stejné délky (medián)",
+                "PĹ™edchozĂ­ srovnatelnĂˇ obdobĂ­ stejnĂ© dĂ©lky (mediĂˇn)",
                 recentComparableReferenceAggregates.Select(x => x.Candidate).ToList()
             );
         }
@@ -2999,7 +3101,7 @@ public class NodeAnalyticsPreviewService
         {
             return new BaselineSelection(
                 recentComparableReferenceAggregates[0].Sum,
-                "Bezprostředně předchozí srovnatelné období",
+                "BezprostĹ™ednÄ› pĹ™edchozĂ­ srovnatelnĂ© obdobĂ­",
                 [recentComparableReferenceAggregates[0].Candidate]
             );
         }
@@ -3070,13 +3172,13 @@ public class NodeAnalyticsPreviewService
             return 0.000001;
         }
 
-        // U velmi nízké baseline je procentní odchylka numericky nestabilní.
+        // U velmi nĂ­zkĂ© baseline je procentnĂ­ odchylka numericky nestabilnĂ­.
         return Math.Max(0.5, intervalDuration.TotalHours * 0.05);
     }
 
     private static string BuildMethodologyText(string strategyDescription, DateTime from, DateTime to, int minimumReferenceSamples)
     {
-        return $"{BaselineMethodology} Strategy: {strategyDescription}. Analysis window: {from:u} - {to:u}. Minimum pokrytí referenčního okna: {minimumReferenceSamples} vzorků.";
+        return $"{BaselineMethodology} Strategy: {strategyDescription}. Analysis window: {from:u} - {to:u}. Minimum pokrytĂ­ referenÄŤnĂ­ho okna: {minimumReferenceSamples} vzorkĹŻ.";
     }
 
     private async Task<WeatherExplanationSummary?> BuildWeatherExplanationAsync(
@@ -3096,18 +3198,18 @@ public class NodeAnalyticsPreviewService
         var weatherFilePath = ResolveCuratedFilePath("weather.csv");
         if (weatherFilePath is null)
         {
-            return CreateUnavailableWeatherExplanation("Vysvětlení počasím není dostupné, protože chybí weather.csv source.");
+            return CreateUnavailableWeatherExplanation("VysvÄ›tlenĂ­ poÄŤasĂ­m nenĂ­ dostupnĂ©, protoĹľe chybĂ­ weather.csv source.");
         }
 
         var weatherAverages = await GetWeatherAveragesAsync(weatherFilePath, analysisFrom, analysisTo, referenceCandidates, minimumReferenceSamples, ct);
         if (!weatherAverages.CurrentAverageTempC.HasValue)
         {
-            return CreateUnavailableWeatherExplanation("Vysvětlení počasím není dostupné: v aktuálním intervalu chybí data venkovní teploty.");
+            return CreateUnavailableWeatherExplanation("VysvÄ›tlenĂ­ poÄŤasĂ­m nenĂ­ dostupnĂ©: v aktuĂˇlnĂ­m intervalu chybĂ­ data venkovnĂ­ teploty.");
         }
 
         if (weatherAverages.ReferenceAverageTempC.Count == 0)
         {
-            return CreateUnavailableWeatherExplanation("Vysvětlení počasím není dostupné: v referenčním baseline období chybí dostatek weather dat.");
+            return CreateUnavailableWeatherExplanation("VysvÄ›tlenĂ­ poÄŤasĂ­m nenĂ­ dostupnĂ©: v referenÄŤnĂ­m baseline obdobĂ­ chybĂ­ dostatek weather dat.");
         }
 
         var referenceAverage = weatherAverages.ReferenceAverageTempC.Count >= 2
@@ -3117,7 +3219,7 @@ public class NodeAnalyticsPreviewService
         var deltaTemp = currentAverage - referenceAverage;
 
         var status = WeatherExplanationStatus.NotSupportedByWeather;
-        var conclusion = "Počasí odchylku v tomto intervalu nepodporuje.";
+        var conclusion = "PoÄŤasĂ­ odchylku v tomto intervalu nepodporuje.";
 
         if (Math.Abs(deltaTemp) < WeatherExplanationDeltaThresholdC)
         {
@@ -3128,8 +3230,8 @@ public class NodeAnalyticsPreviewService
                 CurrentAverageOutdoorTempC = currentAverage,
                 ReferenceAverageOutdoorTempC = referenceAverage,
                 DeltaOutdoorTempC = deltaTemp,
-                Conclusion = "Rozdíl počasí vůči referenci je malý.",
-                Methodology = "Explanatory heuristika v1: porovnání průměrné venkovní teploty v analysis window vůči referenčním baseline oknům. Při |delta T| < 0.8 °C je změna počasí považována za malou."
+                Conclusion = "RozdĂ­l poÄŤasĂ­ vĹŻÄŤi referenci je malĂ˝.",
+                Methodology = "Explanatory heuristika v1: porovnĂˇnĂ­ prĹŻmÄ›rnĂ© venkovnĂ­ teploty v analysis window vĹŻÄŤi referenÄŤnĂ­m baseline oknĹŻm. PĹ™i |delta T| < 0.8 Â°C je zmÄ›na poÄŤasĂ­ povaĹľovĂˇna za malou."
             };
         }
 
@@ -3141,7 +3243,7 @@ public class NodeAnalyticsPreviewService
             if ((deltaAbsolute > 0 && isColderThanReference) || (deltaAbsolute < 0 && isWarmerThanReference))
             {
                 status = WeatherExplanationStatus.SupportedByWeather;
-                conclusion = "Odchylka může být částečně vysvětlena počasím.";
+                conclusion = "Odchylka mĹŻĹľe bĂ˝t ÄŤĂˇsteÄŤnÄ› vysvÄ›tlena poÄŤasĂ­m.";
             }
         }
         else if (nodeKey == "cooling_main")
@@ -3152,7 +3254,7 @@ public class NodeAnalyticsPreviewService
             if ((deltaAbsolute > 0 && isWarmerThanReference) || (deltaAbsolute < 0 && isColderThanReference))
             {
                 status = WeatherExplanationStatus.SupportedByWeather;
-                conclusion = "Odchylka může být částečně vysvětlena počasím.";
+                conclusion = "Odchylka mĹŻĹľe bĂ˝t ÄŤĂˇsteÄŤnÄ› vysvÄ›tlena poÄŤasĂ­m.";
             }
         }
 
@@ -3164,7 +3266,7 @@ public class NodeAnalyticsPreviewService
             ReferenceAverageOutdoorTempC = referenceAverage,
             DeltaOutdoorTempC = deltaTemp,
             Conclusion = conclusion,
-            Methodology = "Explanatory heuristika v1: porovnání průměrné venkovní teploty v analysis window vůči referenčním baseline oknům použitým baseline strategií."
+            Methodology = "Explanatory heuristika v1: porovnĂˇnĂ­ prĹŻmÄ›rnĂ© venkovnĂ­ teploty v analysis window vĹŻÄŤi referenÄŤnĂ­m baseline oknĹŻm pouĹľitĂ˝m baseline strategiĂ­."
         };
     }
 
@@ -3175,7 +3277,7 @@ public class NodeAnalyticsPreviewService
             IsAvailable = false,
             Status = WeatherExplanationStatus.Unavailable,
             Conclusion = message,
-            Methodology = "Explanatory heuristika vyžaduje dostupná weather data pro aktuální i referenční období."
+            Methodology = "Explanatory heuristika vyĹľaduje dostupnĂˇ weather data pro aktuĂˇlnĂ­ i referenÄŤnĂ­ obdobĂ­."
         };
     }
 
@@ -3189,7 +3291,7 @@ public class NodeAnalyticsPreviewService
     {
         try
         {
-            using var reader = new StreamReader(weatherFilePath);
+            using var reader = OpenCsvReader(weatherFilePath);
             var headerLine = await reader.ReadLineAsync(ct);
             if (string.IsNullOrEmpty(headerLine))
             {
@@ -3296,7 +3398,7 @@ public class NodeAnalyticsPreviewService
     {
         try
         {
-            using var reader = new StreamReader(filePath);
+            using var reader = OpenCsvReader(filePath);
             var headerLine = await reader.ReadLineAsync(ct);
             if (string.IsNullOrEmpty(headerLine))
             {
@@ -3372,7 +3474,7 @@ public class NodeAnalyticsPreviewService
     {
         try
         {
-            using var reader = new StreamReader(filePath);
+            using var reader = OpenCsvReader(filePath);
             var headerLine = await reader.ReadLineAsync(ct);
             if (string.IsNullOrEmpty(headerLine))
             {
@@ -3491,14 +3593,14 @@ public class NodeAnalyticsPreviewService
     private static TimeSeriesGranularityDecision ResolveTimeSeriesGranularity(DateTime from, DateTime to, CuratedNodeSource source, CuratedNodeTimeSeriesMode requestedMode)
     {
         var duration = to - from;
-        var valueKind = source.IsPowerSignal ? "výkonu" : "hodnoty";
+        var valueKind = source.IsPowerSignal ? "vĂ˝konu" : "hodnoty";
 
         if (requestedMode == CuratedNodeTimeSeriesMode.Raw15Min)
         {
             return new TimeSeriesGranularityDecision(
                 CuratedNodeTimeSeriesGranularity.Raw15Min,
-                source.IsPowerSignal ? "Raw 15min výkon" : "Raw detailní řada",
-                "Ruční režim 15min: bez agregace, zobrazeny jsou původní vzorky časové řady.",
+                source.IsPowerSignal ? "Raw 15min vĂ˝kon" : "Raw detailnĂ­ Ĺ™ada",
+                "RuÄŤnĂ­ reĹľim 15min: bez agregace, zobrazeny jsou pĹŻvodnĂ­ vzorky ÄŤasovĂ© Ĺ™ady.",
                 CuratedNodeTimeSeriesMode.Raw15Min,
                 "15min"
             );
@@ -3508,8 +3610,8 @@ public class NodeAnalyticsPreviewService
         {
             return new TimeSeriesGranularityDecision(
                 CuratedNodeTimeSeriesGranularity.HourlyAverage,
-                source.IsPowerSignal ? "Hodinový průměr výkonu" : "Hodinový průměr hodnoty",
-                $"Ruční režim Hourly: každá hodnota je aritmetický průměr {valueKind} v daném hodinovém bucketu.",
+                source.IsPowerSignal ? "HodinovĂ˝ prĹŻmÄ›r vĂ˝konu" : "HodinovĂ˝ prĹŻmÄ›r hodnoty",
+                $"RuÄŤnĂ­ reĹľim Hourly: kaĹľdĂˇ hodnota je aritmetickĂ˝ prĹŻmÄ›r {valueKind} v danĂ©m hodinovĂ©m bucketu.",
                 CuratedNodeTimeSeriesMode.HourlyAverage,
                 "Hourly"
             );
@@ -3519,8 +3621,8 @@ public class NodeAnalyticsPreviewService
         {
             return new TimeSeriesGranularityDecision(
                 CuratedNodeTimeSeriesGranularity.DailyAverage,
-                source.IsPowerSignal ? "Denní průměr výkonu" : "Denní průměr hodnoty",
-                $"Ruční režim Daily: každá hodnota je aritmetický průměr {valueKind} v daném denním bucketu.",
+                source.IsPowerSignal ? "DennĂ­ prĹŻmÄ›r vĂ˝konu" : "DennĂ­ prĹŻmÄ›r hodnoty",
+                $"RuÄŤnĂ­ reĹľim Daily: kaĹľdĂˇ hodnota je aritmetickĂ˝ prĹŻmÄ›r {valueKind} v danĂ©m dennĂ­m bucketu.",
                 CuratedNodeTimeSeriesMode.DailyAverage,
                 "Daily"
             );
@@ -3530,8 +3632,8 @@ public class NodeAnalyticsPreviewService
         {
             return new TimeSeriesGranularityDecision(
                 CuratedNodeTimeSeriesGranularity.Raw15Min,
-                source.IsPowerSignal ? "Raw 15min výkon" : "Raw detailní řada",
-                "Auto režim: bez agregace, zobrazeny jsou původní vzorky časové řady.",
+                source.IsPowerSignal ? "Raw 15min vĂ˝kon" : "Raw detailnĂ­ Ĺ™ada",
+                "Auto reĹľim: bez agregace, zobrazeny jsou pĹŻvodnĂ­ vzorky ÄŤasovĂ© Ĺ™ady.",
                 CuratedNodeTimeSeriesMode.Auto,
                 "Auto"
             );
@@ -3541,8 +3643,8 @@ public class NodeAnalyticsPreviewService
         {
             return new TimeSeriesGranularityDecision(
                 CuratedNodeTimeSeriesGranularity.HourlyAverage,
-                source.IsPowerSignal ? "Hodinový průměr výkonu" : "Hodinový průměr hodnoty",
-                $"Auto režim: agregace po hodinách, každá hodnota je aritmetický průměr {valueKind} v daném hodinovém bucketu.",
+                source.IsPowerSignal ? "HodinovĂ˝ prĹŻmÄ›r vĂ˝konu" : "HodinovĂ˝ prĹŻmÄ›r hodnoty",
+                $"Auto reĹľim: agregace po hodinĂˇch, kaĹľdĂˇ hodnota je aritmetickĂ˝ prĹŻmÄ›r {valueKind} v danĂ©m hodinovĂ©m bucketu.",
                 CuratedNodeTimeSeriesMode.Auto,
                 "Auto"
             );
@@ -3550,8 +3652,8 @@ public class NodeAnalyticsPreviewService
 
         return new TimeSeriesGranularityDecision(
             CuratedNodeTimeSeriesGranularity.DailyAverage,
-            source.IsPowerSignal ? "Denní průměr výkonu" : "Denní průměr hodnoty",
-            $"Auto režim: agregace po dnech, každá hodnota je aritmetický průměr {valueKind} v daném denním bucketu.",
+            source.IsPowerSignal ? "DennĂ­ prĹŻmÄ›r vĂ˝konu" : "DennĂ­ prĹŻmÄ›r hodnoty",
+            $"Auto reĹľim: agregace po dnech, kaĹľdĂˇ hodnota je aritmetickĂ˝ prĹŻmÄ›r {valueKind} v danĂ©m dennĂ­m bucketu.",
             CuratedNodeTimeSeriesMode.Auto,
             "Auto"
         );
@@ -3573,17 +3675,17 @@ public class NodeAnalyticsPreviewService
         {
             return granularity.Granularity switch
             {
-                CuratedNodeTimeSeriesGranularity.HourlyAverage => "Graf zobrazuje hodinově agregovaný průměr výkonu (kW). Souhrn nad grafem zůstává intervalová energie (kWh).",
-                CuratedNodeTimeSeriesGranularity.DailyAverage => "Graf zobrazuje denně agregovaný průměr výkonu (kW). Souhrn nad grafem zůstává intervalová energie (kWh).",
-                _ => "Graf zobrazuje okamžitý výkon v čase (kW) v původním kroku časové řady (~15 min). Souhrn nad grafem zobrazuje intervalovou energii (kWh)."
+                CuratedNodeTimeSeriesGranularity.HourlyAverage => "Graf zobrazuje hodinovÄ› agregovanĂ˝ prĹŻmÄ›r vĂ˝konu (kW). Souhrn nad grafem zĹŻstĂˇvĂˇ intervalovĂˇ energie (kWh).",
+                CuratedNodeTimeSeriesGranularity.DailyAverage => "Graf zobrazuje dennÄ› agregovanĂ˝ prĹŻmÄ›r vĂ˝konu (kW). Souhrn nad grafem zĹŻstĂˇvĂˇ intervalovĂˇ energie (kWh).",
+                _ => "Graf zobrazuje okamĹľitĂ˝ vĂ˝kon v ÄŤase (kW) v pĹŻvodnĂ­m kroku ÄŤasovĂ© Ĺ™ady (~15 min). Souhrn nad grafem zobrazuje intervalovou energii (kWh)."
             };
         }
 
         return granularity.Granularity switch
         {
-            CuratedNodeTimeSeriesGranularity.HourlyAverage => "Graf zobrazuje hodinově agregovaný průměr hodnoty pro vybraný uzel.",
-            CuratedNodeTimeSeriesGranularity.DailyAverage => "Graf zobrazuje denně agregovaný průměr hodnoty pro vybraný uzel.",
-            _ => "Graf zobrazuje okamžitou hodnotu v čase pro vybraný uzel."
+            CuratedNodeTimeSeriesGranularity.HourlyAverage => "Graf zobrazuje hodinovÄ› agregovanĂ˝ prĹŻmÄ›r hodnoty pro vybranĂ˝ uzel.",
+            CuratedNodeTimeSeriesGranularity.DailyAverage => "Graf zobrazuje dennÄ› agregovanĂ˝ prĹŻmÄ›r hodnoty pro vybranĂ˝ uzel.",
+            _ => "Graf zobrazuje okamĹľitou hodnotu v ÄŤase pro vybranĂ˝ uzel."
         };
     }
 
@@ -3599,9 +3701,9 @@ public class NodeAnalyticsPreviewService
     {
         return granularity switch
         {
-            CuratedNodeTimeSeriesGranularity.HourlyAverage => "Compare preview zobrazuje výkonové řady v čase (kW) pro více uzlů. Hodinová agregace znamená průměr výkonu za hodinový bucket.",
-            CuratedNodeTimeSeriesGranularity.DailyAverage => "Compare preview zobrazuje výkonové řady v čase (kW) pro více uzlů. Denní agregace znamená průměr výkonu za denní bucket.",
-            _ => "Compare preview zobrazuje výkonové řady v čase (kW) pro více uzlů v původním detailním kroku dat (~15 min)."
+            CuratedNodeTimeSeriesGranularity.HourlyAverage => "Compare preview zobrazuje vĂ˝konovĂ© Ĺ™ady v ÄŤase (kW) pro vĂ­ce uzlĹŻ. HodinovĂˇ agregace znamenĂˇ prĹŻmÄ›r vĂ˝konu za hodinovĂ˝ bucket.",
+            CuratedNodeTimeSeriesGranularity.DailyAverage => "Compare preview zobrazuje vĂ˝konovĂ© Ĺ™ady v ÄŤase (kW) pro vĂ­ce uzlĹŻ. DennĂ­ agregace znamenĂˇ prĹŻmÄ›r vĂ˝konu za dennĂ­ bucket.",
+            _ => "Compare preview zobrazuje vĂ˝konovĂ© Ĺ™ady v ÄŤase (kW) pro vĂ­ce uzlĹŻ v pĹŻvodnĂ­m detailnĂ­m kroku dat (~15 min)."
         };
     }
 
@@ -3609,16 +3711,16 @@ public class NodeAnalyticsPreviewService
     {
         var signedSemanticsNote = energyProfile switch
         {
-            CuratedAggregateEnergyProfile.MixedSigned => " Selection kombinuje spotřebu i výrobu: kladné body reprezentují čistou spotřebu, záporné body čistou výrobu/export.",
-            CuratedAggregateEnergyProfile.GenerationOnly => " Selection je výrobní/exportní: záporné body jsou očekávané a reprezentují export nebo výrobu.",
+            CuratedAggregateEnergyProfile.MixedSigned => " Selection kombinuje spotĹ™ebu i vĂ˝robu: kladnĂ© body reprezentujĂ­ ÄŤistou spotĹ™ebu, zĂˇpornĂ© body ÄŤistou vĂ˝robu/export.",
+            CuratedAggregateEnergyProfile.GenerationOnly => " Selection je vĂ˝robnĂ­/exportnĂ­: zĂˇpornĂ© body jsou oÄŤekĂˇvanĂ© a reprezentujĂ­ export nebo vĂ˝robu.",
             _ => string.Empty
         };
 
         return granularity switch
         {
-            CuratedNodeTimeSeriesGranularity.HourlyAverage => "Agregovaný graf zobrazuje součet hodinových průměrů výkonu (kW) přes podporované uzly selection setu." + signedSemanticsNote,
-            CuratedNodeTimeSeriesGranularity.DailyAverage => "Agregovaný graf zobrazuje součet denních průměrů výkonu (kW) přes podporované uzly selection setu." + signedSemanticsNote,
-            _ => "Agregovaný graf zobrazuje součet okamžitých výkonů (kW) přes podporované uzly selection setu v původním kroku dat (~15 min)." + signedSemanticsNote
+            CuratedNodeTimeSeriesGranularity.HourlyAverage => "AgregovanĂ˝ graf zobrazuje souÄŤet hodinovĂ˝ch prĹŻmÄ›rĹŻ vĂ˝konu (kW) pĹ™es podporovanĂ© uzly selection setu." + signedSemanticsNote,
+            CuratedNodeTimeSeriesGranularity.DailyAverage => "AgregovanĂ˝ graf zobrazuje souÄŤet dennĂ­ch prĹŻmÄ›rĹŻ vĂ˝konu (kW) pĹ™es podporovanĂ© uzly selection setu." + signedSemanticsNote,
+            _ => "AgregovanĂ˝ graf zobrazuje souÄŤet okamĹľitĂ˝ch vĂ˝konĹŻ (kW) pĹ™es podporovanĂ© uzly selection setu v pĹŻvodnĂ­m kroku dat (~15 min)." + signedSemanticsNote
         };
     }
 
@@ -3637,10 +3739,10 @@ public class NodeAnalyticsPreviewService
 
         var compositionSummary = measuredContributors.Count switch
         {
-            0 => "Disaggregation foundation: v intervalu nejsou dostupní measured contributoři.",
-            1 => $"Aggregate je složen z 1 measured contributoru: {measuredContributors[0].Label}.",
-            _ when hasMixedSigns => $"Aggregate je složen z {measuredContributors.Count} measured contributoru (load {consumptionContributorCount}, generation {generationContributorCount}).",
-            _ when energyProfile == CuratedAggregateEnergyProfile.GenerationOnly => $"Aggregate je složen z {measuredContributors.Count} measured contributoru, kteri snizuji netto bilanci (generation/export).",
+            0 => "Disaggregation foundation: v intervalu nejsou dostupnĂ­ measured contributoĹ™i.",
+            1 => $"Aggregate je sloĹľen z 1 measured contributoru: {measuredContributors[0].Label}.",
+            _ when hasMixedSigns => $"Aggregate je sloĹľen z {measuredContributors.Count} measured contributoru (load {consumptionContributorCount}, generation {generationContributorCount}).",
+            _ when energyProfile == CuratedAggregateEnergyProfile.GenerationOnly => $"Aggregate je sloĹľen z {measuredContributors.Count} measured contributoru, kteri snizuji netto bilanci (generation/export).",
             _ => $"Aggregate je slozen z {measuredContributors.Count} measured contributoru, kteri zvysuji load (consumption)."
         };
 
@@ -3856,13 +3958,13 @@ public class NodeAnalyticsPreviewService
         return energyProfile switch
         {
             CuratedAggregateEnergyProfile.MixedSigned =>
-                (netEnergyKwh, "Netto bilance energie", "Selection kombinuje spotřebu i výrobu; hlavní KPI proto reprezentuje netto výsledek.", true),
+                (netEnergyKwh, "Netto bilance energie", "Selection kombinuje spotĹ™ebu i vĂ˝robu; hlavnĂ­ KPI proto reprezentuje netto vĂ˝sledek.", true),
             CuratedAggregateEnergyProfile.GenerationOnly =>
-                (totalGenerationKwh, "Celková výroba energie", "Selection je čistě výrobní/exportní; netto bilance je záporná.", false),
+                (totalGenerationKwh, "CelkovĂˇ vĂ˝roba energie", "Selection je ÄŤistÄ› vĂ˝robnĂ­/exportnĂ­; netto bilance je zĂˇpornĂˇ.", false),
             CuratedAggregateEnergyProfile.ConsumptionOnly =>
-                (totalConsumptionKwh, "Celková spotřeba energie", "Selection je čistě spotřební; netto bilance odpovídá spotřebě.", false),
+                (totalConsumptionKwh, "CelkovĂˇ spotĹ™eba energie", "Selection je ÄŤistÄ› spotĹ™ebnĂ­; netto bilance odpovĂ­dĂˇ spotĹ™ebÄ›.", false),
             _ =>
-                (netEnergyKwh, "Netto bilance energie", "Selection nemá v intervalu významné energetické contribution.", true)
+                (netEnergyKwh, "Netto bilance energie", "Selection nemĂˇ v intervalu vĂ˝znamnĂ© energetickĂ© contribution.", true)
         };
     }
 
@@ -3957,15 +4059,15 @@ public class NodeAnalyticsPreviewService
 
         try
         {
-            using var reader = new StreamReader(filePath);
+            using var reader = OpenCsvReader(filePath);
             var headerLine = await reader.ReadLineAsync(ct);
             if (string.IsNullOrEmpty(headerLine))
             {
                 return CreateResult(
                     [],
-                    "Reduced source je prázdný.",
+                    "Reduced source je prĂˇzdnĂ˝.",
                     [],
-                    includeBaselineOverlay ? "Baseline overlay není dostupný: reduced source je prázdný." : null);
+                    includeBaselineOverlay ? "Baseline overlay nenĂ­ dostupnĂ˝: reduced source je prĂˇzdnĂ˝." : null);
             }
 
             var headers = headerLine.Split(',');
@@ -3979,9 +4081,9 @@ public class NodeAnalyticsPreviewService
             {
                 return CreateResult(
                     [],
-                    "Reduced source neobsahuje očekávaný sloupec pro vybraný uzel.",
+                    "Reduced source neobsahuje oÄŤekĂˇvanĂ˝ sloupec pro vybranĂ˝ uzel.",
                     [],
-                    includeBaselineOverlay ? "Baseline overlay není dostupný: reduced source neobsahuje očekávaný sloupec." : null);
+                    includeBaselineOverlay ? "Baseline overlay nenĂ­ dostupnĂ˝: reduced source neobsahuje oÄŤekĂˇvanĂ˝ sloupec." : null);
             }
 
             if (timeColIndex == -1)
@@ -4112,15 +4214,15 @@ public class NodeAnalyticsPreviewService
             {
                 if (!source.SupportsDeviation)
                 {
-                    baselineOverlayMessage = "Baseline overlay není pro tento uzel podporován.";
+                    baselineOverlayMessage = "Baseline overlay nenĂ­ pro tento uzel podporovĂˇn.";
                 }
                 else if (baselineCandidates.Count == 0)
                 {
-                    baselineOverlayMessage = "Baseline overlay není dostupný: chybí referenční baseline okna.";
+                    baselineOverlayMessage = "Baseline overlay nenĂ­ dostupnĂ˝: chybĂ­ referenÄŤnĂ­ baseline okna.";
                 }
                 else if (currentIntervalSamples == 0)
                 {
-                    baselineOverlayMessage = "Baseline overlay nelze spočítat, protože v analysis window chybí aktuální vzorky.";
+                    baselineOverlayMessage = "Baseline overlay nelze spoÄŤĂ­tat, protoĹľe v analysis window chybĂ­ aktuĂˇlnĂ­ vzorky.";
                 }
                 else
                 {
@@ -4141,14 +4243,14 @@ public class NodeAnalyticsPreviewService
                     var selectedBaseline = SelectBaselineValue(samePeriodReferenceAggregates, recentComparableReferenceAggregates);
                     if (selectedBaseline is null)
                     {
-                        baselineOverlayMessage = "Baseline overlay není dostupný: referenční baseline okna nemají dostatečné pokrytí dat.";
+                        baselineOverlayMessage = "Baseline overlay nenĂ­ dostupnĂ˝: referenÄŤnĂ­ baseline okna nemajĂ­ dostateÄŤnĂ© pokrytĂ­ dat.";
                     }
                     else
                     {
                         baselinePoints = BuildBaselineOverlaySeries(selectedBaseline, baselineBucketStatsByCandidate);
                         if (baselinePoints.Count == 0)
                         {
-                            baselineOverlayMessage = "Baseline overlay není dostupný: referenční řada pro vybranou granularitu nemá žádné body.";
+                            baselineOverlayMessage = "Baseline overlay nenĂ­ dostupnĂ˝: referenÄŤnĂ­ Ĺ™ada pro vybranou granularitu nemĂˇ ĹľĂˇdnĂ© body.";
                         }
                     }
                 }
@@ -4156,7 +4258,7 @@ public class NodeAnalyticsPreviewService
 
             return CreateResult(
                 points,
-                points.Count == 0 ? "Pro vybraný interval nejsou k dispozici žádné body časové řady." : null,
+                points.Count == 0 ? "Pro vybranĂ˝ interval nejsou k dispozici ĹľĂˇdnĂ© body ÄŤasovĂ© Ĺ™ady." : null,
                 baselinePoints,
                 baselineOverlayMessage);
         }
@@ -4164,9 +4266,9 @@ public class NodeAnalyticsPreviewService
         {
             return CreateResult(
                 [],
-                "Nepodařilo se načíst reduced source pro časovou řadu.",
+                "NepodaĹ™ilo se naÄŤĂ­st reduced source pro ÄŤasovou Ĺ™adu.",
                 [],
-                includeBaselineOverlay ? "Baseline overlay není dostupný: nepodařilo se načíst reduced source." : null);
+                includeBaselineOverlay ? "Baseline overlay nenĂ­ dostupnĂ˝: nepodaĹ™ilo se naÄŤĂ­st reduced source." : null);
         }
     }
 
@@ -4291,7 +4393,7 @@ public class NodeAnalyticsPreviewService
     {
         try
         {
-            using var reader = new StreamReader(filePath);
+            using var reader = OpenCsvReader(filePath);
             var headerLine = await reader.ReadLineAsync(ct);
             if (string.IsNullOrEmpty(headerLine)) return null;
 
@@ -4339,7 +4441,7 @@ public class NodeAnalyticsPreviewService
                             }
                         }
                         
-                        // Zastaví čtení pokud jsme chronologicky přesáhli zkoumané období (zlepšuje výkon pro starší data)
+                        // ZastavĂ­ ÄŤtenĂ­ pokud jsme chronologicky pĹ™esĂˇhli zkoumanĂ© obdobĂ­ (zlepĹˇuje vĂ˝kon pro starĹˇĂ­ data)
                         if (timestamp >= to)
                         {
                             break;
@@ -4366,7 +4468,7 @@ public class NodeAnalyticsPreviewService
         }
         catch
         {
-            return null; // Při file I/O problému prostě fallbackujeme do NO-DATA stavu
+            return null; // PĹ™i file I/O problĂ©mu prostÄ› fallbackujeme do NO-DATA stavu
         }
     }
 }
