@@ -27,7 +27,9 @@ window.editorCanvas = (function () {
     var _facilityNodeDragEnabled = false;
     var _selectedNodeKeys = new Set();      // Blazor-driven selected node keys (group drag detection)
     var _suppressNextClick = false;         // Prevents onClick from clearing selection after rectSelect
-
+    var _pendingRectSelectionKeys = null;
+    var _pendingRectSelectionUntil = 0; // timestamp guard for first drag after rect-select
+    var _pendingRectSelectionElements = null; // exact selected node elements from last rect-select
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     function getSvg() { return document.getElementById(_svgId); }
@@ -72,6 +74,61 @@ window.editorCanvas = (function () {
         var el = document.getElementById(_svgId + '-preview');
         if (el) el.remove();
     }
+
+    function getActiveNodeElements() {
+    var content = getContent();
+    if (!content) return [];
+
+    var els = Array.from(
+        content.querySelectorAll('[data-node-key][data-node-x][data-node-y]')
+    );
+
+    console.debug('[active-node-elements]', {
+        count: els.length,
+        keys: els.map(function (el) { return el.dataset.nodeKey; })
+    });
+
+    return els;
+    }
+
+
+    function applyLocalRectSelection(x1, y1, x2, y2, additive) {
+    var nextSelectedKeys = additive ? new Set(_selectedNodeKeys) : new Set();
+    var nextSelectedElements = [];
+
+    getActiveNodeElements().forEach(function (el) {
+        var nodeKey = el.dataset.nodeKey;
+        var nodeX = parseFloat(el.dataset.nodeX);
+        var nodeY = parseFloat(el.dataset.nodeY);
+
+        if (!nodeKey || Number.isNaN(nodeX) || Number.isNaN(nodeY)) return;
+
+        if (nodeX >= x1 && nodeX <= x2 && nodeY >= y1 && nodeY <= y2) {
+            nextSelectedKeys.add(nodeKey);
+            nextSelectedElements.push({
+                el: el,
+                nodeKey: nodeKey,
+                origX: nodeX,
+                origY: nodeY
+            });
+        }
+    });
+
+    _selectedNodeKeys = nextSelectedKeys;
+    _pendingRectSelectionKeys = new Set(nextSelectedKeys);
+    _pendingRectSelectionElements = nextSelectedElements;
+    _pendingRectSelectionUntil = Date.now() + 800;
+
+    console.debug('[rect-select-local]', {
+        selected: Array.from(_selectedNodeKeys || []),
+        pending: _pendingRectSelectionKeys ? Array.from(_pendingRectSelectionKeys) : [],
+        elementCount: _pendingRectSelectionElements ? _pendingRectSelectionElements.length : 0
+    });
+
+    return nextSelectedKeys;
+    }
+
+
 
     /** Přichytí hodnotu k mřížce (pokud je mřížka aktivní). */
     function snapToGrid(val) {
@@ -150,20 +207,100 @@ window.editorCanvas = (function () {
                     }
 
                     // Group drag: clicked node is in selected set AND 2+ nodes selected
-                    if (_selectedNodeKeys.size > 1 && _selectedNodeKeys.has(clickedKey)) {
-                        var groupEls = [];
-                        document.querySelectorAll('g[data-node-key]').forEach(function (el) {
-                            if (_selectedNodeKeys.has(el.dataset.nodeKey)) {
-                                var nx = parseFloat(el.dataset.nodeX);
-                                var ny = parseFloat(el.dataset.nodeY);
-                                if (!Number.isNaN(nx) && !Number.isNaN(ny))
-                                    groupEls.push({ el: el, nodeKey: el.dataset.nodeKey, origX: nx, origY: ny });
-                            }
-                        });
-                        _state = { type: 'groupDrag', anchorKey: clickedKey, startCX: pos.x, startCY: pos.y, groupEls: groupEls, moved: false };
-                    } else {
-                        _state = { type: 'dragFacilityNode', nodeKey: clickedKey, startCX: pos.x, startCY: pos.y, origX: origNodeX, origY: origNodeY, el: nodeEl, moved: false };
-                    }
+                    
+                    
+                    var effectiveSelectedKeys =
+                        (_pendingRectSelectionKeys &&
+                        _pendingRectSelectionKeys.size > 1 &&
+                        Date.now() < _pendingRectSelectionUntil)
+                            ? _pendingRectSelectionKeys
+                            : _selectedNodeKeys;
+
+
+                    
+                    console.debug('[group-drag-check]', {
+                        clickedKey: clickedKey,
+                        selectedSize: _selectedNodeKeys ? _selectedNodeKeys.size : 0,
+                        selectedHasClicked: _selectedNodeKeys ? _selectedNodeKeys.has(clickedKey) : false,
+                        pendingSize: _pendingRectSelectionKeys ? _pendingRectSelectionKeys.size : 0,
+                        pendingHasClicked: _pendingRectSelectionKeys ? _pendingRectSelectionKeys.has(clickedKey) : false,
+                        effectiveSize: effectiveSelectedKeys ? effectiveSelectedKeys.size : 0,
+                        effectiveHasClicked: effectiveSelectedKeys ? effectiveSelectedKeys.has(clickedKey) : false
+                    });
+
+                    if (effectiveSelectedKeys && effectiveSelectedKeys.size > 1 && effectiveSelectedKeys.has(clickedKey)) {
+    var groupEls = [];
+
+    // First drag immediately after rect-select: use the exact locally captured elements.
+    if (
+        _pendingRectSelectionElements &&
+        _pendingRectSelectionElements.length > 1 &&
+        _pendingRectSelectionKeys &&
+        _pendingRectSelectionKeys.has(clickedKey) &&
+        Date.now() < _pendingRectSelectionUntil
+    ) {
+        groupEls = _pendingRectSelectionElements.map(function (item) {
+            return {
+                el: item.el,
+                nodeKey: item.nodeKey,
+                origX: item.origX,
+                origY: item.origY
+            };
+        });
+    } else {
+        getActiveNodeElements().forEach(function (el) {
+            if (effectiveSelectedKeys.has(el.dataset.nodeKey)) {
+                var nx = parseFloat(el.dataset.nodeX);
+                var ny = parseFloat(el.dataset.nodeY);
+                if (!Number.isNaN(nx) && !Number.isNaN(ny)) {
+                    groupEls.push({
+                        el: el,
+                        nodeKey: el.dataset.nodeKey,
+                        origX: nx,
+                        origY: ny
+                    });
+                }
+            }
+        });
+    }
+
+    console.debug('[group-drag-branch]', {
+        groupCount: groupEls.length,
+        groupKeys: groupEls.map(function (x) { return x.nodeKey; }),
+        usedPendingElements:
+            !!(_pendingRectSelectionElements &&
+               _pendingRectSelectionElements.length > 1 &&
+               _pendingRectSelectionKeys &&
+               _pendingRectSelectionKeys.has(clickedKey) &&
+               Date.now() < _pendingRectSelectionUntil)
+    });
+
+    _state = {
+        type: 'groupDrag',
+        anchorKey: clickedKey,
+        startCX: pos.x,
+        startCY: pos.y,
+        groupEls: groupEls,
+        moved: false
+    };
+        } else {
+            console.debug('[single-drag-branch]', {
+                clickedKey: clickedKey
+            });
+
+            _state = {
+                type: 'dragFacilityNode',
+                nodeKey: clickedKey,
+                startCX: pos.x,
+                startCY: pos.y,
+                origX: origNodeX,
+                origY: origNodeY,
+                el: nodeEl,
+                moved: false
+            };
+        }
+
+
                     return;
                 }
                 // No node hit → start rectangle selection
@@ -312,36 +449,82 @@ window.editorCanvas = (function () {
             return;
         }
 
+        
         if (s.type === 'groupDrag') {
-            s.groupEls.forEach(function (item) { item.el.removeAttribute('transform'); });
-            if (s.moved) {
-                var gPos = clientToContent(e.clientX, e.clientY);
-                var rawDx = gPos.x - s.startCX;
-                var rawDy = gPos.y - s.startCY;
-                var anchorEl = s.groupEls.find(function (g) { return g.nodeKey === s.anchorKey; }) || s.groupEls[0];
-                var snappedAnchorX = snapToGrid(anchorEl.origX + rawDx);
-                var snappedAnchorY = snapToGrid(anchorEl.origY + rawDy);
-                var snappedDx = snappedAnchorX - anchorEl.origX;
-                var snappedDy = snappedAnchorY - anchorEl.origY;
-                if (_dotNet) _dotNet.invokeMethodAsync('JsOnFacilityGroupDragEnd', snappedDx, snappedDy);
-                _suppressNextClick = true;
-            }
+    s.groupEls.forEach(function (item) {
+        item.el.removeAttribute('transform');
+    });
+
+    if (s.moved) {
+        var gPos = clientToContent(e.clientX, e.clientY);
+        var rawDx = gPos.x - s.startCX;
+        var rawDy = gPos.y - s.startCY;
+
+        var anchorEl =
+            s.groupEls.find(function (g) { return g.nodeKey === s.anchorKey; }) ||
+            s.groupEls[0];
+
+        if (!anchorEl) {
+            _suppressNextClick = true;
             return;
         }
 
+        var snappedAnchorX = snapToGrid(anchorEl.origX + rawDx);
+        var snappedAnchorY = snapToGrid(anchorEl.origY + rawDy);
+        var snappedDx = snappedAnchorX - anchorEl.origX;
+        var snappedDy = snappedAnchorY - anchorEl.origY;
+
+        if (_dotNet) {
+            _dotNet.invokeMethodAsync('JsOnFacilityGroupDragEnd', snappedDx, snappedDy);
+        }
+
+        // Keep the moved group selected for the next immediate drag.
+        // Blazor currently sends an empty sync right after drop, so we must
+        // preserve the local multi-selection for a short time.
+        var movedKeys = new Set(
+            s.groupEls.map(function (item) { return item.nodeKey; })
+        );
+
+        _selectedNodeKeys = movedKeys;
+        _pendingRectSelectionKeys = new Set(movedKeys);
+        _pendingRectSelectionElements = null; // next drag can rebuild from current DOM
+        _pendingRectSelectionUntil = Date.now() + 1500;
+    }
+
+    _suppressNextClick = true;
+    return;
+    }
+
+
+        
         if (s.type === 'rectSelect') {
             var selRectEl2 = document.getElementById(_svgId + '-sel-rect');
             if (selRectEl2) selRectEl2.remove();
+
             var x1 = Math.min(s.startX, s.currX);
             var y1 = Math.min(s.startY, s.currY);
             var x2 = Math.max(s.startX, s.currX);
             var y2 = Math.max(s.startY, s.currY);
+
             if ((x2 - x1) > 4 && (y2 - y1) > 4) {
-                _suppressNextClick = true;  // prevent onClick from firing JsOnElementClicked('','None')
-                if (_dotNet) _dotNet.invokeMethodAsync('JsOnRectSelectEnd', x1, y1, x2, y2, s.ctrlKey);
+                _suppressNextClick = true;
+
+                // Local JS update first, before the Blazor roundtrip finishes.
+                applyLocalRectSelection(x1, y1, x2, y2, s.ctrlKey);
+                
+                console.debug('[rect-select-local]', {
+                    selected: Array.from(_selectedNodeKeys || []),
+                    pending: _pendingRectSelectionKeys ? Array.from(_pendingRectSelectionKeys) : []
+                });
+
+
+                if (_dotNet) {
+                    _dotNet.invokeMethodAsync('JsOnRectSelectEnd', x1, y1, x2, y2, s.ctrlKey);
+                }
             }
-            return;
-        }
+        return;
+    }
+
     }
 
     function onClick(e) {
@@ -366,7 +549,11 @@ window.editorCanvas = (function () {
                 } else {
                     if (_dotNet) _dotNet.invokeMethodAsync('JsOnElementClicked', nodeEl.dataset.nodeKey, 'FacilityNode');
                 }
-            } else {
+            } else {                
+                _selectedNodeKeys = new Set();
+                _pendingRectSelectionKeys = null;
+                _pendingRectSelectionElements = null;
+                _pendingRectSelectionUntil = 0;
                 if (_dotNet) _dotNet.invokeMethodAsync('JsOnElementClicked', '', 'None');
             }
         } else if (_tool === 'AddDevice') {
@@ -442,53 +629,68 @@ window.editorCanvas = (function () {
 
     return {
         init: function (svgId, dotNet) {
-            this.dispose(svgId);
-            _svgId = svgId;
+            
+        console.debug('[editor-init]', {
+            svgId: svgId,
+            sameInstance: _svgId === svgId,
+            selectedSize: _selectedNodeKeys ? _selectedNodeKeys.size : 0,
+            pendingSize: _pendingRectSelectionKeys ? _pendingRectSelectionKeys.size : 0
+        });
+
+        // If the same schematic instance is being re-rendered, do NOT reset
+        // selected-node state / pending rect-selection state / transform.
+        if (_svgId === svgId) {
             _dotNet = dotNet;
-            _transform = { tx: 0, ty: 0, scale: 1.0 };
-            _state = null;
 
             var svg = getSvg();
-            if (!svg) { console.warn('editorCanvas.init: SVG #' + svgId + ' not found'); return; }
+            if (svg) {
+                svg.style.cursor = cursorForTool(_tool);
+            }
 
-            _handlers = {
-                mousedown: onMouseDown,
-                mousemove: onMouseMove,
-                mouseup: onMouseUp,
-                click: onClick,
-                wheel: onWheel,
-                mouseleave: function () {
-                    if (_state && _state.type === 'draw') removePreview();
-                    if (_state && _state.type === 'drag' && _state.el)
-                        _state.el.removeAttribute('transform');
-                    if (_state && _state.type === 'dragFacilityNode' && _state.el)
-                        _state.el.removeAttribute('transform');
-                    if (_state && _state.type === 'groupDrag' && _state.groupEls)
-                        _state.groupEls.forEach(function (item) { item.el.removeAttribute('transform'); });
-                    if (_state && _state.type === 'rectSelect') {
-                        var sr = document.getElementById(_svgId + '-sel-rect');
-                        if (sr) sr.remove();
-                    }
-                    if (_state && _state.type === 'pan') svg.style.cursor = cursorForTool(_tool);
-                    _state = null;
-                },
-                contextmenu: function (e) { e.preventDefault(); },
-                keydown: onKeyDown,
-                keyup: onKeyUp
-            };
+            applyTransform();
+            return;
+        }
 
-            svg.addEventListener('mousedown', _handlers.mousedown);
-            svg.addEventListener('mousemove', _handlers.mousemove);
-            svg.addEventListener('mouseup', _handlers.mouseup);
-            svg.addEventListener('click', _handlers.click);
-            svg.addEventListener('wheel', _handlers.wheel, { passive: false });
-            svg.addEventListener('mouseleave', _handlers.mouseleave);
-            svg.addEventListener('contextmenu', _handlers.contextmenu);
-            document.addEventListener('keydown', _handlers.keydown);
-            document.addEventListener('keyup', _handlers.keyup);
+        // True instance change: dispose old handlers/state first
+        if (_svgId) {
+            this.dispose();
+        }
 
-            svg.style.cursor = cursorForTool(_tool);
-        },
+        _svgId = svgId;
+        _dotNet = dotNet;
+        _transform = { tx: 0, ty: 0, scale: 1.0 };
+        _state = null;
+        _spaceDown = false;
+        _selectedNodeKeys = new Set();
+        _pendingRectSelectionKeys = null;
+
+        var svg = getSvg();
+        if (!svg) return;
+
+        var content = getContent();
+        if (!content) return;
+
+        _handlers = {
+            mousedown: onMouseDown,
+            mousemove: onMouseMove,
+            mouseup: onMouseUp,
+            click: onClick,
+            wheel: onWheel,
+            keydown: onKeyDown,
+            keyup: onKeyUp
+        };
+
+        svg.addEventListener('mousedown', _handlers.mousedown);
+        window.addEventListener('mousemove', _handlers.mousemove);
+        window.addEventListener('mouseup', _handlers.mouseup);
+        svg.addEventListener('click', _handlers.click);
+        svg.addEventListener('wheel', _handlers.wheel, { passive: false });
+        window.addEventListener('keydown', _handlers.keydown);
+        window.addEventListener('keyup', _handlers.keyup);
+
+        svg.style.cursor = cursorForTool(_tool);
+        applyTransform();
+    },
 
         setTool: function (tool) {
             _tool = tool;
@@ -632,10 +834,40 @@ window.editorCanvas = (function () {
             if (!enabled) _selectedNodeKeys = new Set();
         },
 
-        /** Synchronizes the set of selected facility node keys from Blazor (used for group drag detection). */
         setSelectedNodes: function (keys) {
-            _selectedNodeKeys = new Set(Array.isArray(keys) ? keys : []);
-        },
+    var next = new Set(Array.isArray(keys) ? keys : []);
+
+    // Ignore transient empty sync immediately after local rect-select.
+    if (
+        next.size === 0 &&
+        _pendingRectSelectionKeys &&
+        _pendingRectSelectionKeys.size > 1 &&
+        Date.now() < _pendingRectSelectionUntil
+    ) {
+        console.debug('[setSelectedNodes] ignoring transient empty sync', {
+            incomingSize: next.size,
+            pendingSize: _pendingRectSelectionKeys.size,
+            msLeft: _pendingRectSelectionUntil - Date.now()
+        });
+        return;
+    }
+
+    _selectedNodeKeys = next;
+
+    if (next.size > 1) {
+        _pendingRectSelectionKeys = new Set(next);
+    } else {
+        _pendingRectSelectionKeys = null;
+        _pendingRectSelectionElements = null;
+        _pendingRectSelectionUntil = 0;
+    }
+
+    console.debug('[setSelectedNodes]', {
+        size: next.size,
+        keys: Array.from(next)
+    });
+},
+
 
         /** Pans the viewport so that the given canvas point (x, y) is visible near the top-third of the view. */
         panToNode: function (x, y, scale) {
@@ -651,26 +883,27 @@ window.editorCanvas = (function () {
             applyTransform();
         },
 
-        dispose: function (svgId) {
-            var id = svgId || _svgId;
-            var svg = document.getElementById(id);
-            if (svg && _handlers.mousedown) {
-                svg.removeEventListener('mousedown', _handlers.mousedown);
-                svg.removeEventListener('mousemove', _handlers.mousemove);
-                svg.removeEventListener('mouseup', _handlers.mouseup);
-                svg.removeEventListener('click', _handlers.click);
-                svg.removeEventListener('wheel', _handlers.wheel);
-                svg.removeEventListener('mouseleave', _handlers.mouseleave);
-                svg.removeEventListener('contextmenu', _handlers.contextmenu);
-            }
-            if (_handlers.keydown) {
-                document.removeEventListener('keydown', _handlers.keydown);
-                document.removeEventListener('keyup', _handlers.keyup);
-            }
-            if (_dotNet) { _dotNet = null; }
+        
+        dispose: function () {
+            var svg = getSvg();
+
+            if (svg && _handlers.mousedown) svg.removeEventListener('mousedown', _handlers.mousedown);
+            if (svg && _handlers.click) svg.removeEventListener('click', _handlers.click);
+            if (svg && _handlers.wheel) svg.removeEventListener('wheel', _handlers.wheel);
+
+            if (_handlers.mousemove) window.removeEventListener('mousemove', _handlers.mousemove);
+            if (_handlers.mouseup) window.removeEventListener('mouseup', _handlers.mouseup);
+            if (_handlers.keydown) window.removeEventListener('keydown', _handlers.keydown);
+            if (_handlers.keyup) window.removeEventListener('keyup', _handlers.keyup);
+
             _handlers = {};
             _state = null;
+            _svgId = null;
+            _dotNet = null;
+            _selectedNodeKeys = new Set();
+            _pendingRectSelectionKeys = null;
         }
+
     };
 }());
 

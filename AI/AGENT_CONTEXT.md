@@ -97,6 +97,10 @@
 - Entering editor mode should initialize the viewport in the same logical position as Home.
 - Home must focus the primary external/top root node of the graph, not a generic facility wrapper/container node.
 - Layout changes must go through the existing dirty/save flow and activate the orange save diskette.
+- In single-select mode, clicking a node should automatically switch the right panel to Edit.
+- Group drag must work without holding any modifier key:
+  if multiple nodes are selected and the user drags one of the selected nodes, the whole selected group must move.
+
 
 
 ## AI workflow mode policy

@@ -58,3 +58,21 @@ Editor UX: selection-first multi-select/home/grid fixes
 
 ### Remaining issue / next step
 - Execute focused manual UI checks for rectangle-selection highlighting, group drag interaction feel, and external-root targeting on current dataset.
+
+### Date
+[2026-04-21 14:15]
+
+### Task
+Editor UX: group drag fix and single-select Edit tab
+
+### What changed
+- Fixed facility group drag click handling so clicking a selected node no longer collapses multi-selection before drag starts.
+- Changed group drag persistence to apply the already snapped group delta without per-node re-snapping, preserving relative spacing.
+- In edit mode, single-clicking a node now forces the right panel back to the Edit tab.
+
+### What works now
+- Group drag can stay armed after box selection and does not require a modifier key.
+- Single-select node clicks in edit mode return the properties panel to Edit.
+
+### Remaining issue / next step
+- Run focused manual UI verification for multi-select drag feel, relative spacing preservation, and dirty/save/undo behavior on the current dataset.

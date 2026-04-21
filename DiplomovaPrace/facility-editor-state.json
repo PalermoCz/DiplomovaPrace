@@ -30,9 +30,9 @@
       "zone": null,
       "tags": [],
       "note": null,
-      "xHint": 2260,
-      "yHint": 80,
-      "updatedUtc": "2026-04-21T11:58:38.507162Z"
+      "xHint": 2860,
+      "yHint": -220,
+      "updatedUtc": "2026-04-21T16:42:02.1376078Z"
     },
     {
       "nodeKey": "external_grid",
@@ -41,9 +41,9 @@
       "zone": null,
       "tags": [],
       "note": null,
-      "xHint": 3420,
-      "yHint": 0,
-      "updatedUtc": "2026-04-21T13:00:34.8910948Z"
+      "xHint": 2860,
+      "yHint": 100,
+      "updatedUtc": "2026-04-21T16:41:59.98568Z"
     },
     {
       "nodeKey": "facility_root",
@@ -52,9 +52,9 @@
       "zone": null,
       "tags": [],
       "note": null,
-      "xHint": 2500,
-      "yHint": 0,
-      "updatedUtc": "2026-04-21T13:31:20.705376Z"
+      "xHint": 3040,
+      "yHint": -320,
+      "updatedUtc": "2026-04-21T16:41:47.2015209Z"
     },
     {
       "nodeKey": "main_h2_bus",
@@ -96,9 +96,9 @@
       "zone": null,
       "tags": [],
       "note": null,
-      "xHint": 2120,
+      "xHint": 2040,
       "yHint": 480,
-      "updatedUtc": "2026-04-21T12:48:19.7544186Z"
+      "updatedUtc": "2026-04-21T17:15:57.0673808Z"
     },
     {
       "nodeKey": "meter__h2_z311",
@@ -118,9 +118,9 @@
       "zone": null,
       "tags": [],
       "note": null,
-      "xHint": 2020,
-      "yHint": 200,
-      "updatedUtc": "2026-04-21T13:31:10.3441716Z"
+      "xHint": 2160,
+      "yHint": 240,
+      "updatedUtc": "2026-04-21T16:41:17.1571533Z"
     },
     {
       "nodeKey": "meter__h2_z351",
@@ -151,9 +151,9 @@
       "zone": null,
       "tags": [],
       "note": null,
-      "xHint": 1860,
-      "yHint": 220,
-      "updatedUtc": "2026-04-21T14:19:14.3337701Z"
+      "xHint": 2500,
+      "yHint": -100,
+      "updatedUtc": "2026-04-21T19:36:30.4941194Z"
     },
     {
       "nodeKey": "meter__v_ze84",
@@ -162,9 +162,9 @@
       "zone": null,
       "tags": [],
       "note": null,
-      "xHint": 1800,
-      "yHint": 220,
-      "updatedUtc": "2026-04-21T14:19:16.4788267Z"
+      "xHint": 2460,
+      "yHint": -100,
+      "updatedUtc": "2026-04-21T19:36:30.4941219Z"
     },
     {
       "nodeKey": "other_pv",
@@ -173,9 +173,9 @@
       "zone": null,
       "tags": [],
       "note": null,
-      "xHint": 1920,
-      "yHint": 220,
-      "updatedUtc": "2026-04-21T14:19:12.5560033Z"
+      "xHint": 2540,
+      "yHint": -100,
+      "updatedUtc": "2026-04-21T19:36:30.4941223Z"
     },
     {
       "nodeKey": "pv_roof_branch",
@@ -184,9 +184,9 @@
       "zone": null,
       "tags": [],
       "note": null,
-      "xHint": 1860,
-      "yHint": 160,
-      "updatedUtc": "2026-04-21T14:19:30.523314Z"
+      "xHint": 2500,
+      "yHint": -200,
+      "updatedUtc": "2026-04-21T19:36:32.7181287Z"
     },
     {
       "nodeKey": "transformer_pair_h2_a",

@@ -3544,32 +3544,71 @@
     }
 
     private async Task HandleGroupDragEndAsync((double DeltaX, double DeltaY) args)
+{
+    if (!_isEditModeOpen || _selectionSet.Count == 0 || _schematicLayout is null)
+        return;
+
+    // Explicitly preserve current selection, because ReloadData(...) still
+    // ends up clearing it before SyncEditorSelectionToJsAsync() runs.
+    var preservedSelection = _selectionSet.ToArray();
+
+    var snapshot = await SnapshotEditStateAsync();
+
+    var nodesByKey = _schematicLayout.Nodes.ToDictionary(n => n.NodeKey, StringComparer.OrdinalIgnoreCase);
+    var updatedStates = new List<FacilityNodeEditorState>();
+
+    foreach (var nodeKey in preservedSelection)
     {
-        if (!_isEditModeOpen || _selectionSet.Count == 0 || _schematicLayout is null) return;
+        if (!nodesByKey.TryGetValue(nodeKey, out var layoutNode))
+            continue;
 
-        var snapshot = await SnapshotEditStateAsync();
+        var existing = _editorNodeStatesByKey.TryGetValue(nodeKey, out var c) ? c : null;
 
-        var nodesByKey = _schematicLayout.Nodes.ToDictionary(n => n.NodeKey, StringComparer.OrdinalIgnoreCase);
-        var updatedStates = new List<FacilityNodeEditorState>();
-        foreach (var nodeKey in _selectionSet)
+        updatedStates.Add(new FacilityNodeEditorState
         {
-            if (!nodesByKey.TryGetValue(nodeKey, out var layoutNode)) continue;
-            var existing = _editorNodeStatesByKey.TryGetValue(nodeKey, out var c) ? c : null;
-            updatedStates.Add(new FacilityNodeEditorState
-            {
-                NodeKey = nodeKey,
-                Label = existing?.Label, NodeType = existing?.NodeType,
-                Zone = existing?.Zone, Note = existing?.Note, Tags = existing?.Tags ?? [],
-                XHint = Math.Round(SnapToEditorGrid(layoutNode.X + args.DeltaX), 1),
-                YHint = Math.Round(SnapToEditorGrid(layoutNode.Y + args.DeltaY), 1),
-            });
-        }
+            NodeKey = nodeKey,
+            Label = existing?.Label,
+            NodeType = existing?.NodeType,
+            Zone = existing?.Zone,
+            Note = existing?.Note,
+            Tags = existing?.Tags ?? [],
+            XHint = Math.Round(layoutNode.X + args.DeltaX, 1),
+            YHint = Math.Round(layoutNode.Y + args.DeltaY, 1),
+        });
+    }
 
-        if (updatedStates.Count == 0) return;
-        await FacilityEditorStateService.SaveNodeStatesAsync(updatedStates);
-        PushEditUndoSnapshot(snapshot, $"Přesun skupiny ({_selectionSet.Count} uzlů)");
-        await ReloadData(preserveSelection: true);
-        await SyncEditorSelectionToJsAsync();
+    if (updatedStates.Count == 0)
+        return;
+
+    await FacilityEditorStateService.SaveNodeStatesAsync(updatedStates);
+
+    PushEditUndoSnapshot(snapshot, $"Přesun skupiny ({preservedSelection.Length} uzlů)");
+
+    await ReloadData(preserveSelection: true);
+
+    // Hard-restore selection after reload.
+    ClearSelectionSetState();
+
+    if (_schematicLayout is not null)
+    {
+        var validKeys = new HashSet<string>(
+            _schematicLayout.Nodes.Select(n => n.NodeKey),
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var key in preservedSelection)
+        {
+            if (validKeys.Contains(key))
+                AddNodeToSelectionSet(key);
+        }
+    }
+
+    SyncEditorFocusFromSelectionSet();
+
+    if (_selectionSet.Count > 1)
+        SwitchEditorTab("layout");
+
+    await SyncEditorSelectionToJsAsync();
+    await InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleNodeCtrlClickedAsync(string nodeKey)
@@ -3724,6 +3763,7 @@
         {
             ClearSelectionSetState();
             AddNodeToSelectionSet(nodeKey);
+            _editorActiveTab = "edit";
             var editFocusChanged = ApplyFocusNode(nodeKey);
             if (!editFocusChanged)
             {
