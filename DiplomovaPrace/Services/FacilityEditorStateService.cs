@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DiplomovaPrace.Persistence.Schematic;
 
 namespace DiplomovaPrace.Services;
 
@@ -9,6 +10,7 @@ public sealed class FacilityNodeEditorState
     public string? Label { get; init; }
     public string? NodeType { get; init; }
     public string? Zone { get; init; }
+    public string? StylePresetKey { get; init; }
     public IReadOnlyList<string> Tags { get; init; } = [];
     public string? Note { get; init; }
     public double? XHint { get; init; }
@@ -38,11 +40,22 @@ public sealed class FacilityStructureNode
     public DateTime UpdatedUtc { get; init; } = DateTime.UtcNow;
 }
 
+public sealed class FacilityAdditionalRelationship
+{
+    public required string SourceNodeKey { get; init; }
+    public required string TargetNodeKey { get; init; }
+    public required string RelationshipKind { get; init; }
+    public string? Note { get; init; }
+    public DateTime UpdatedUtc { get; init; } = DateTime.UtcNow;
+}
+
 public sealed class FacilityStructureState
 {
     public IReadOnlyList<FacilityStructureNode> AddedNodes { get; init; } = [];
     public IReadOnlySet<string> RemovedNodeKeys { get; init; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     public IReadOnlyDictionary<string, string?> ParentOverrides { get; init; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+    public IReadOnlyList<FacilityAdditionalRelationship> AddedRelationships { get; init; } = [];
+    public IReadOnlyList<FacilityAdditionalRelationship> RemovedRelationships { get; init; } = [];
 }
 
 public sealed class FacilityStructureEditResult
@@ -71,7 +84,7 @@ public sealed class FacilityStructureEditResult
 
 public sealed class FacilityEditorStateService
 {
-    private const int CurrentSchemaVersion = 2;
+    private const int CurrentSchemaVersion = 4;
 
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly string _stateFilePath;
@@ -139,6 +152,21 @@ public sealed class FacilityEditorStateService
                 .GroupBy(node => node.NodeKey, StringComparer.OrdinalIgnoreCase)
                 .Select(group => NormalizeNodeState(group.Last()))
                 .ToDictionary(node => node.NodeKey, StringComparer.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<IReadOnlyDictionary<string, FacilityNodeStylePreset>> GetStylePresetsByKeyAsync(CancellationToken ct = default)
+    {
+        await _gate.WaitAsync(ct);
+
+        try
+        {
+            var state = await LoadStateUnsafeAsync(ct);
+            return FacilityNodeStyleSystem.NormalizePresetLibrary(state.StylePresets);
         }
         finally
         {
@@ -387,6 +415,116 @@ public sealed class FacilityEditorStateService
         }
     }
 
+    public async Task<FacilityStructureEditResult> TryAddAdditionalRelationshipAsync(
+        FacilityAdditionalRelationship relationship,
+        IReadOnlySet<string> currentNodeKeys,
+        IEnumerable<FacilityAdditionalRelationship> currentRelationships,
+        CancellationToken ct = default)
+    {
+        FacilityAdditionalRelationship normalizedRelationship;
+        try
+        {
+            normalizedRelationship = NormalizeAdditionalRelationship(relationship);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return FacilityStructureEditResult.Fail(ex.Message);
+        }
+
+        if (!currentNodeKeys.Contains(normalizedRelationship.SourceNodeKey))
+        {
+            return FacilityStructureEditResult.Fail($"Zdrojový uzel {normalizedRelationship.SourceNodeKey} neexistuje.");
+        }
+
+        if (!currentNodeKeys.Contains(normalizedRelationship.TargetNodeKey))
+        {
+            return FacilityStructureEditResult.Fail($"Cílový uzel {normalizedRelationship.TargetNodeKey} neexistuje.");
+        }
+
+        var relationshipKey = BuildAdditionalRelationshipKey(normalizedRelationship);
+        var existingRelationshipKeys = currentRelationships
+            .Select(BuildAdditionalRelationshipKey)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (existingRelationshipKeys.Contains(relationshipKey))
+        {
+            return FacilityStructureEditResult.Fail("Stejná explicitní vazba už existuje.");
+        }
+
+        await _gate.WaitAsync(ct);
+
+        try
+        {
+            var state = await LoadStateUnsafeAsync(ct);
+            var normalizedStructure = NormalizeStructureStateMutable(state.Structure);
+
+            normalizedStructure.RemoveRemovedRelationship(relationshipKey);
+            normalizedStructure.UpsertAddedRelationship(normalizedRelationship);
+
+            normalizedStructure.Sort();
+            state.Structure = normalizedStructure.ToDocument();
+            state.SchemaVersion = CurrentSchemaVersion;
+            await PersistStateUnsafeAsync(state, ct);
+
+            return FacilityStructureEditResult.Ok($"Explicitní vazba {normalizedRelationship.SourceNodeKey} → {normalizedRelationship.TargetNodeKey} ({normalizedRelationship.RelationshipKind}) byla přidána.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<FacilityStructureEditResult> TryRemoveAdditionalRelationshipAsync(
+        FacilityAdditionalRelationship relationship,
+        IEnumerable<FacilityAdditionalRelationship> currentRelationships,
+        CancellationToken ct = default)
+    {
+        FacilityAdditionalRelationship normalizedRelationship;
+        try
+        {
+            normalizedRelationship = NormalizeAdditionalRelationship(relationship);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return FacilityStructureEditResult.Fail(ex.Message);
+        }
+
+        var relationshipKey = BuildAdditionalRelationshipKey(normalizedRelationship);
+        var existingRelationshipKeys = currentRelationships
+            .Select(BuildAdditionalRelationshipKey)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (!existingRelationshipKeys.Contains(relationshipKey))
+        {
+            return FacilityStructureEditResult.Fail("Vybraná explicitní vazba už v aktuálním draftu neexistuje.");
+        }
+
+        await _gate.WaitAsync(ct);
+
+        try
+        {
+            var state = await LoadStateUnsafeAsync(ct);
+            var normalizedStructure = NormalizeStructureStateMutable(state.Structure);
+
+            var removedFromAdded = normalizedStructure.RemoveAddedRelationship(relationshipKey);
+            if (removedFromAdded == 0)
+            {
+                normalizedStructure.UpsertRemovedRelationship(normalizedRelationship);
+            }
+
+            normalizedStructure.Sort();
+            state.Structure = normalizedStructure.ToDocument();
+            state.SchemaVersion = CurrentSchemaVersion;
+            await PersistStateUnsafeAsync(state, ct);
+
+            return FacilityStructureEditResult.Ok($"Explicitní vazba {normalizedRelationship.SourceNodeKey} → {normalizedRelationship.TargetNodeKey} ({normalizedRelationship.RelationshipKind}) byla odstraněna.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     public async Task SaveNodeStatesAsync(IEnumerable<FacilityNodeEditorState> nodeStates, CancellationToken ct = default)
     {
         await _gate.WaitAsync(ct);
@@ -414,6 +552,30 @@ public sealed class FacilityEditorStateService
             state.SchemaVersion = CurrentSchemaVersion;
             state.NodeEdits = byNodeKey.Values
                 .OrderBy(node => node.NodeKey, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            await PersistStateUnsafeAsync(state, ct);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task SaveStylePresetsAsync(IEnumerable<FacilityNodeStylePreset> stylePresets, CancellationToken ct = default)
+    {
+        await _gate.WaitAsync(ct);
+
+        try
+        {
+            var state = await LoadStateUnsafeAsync(ct);
+            var normalizedLibrary = FacilityNodeStyleSystem.NormalizePresetLibrary(stylePresets);
+
+            state.SchemaVersion = CurrentSchemaVersion;
+            state.StylePresets = normalizedLibrary.Values
+                .OrderBy(preset => preset.Key.Equals(FacilityNodeStyleSystem.DefaultPresetKey, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+                .ThenBy(preset => preset.Name, StringComparer.CurrentCultureIgnoreCase)
+                .ThenBy(preset => preset.Key, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
             await PersistStateUnsafeAsync(state, ct);
@@ -530,7 +692,9 @@ public sealed class FacilityEditorStateService
         {
             AddedNodes = mutable.AddedNodes,
             RemovedNodeKeys = mutable.RemovedNodeKeys.ToHashSet(StringComparer.OrdinalIgnoreCase),
-            ParentOverrides = new Dictionary<string, string?>(mutable.ParentOverrides, StringComparer.OrdinalIgnoreCase)
+            ParentOverrides = new Dictionary<string, string?>(mutable.ParentOverrides, StringComparer.OrdinalIgnoreCase),
+            AddedRelationships = [.. mutable.AddedRelationships],
+            RemovedRelationships = [.. mutable.RemovedRelationships]
         };
     }
 
@@ -589,11 +753,31 @@ public sealed class FacilityEditorStateService
             normalized.ParentOverrides[normalizedNodeKey] = normalizedParentNodeKey;
         }
 
+        foreach (var relationship in structure.AddedRelationships)
+        {
+            var normalizedRelationship = NormalizeAdditionalRelationship(relationship);
+            normalized.RemoveRemovedRelationship(BuildAdditionalRelationshipKey(normalizedRelationship));
+            normalized.UpsertAddedRelationship(normalizedRelationship);
+        }
+
+        foreach (var relationship in structure.RemovedRelationships)
+        {
+            var normalizedRelationship = NormalizeAdditionalRelationship(relationship);
+            normalized.UpsertRemovedRelationship(normalizedRelationship);
+        }
+
         normalized.AddedNodes.RemoveAll(node => normalized.RemovedNodeKeys.Contains(node.NodeKey));
         foreach (var removedNodeKey in normalized.RemovedNodeKeys)
         {
             normalized.ParentOverrides.Remove(removedNodeKey);
         }
+
+        normalized.AddedRelationships.RemoveAll(relationship =>
+            normalized.RemovedNodeKeys.Contains(relationship.SourceNodeKey)
+            || normalized.RemovedNodeKeys.Contains(relationship.TargetNodeKey));
+        normalized.RemovedRelationships.RemoveAll(relationship =>
+            normalized.RemovedNodeKeys.Contains(relationship.SourceNodeKey)
+            || normalized.RemovedNodeKeys.Contains(relationship.TargetNodeKey));
 
         normalized.Sort();
         return normalized;
@@ -627,6 +811,67 @@ public sealed class FacilityEditorStateService
             YHint = NormalizeHint(node.YHint),
             UpdatedUtc = node.UpdatedUtc == default ? DateTime.UtcNow : node.UpdatedUtc
         };
+    }
+
+    private static FacilityAdditionalRelationship NormalizeAdditionalRelationship(FacilityAdditionalRelationship relationship)
+    {
+        var sourceNodeKey = NormalizeRequiredNodeKey(relationship.SourceNodeKey);
+        var targetNodeKey = NormalizeRequiredNodeKey(relationship.TargetNodeKey);
+        if (sourceNodeKey.Equals(targetNodeKey, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Explicitní vazba nemůže spojovat uzel sám na sebe.");
+        }
+
+        var relationshipKind = NormalizeRelationshipKind(relationship.RelationshipKind);
+
+        return new FacilityAdditionalRelationship
+        {
+            SourceNodeKey = sourceNodeKey,
+            TargetNodeKey = targetNodeKey,
+            RelationshipKind = relationshipKind,
+            Note = NormalizeOptionalText(relationship.Note),
+            UpdatedUtc = relationship.UpdatedUtc == default ? DateTime.UtcNow : relationship.UpdatedUtc
+        };
+    }
+
+    private static string NormalizeRelationshipKind(string? relationshipKind)
+    {
+        var normalized = NormalizeOptionalText(relationshipKind);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new InvalidOperationException("Relationship kind musí být vyplněný.");
+        }
+
+        normalized = normalized.ToLowerInvariant();
+        if (string.Equals(normalized, SchematicRelationshipKinds.LayoutPrimary, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("layout_primary se upravuje pouze přes primary layout parent.");
+        }
+
+        return normalized;
+    }
+
+    private static string BuildAdditionalRelationshipKey(FacilityAdditionalRelationship relationship)
+    {
+        return BuildAdditionalRelationshipKey(relationship.SourceNodeKey, relationship.TargetNodeKey, relationship.RelationshipKind);
+    }
+
+    private static string BuildAdditionalRelationshipKey(string sourceNodeKey, string targetNodeKey, string relationshipKind)
+    {
+        return string.Create(
+            sourceNodeKey.Length + targetNodeKey.Length + relationshipKind.Length + 2,
+            (sourceNodeKey, targetNodeKey, relationshipKind),
+            static (span, state) =>
+            {
+                var offset = 0;
+                state.sourceNodeKey.AsSpan().CopyTo(span[offset..]);
+                offset += state.sourceNodeKey.Length;
+                span[offset++] = '|';
+                state.targetNodeKey.AsSpan().CopyTo(span[offset..]);
+                offset += state.targetNodeKey.Length;
+                span[offset++] = '|';
+                state.relationshipKind.AsSpan().CopyTo(span[offset..]);
+            });
     }
 
     private static string NormalizeRequiredNodeKey(string? nodeKey)
@@ -709,6 +954,7 @@ public sealed class FacilityEditorStateService
         return !string.IsNullOrWhiteSpace(nodeState.Label)
             || !string.IsNullOrWhiteSpace(nodeState.NodeType)
             || !string.IsNullOrWhiteSpace(nodeState.Zone)
+            || !string.IsNullOrWhiteSpace(nodeState.StylePresetKey)
             || nodeState.XHint.HasValue
             || nodeState.YHint.HasValue
             || !string.IsNullOrWhiteSpace(nodeState.Note)
@@ -729,6 +975,7 @@ public sealed class FacilityEditorStateService
             Label = NormalizeOptionalText(nodeState.Label),
             NodeType = NormalizeOptionalText(nodeState.NodeType),
             Zone = NormalizeOptionalText(nodeState.Zone),
+            StylePresetKey = NormalizeOptionalStylePresetKey(nodeState.StylePresetKey),
             Tags = NormalizeTags(nodeState.Tags),
             Note = NormalizeOptionalText(nodeState.Note),
             XHint = NormalizeHint(nodeState.XHint),
@@ -801,6 +1048,12 @@ public sealed class FacilityEditorStateService
         return raw.Trim();
     }
 
+    private static string? NormalizeOptionalStylePresetKey(string? raw)
+    {
+        var normalized = FacilityNodeStyleSystem.NormalizePresetKey(raw);
+        return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
+    }
+
     private static double? NormalizeHint(double? hint)
     {
         if (!hint.HasValue || !double.IsFinite(hint.Value))
@@ -812,6 +1065,7 @@ public sealed class FacilityEditorStateService
     {
         public int SchemaVersion { get; set; } = CurrentSchemaVersion;
         public List<FacilityNodeEditorState> NodeEdits { get; set; } = [];
+        public List<FacilityNodeStylePreset> StylePresets { get; set; } = [];
         public List<FacilitySavedWorkingSet> WorkingSets { get; set; } = [];
         public FacilityStructureStateDocument Structure { get; set; } = new();
     }
@@ -821,6 +1075,8 @@ public sealed class FacilityEditorStateService
         public List<FacilityStructureNode> AddedNodes { get; set; } = [];
         public List<string> RemovedNodeKeys { get; set; } = [];
         public Dictionary<string, string?> ParentOverrides { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        public List<FacilityAdditionalRelationship> AddedRelationships { get; set; } = [];
+        public List<FacilityAdditionalRelationship> RemovedRelationships { get; set; } = [];
     }
 
     private sealed class MutableStructureState
@@ -828,6 +1084,8 @@ public sealed class FacilityEditorStateService
         public List<FacilityStructureNode> AddedNodes { get; } = [];
         public List<string> RemovedNodeKeys { get; } = [];
         public Dictionary<string, string?> ParentOverrides { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public List<FacilityAdditionalRelationship> AddedRelationships { get; } = [];
+        public List<FacilityAdditionalRelationship> RemovedRelationships { get; } = [];
 
         public FacilityStructureStateDocument ToDocument()
         {
@@ -835,14 +1093,68 @@ public sealed class FacilityEditorStateService
             {
                 AddedNodes = [.. AddedNodes],
                 RemovedNodeKeys = [.. RemovedNodeKeys],
-                ParentOverrides = new Dictionary<string, string?>(ParentOverrides, StringComparer.OrdinalIgnoreCase)
+                ParentOverrides = new Dictionary<string, string?>(ParentOverrides, StringComparer.OrdinalIgnoreCase),
+                AddedRelationships = [.. AddedRelationships],
+                RemovedRelationships = [.. RemovedRelationships]
             };
+        }
+
+        public void UpsertAddedRelationship(FacilityAdditionalRelationship relationship)
+        {
+            var relationshipKey = BuildAdditionalRelationshipKey(relationship);
+            RemoveRemovedRelationship(relationshipKey);
+
+            var existingIndex = AddedRelationships.FindIndex(existing =>
+                BuildAdditionalRelationshipKey(existing).Equals(relationshipKey, StringComparison.OrdinalIgnoreCase));
+
+            if (existingIndex >= 0)
+            {
+                AddedRelationships[existingIndex] = relationship;
+            }
+            else
+            {
+                AddedRelationships.Add(relationship);
+            }
+        }
+
+        public void UpsertRemovedRelationship(FacilityAdditionalRelationship relationship)
+        {
+            var relationshipKey = BuildAdditionalRelationshipKey(relationship);
+            var existingIndex = RemovedRelationships.FindIndex(existing =>
+                BuildAdditionalRelationshipKey(existing).Equals(relationshipKey, StringComparison.OrdinalIgnoreCase));
+
+            if (existingIndex >= 0)
+            {
+                RemovedRelationships[existingIndex] = relationship;
+            }
+            else
+            {
+                RemovedRelationships.Add(relationship);
+            }
+        }
+
+        public int RemoveAddedRelationship(string relationshipKey)
+        {
+            return AddedRelationships.RemoveAll(existing =>
+                BuildAdditionalRelationshipKey(existing).Equals(relationshipKey, StringComparison.OrdinalIgnoreCase));
+        }
+
+        public int RemoveRemovedRelationship(string relationshipKey)
+        {
+            return RemovedRelationships.RemoveAll(existing =>
+                BuildAdditionalRelationshipKey(existing).Equals(relationshipKey, StringComparison.OrdinalIgnoreCase));
         }
 
         public void Sort()
         {
             AddedNodes.Sort((left, right) => StringComparer.OrdinalIgnoreCase.Compare(left.NodeKey, right.NodeKey));
             RemovedNodeKeys.Sort(StringComparer.OrdinalIgnoreCase);
+            AddedRelationships.Sort(static (left, right) => StringComparer.OrdinalIgnoreCase.Compare(
+                BuildAdditionalRelationshipKey(left),
+                BuildAdditionalRelationshipKey(right)));
+            RemovedRelationships.Sort(static (left, right) => StringComparer.OrdinalIgnoreCase.Compare(
+                BuildAdditionalRelationshipKey(left),
+                BuildAdditionalRelationshipKey(right)));
         }
     }
 }

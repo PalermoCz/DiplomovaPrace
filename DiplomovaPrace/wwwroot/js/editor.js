@@ -869,7 +869,7 @@ window.editorCanvas = (function () {
 },
 
 
-        /** Pans the viewport so that the given canvas point (x, y) is visible near the top-third of the view. */
+		/** Pans the viewport so that the given canvas point (x, y) is centered in the current view. */
         panToNode: function (x, y, scale) {
             var svg = getSvg();
             if (!svg) return;
@@ -878,7 +878,7 @@ window.editorCanvas = (function () {
             var vh = rect.height > 10 ? rect.height : 600;
             var s = (scale > 0) ? scale : 1.4;
             _transform.tx = vw / 2 - x * s;
-            _transform.ty = vh / 3 - y * s;
+            _transform.ty = vh / 2 - y * s;
             _transform.scale = s;
             applyTransform();
         },

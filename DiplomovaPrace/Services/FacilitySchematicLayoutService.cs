@@ -1230,7 +1230,10 @@ public static class FacilitySchematicLayoutService
             Id = source.Id,
             FacilityId = source.FacilityId,
             SourceNodeKey = source.SourceNodeKey,
-            TargetNodeKey = source.TargetNodeKey
+            TargetNodeKey = source.TargetNodeKey,
+            RelationshipKind = source.RelationshipKind,
+            IsLayoutEdge = source.IsLayoutEdge,
+            Note = source.Note
         };
     }
 

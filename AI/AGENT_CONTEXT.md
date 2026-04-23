@@ -113,3 +113,37 @@
   3. Agent mode implementation
   4. validation
 - Keep planning concise and avoid unnecessary over-exploration or parallel research.
+
+
+## Current milestone status
+- Full dataset import is working.
+- Binding-based data loading is working.
+- Editor-only grid/drag/save flow is working.
+- Single-select and multi-select editor behavior is now functional.
+- Group drag is working.
+
+## Graph relationship architecture
+- Do not model the graph as a true multi-parent layout tree.
+- Prefer exactly one primary layout parent per node.
+- Preserve additional parent-like / semantic / membership relationships as explicit edges.
+- Keep layout structure, topology, and selection semantics as separate concerns.
+- Strict layout subtree selection and expanded relationship-based selection should remain distinct modes.
+
+- Relationship inspection UI is needed before relationship editing UI.
+- Resolved selection set and visual highlight set must remain understandable and, if different, that difference must be explicit in the UI/logic.
+
+- Relationship inspection UI was a transitional/debugging step.
+- The next milestone is relationship editing UI for additional explicit relationships.
+- Primary layout parent editing and additional relationship editing must remain separate actions.
+
+## Node appearance direction
+- Node appearance should move away from dataset-specific hardcoded layer/type rules.
+- Prefer a universal style preset system.
+- Style editing should live in a separate Style editor surface, not in the normal single-node Edit form.
+- Live preview is required.
+- Alert-based appearance logic is not a current priority and should be removed from the future style model.
+- Selection, focus, and subtree highlight should remain overlay states separate from base node appearance.
+
+
+
+  

@@ -1,6 +1,7 @@
 ﻿@page "/"
 @page "/facility"
 @using DiplomovaPrace.Services
+@using DiplomovaPrace.Persistence.Schematic
 @using DiplomovaPrace.Components.Editor
 @rendermode InteractiveServer
 @inject FacilityQueryService FacilityQueryService
@@ -25,23 +26,54 @@
             <div class="wb-schematic">
                 <div class="wb-schematic-toolbar">
                     <div class="toolbar-left">
-                        <span class="text-muted fw-bold small text-uppercase"><i class="bi bi-bezier2 me-1"></i> Facility Schéma</span>
+                        <span class="text-muted fw-bold small text-uppercase"><i class="bi bi-bezier2 me-1"></i> Facility Schematic</span>
                         <span class="badge bg-secondary-subtle text-secondary border"><i class="bi bi-arrows-fullscreen me-1"></i>Focus</span>
                     </div>
                     <div class="toolbar-right">
+                        <div class="wb-node-search">
+                            <input class="form-control form-control-sm wb-node-search-input"
+                                   @bind="_globalNodeSearchInput"
+                                   @bind:event="oninput"
+                                   @onfocus="OpenGlobalNodeSearch"
+                                @onblur="CloseGlobalNodeSearch"
+                                   placeholder="Search node"
+                                   aria-label="Search node" />
+                            @if (ShouldShowGlobalNodeSearchResults)
+                            {
+                                <div class="wb-node-search-results">
+                                    @if (GetGlobalNodeSearchMatches().Count == 0)
+                                    {
+                                        <div class="wb-node-search-empty">No matches</div>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var nodeMatch in GetGlobalNodeSearchMatches())
+                                        {
+                                            <button type="button"
+                                                    class="wb-node-search-result"
+                                                    @onmousedown:preventDefault="true"
+                                                    @onclick="@(() => FocusNodeFromSearchAsync(nodeMatch.NodeKey))">
+                                                <span class="wb-node-search-result-label">@GetNodeDisplayLabel(nodeMatch)</span>
+                                                <span class="wb-node-search-result-key">@nodeMatch.NodeKey</span>
+                                            </button>
+                                        }
+                                    }
+                                </div>
+                            }
+                        </div>
                         <button class="wb-toolbar-icon-btn" @onclick="GoHomeAsync"
-                                title="Domů – výchozí pohled" disabled="@(_canvasV2 is null)">
+                                title="Default view" disabled="@(_canvasV2 is null)">
                             <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354z"/></svg>
                         </button>
-                        <button class="wb-toolbar-icon-btn" @onclick="() => ReloadData()" title="Znovu načíst schéma">
+                        <button class="wb-toolbar-icon-btn" @onclick="() => ReloadData()" title="Reload schematic">
                             <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></svg>
                         </button>
                         <button class="wb-toolbar-icon-btn"
-                                @onclick="ToggleSchematicFullscreen" title="Zavřít focus – zpět do workbench">
+                                @onclick="ToggleSchematicFullscreen" title="Close focus view">
                             <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5.5 0a.5.5 0 0 1 .5.5v4A1.5 1.5 0 0 1 4.5 6h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5m5 0a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 10 4.5v-4a.5.5 0 0 1 .5-.5M0 10.5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 6 11.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5m10 1a1.5 1.5 0 0 1 1.5-1.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0z"/></svg>
                         </button>
                         <button class="wb-toolbar-icon-btn wb-toolbar-icon-btn-primary"
-                                @onclick="ToggleEditMode" title="Upravit schéma" disabled="@(_facility is null)">
+                                @onclick="ToggleEditMode" title="Edit schematic" disabled="@(_facility is null)">
                             <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/></svg>
                         </button>
                     </div>
@@ -51,7 +83,7 @@
                     {
                         <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
                             <div class="spinner-border mb-3" role="status"></div>
-                            <p class="mb-0">Načítám strukturní data...</p>
+                            <p class="mb-0">Loading structural data...</p>
                         </div>
                     }
                     else
@@ -60,9 +92,10 @@
                                       Layout="_schematicLayout"
                                       InitialFitMode="focus"
                                       SelectedElementId="@SessionService.SelectedElementId"
-                                      SelectedElementIds="@_selectionSet"
-                                      SelectedSubtreeNodeKeys="@SelectedSubtreeNodeKeysForCanvas"
-                                      FacilityNodeAlertSeverities="@AlertSeverityByNodeKey"
+                                      SelectedElementIds="@ResolvedSelectionNodeKeysForCanvas"
+                                      SelectedSubtreeNodeKeys="@VisualHighlightNodeKeysForCanvas"
+                                      NodeStylePresetKeysByNodeKey="@EffectiveNodeStylePresetKeysForCanvas"
+                                      StylePresetsByKey="@EffectiveStylePresetsForCanvas"
                                       OnElementSelected="HandleElementSelected"
                                       OnCanvasClicked="HandleCanvasClicked"
                                       OnNodeDragEnd="HandleNodeDragEndAsync" />
@@ -79,16 +112,47 @@
             <div class="wb-schematic">
                 <div class="wb-schematic-toolbar wb-editor-toolbar">
                     <div class="toolbar-left">
-                        <span class="text-muted fw-bold small text-uppercase"><i class="bi bi-bezier2 me-1"></i> Facility Schéma</span>
+                        <span class="text-muted fw-bold small text-uppercase"><i class="bi bi-bezier2 me-1"></i> Facility Schematic</span>
                         <span class="badge bg-primary-subtle text-primary border border-primary-subtle"><i class="bi bi-pencil-fill me-1"></i>Edit Mode</span>
                     </div>
                     <div class="toolbar-right wb-editor-toolbar-right">
+                        <div class="wb-node-search">
+                            <input class="form-control form-control-sm wb-node-search-input"
+                                   @bind="_globalNodeSearchInput"
+                                   @bind:event="oninput"
+                                   @onfocus="OpenGlobalNodeSearch"
+                                @onblur="CloseGlobalNodeSearch"
+                                   placeholder="Search node"
+                                   aria-label="Search node" />
+                            @if (ShouldShowGlobalNodeSearchResults)
+                            {
+                                <div class="wb-node-search-results">
+                                    @if (GetGlobalNodeSearchMatches().Count == 0)
+                                    {
+                                        <div class="wb-node-search-empty">No matches</div>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var nodeMatch in GetGlobalNodeSearchMatches())
+                                        {
+                                            <button type="button"
+                                                    class="wb-node-search-result"
+                                                    @onmousedown:preventDefault="true"
+                                                    @onclick="@(() => FocusNodeFromSearchAsync(nodeMatch.NodeKey))">
+                                                <span class="wb-node-search-result-label">@GetNodeDisplayLabel(nodeMatch)</span>
+                                                <span class="wb-node-search-result-key">@nodeMatch.NodeKey</span>
+                                            </button>
+                                        }
+                                    }
+                                </div>
+                            }
+                        </div>
                         @* ── View tools ── *@
                         <button class="wb-toolbar-icon-btn" @onclick="GoHomeAsync"
-                                title="Výchozí pohled" disabled="@(_canvasV2 is null)">
+                            title="Default view" disabled="@(_canvasV2 is null)">
                             <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354z"/></svg>
                         </button>
-                        <button class="wb-toolbar-icon-btn" @onclick="() => ReloadData()" title="Znovu načíst schéma">
+                        <button class="wb-toolbar-icon-btn" @onclick="() => ReloadData()" title="Reload schematic">
                             <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></svg>
                         </button>
                         <div class="wb-editor-toolbar-divider"></div>
@@ -161,9 +225,10 @@
                                       Layout="_schematicLayout"
                                       InitialFitMode="home"
                                       SelectedElementId="@SessionService.SelectedElementId"
-                                      SelectedElementIds="@_selectionSet"
-                                      SelectedSubtreeNodeKeys="@SelectedSubtreeNodeKeysForCanvas"
-                                      FacilityNodeAlertSeverities="@AlertSeverityByNodeKey"
+                                      SelectedElementIds="@ResolvedSelectionNodeKeysForCanvas"
+                                      SelectedSubtreeNodeKeys="@VisualHighlightNodeKeysForCanvas"
+                                      NodeStylePresetKeysByNodeKey="@EffectiveNodeStylePresetKeysForCanvas"
+                                      StylePresetsByKey="@EffectiveStylePresetsForCanvas"
                                       ShowGrid="true"
                                       OnElementSelected="HandleElementSelected"
                                       OnCanvasClicked="HandleCanvasClicked"
@@ -213,6 +278,11 @@
                             <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></svg>
                             Import
                         </button>
+                        <button class="wb-editor-tab @(_editorActiveTab == "style" ? "wb-editor-tab-active" : "")"
+                                @onclick="@(() => SwitchEditorTab("style"))">
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12 .25a.75.75 0 0 1 .75.75v2.112a2.75 2.75 0 0 1 1.47 3.78l-4.1 7.38A1.75 1.75 0 0 1 8.59 15H4.75A1.75 1.75 0 0 1 3 13.25v-1.586a1.75 1.75 0 0 1 .256-.91l4.19-6.984A2.75 2.75 0 0 1 10.25 1.1V1A.75.75 0 0 1 11 .25zm-.25 4.5a1.25 1.25 0 0 0-1.072.608l-4.19 6.985a.25.25 0 0 0-.038.128v.779h2.14l4.063-7.314A1.25 1.25 0 0 0 11.75 4.75"/></svg>
+                            Style
+                        </button>
                     }
                 </div>
 
@@ -244,19 +314,19 @@
                     @if (editorHasFocusNode && CanEditFocusedNode)
                     {
                         <div class="ep-section">
-                            <div class="ep-section-label">Základní info</div>
+                            <div class="ep-section-label">Basic Info</div>
                             <div class="ep-field">
-                                <label>Label / Název</label>
+                                <label>Label</label>
                                 <input class="form-control form-control-sm" @bind="_editorLabelInput" maxlength="200" />
                             </div>
                             <div class="ep-field-row">
                                 <div class="ep-field">
                                     <label>NodeType</label>
-                                    <input class="form-control form-control-sm" @bind="_editorNodeTypeInput" maxlength="100" placeholder="subzone, meter…" />
+                                    <input class="form-control form-control-sm" @bind="_editorNodeTypeInput" maxlength="100" placeholder="subzone, meter" />
                                 </div>
                                 <div class="ep-field">
                                     <label>Zone</label>
-                                    <input class="form-control form-control-sm" @bind="_editorZoneInput" maxlength="100" placeholder="volitelně" />
+                                    <input class="form-control form-control-sm" @bind="_editorZoneInput" maxlength="100" placeholder="optional" />
                                 </div>
                             </div>
                             @if (!string.IsNullOrWhiteSpace(_selectedFacilityNode!.MeterUrn))
@@ -269,41 +339,151 @@
                         </div>
 
                         <div class="ep-section">
-                            <div class="ep-section-label">
-                                <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor" class="me-1" aria-hidden="true"><path fill-rule="evenodd" d="M6 3.5A1.5 1.5 0 0 1 7.5 2h1A1.5 1.5 0 0 1 10 3.5v1A1.5 1.5 0 0 1 8.5 6v1H14a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0V8h-5v.5a.5.5 0 0 1-1 0v-1A.5.5 0 0 1 2 7h5.5V6A1.5 1.5 0 0 1 6 4.5zM8.5 5a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5z"/></svg>
-                                Změna parenta
-                            </div>
+                            <div class="ep-section-label">Connections</div>
                             <div class="ep-field">
-                                <label>Aktuální parent</label>
-                                <div class="ep-value-chip">@(_selectedFacilityNode!.ParentNodeKey ?? "root")</div>
-                            </div>
-                            <div class="ep-field">
-                                <label>Nový parent</label>
-                                <select class="form-select form-select-sm" @bind="_reconnectParentNodeKeyInput">
-                                    <option value="">root (bez parenta)</option>
-                                    @foreach (var parentCandidate in GetReconnectParentCandidates(_selectedFacilityNode.NodeKey))
-                                    {
-                                        <option value="@parentCandidate.NodeKey">@parentCandidate.Label (@parentCandidate.NodeKey)</option>
-                                    }
-                                </select>
+                                <label>Primary Parent</label>
+                                <div class="wb-link-item wb-link-item-compact">
+                                    <div>
+                                        <div class="wb-link-item-title">@GetSelectedParentDisplayText()</div>
+                                        <div class="wb-link-item-key">@GetSelectedParentNodeKeyText()</div>
+                                    </div>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-primary wb-inline-action-btn"
+                                            @onclick="ToggleReconnectParentPicker">
+                                        @(_isReconnectParentPickerOpen ? "Close" : "Change")
+                                    </button>
+                                </div>
+                                @if (_isReconnectParentPickerOpen)
+                                {
+                                    <div class="wb-picker-combobox mt-2">
+                                        <input class="form-control form-control-sm"
+                                               @bind="_reconnectParentSearchInput"
+                                               @bind:event="oninput"
+                                               placeholder="Search by label or key" />
+                                        <div class="wb-picker-list">
+                                            <button type="button"
+                                                    class="wb-picker-item @GetPickerSelectionClass(string.Empty, _reconnectParentNodeKeyInput)"
+                                                    @onclick="@(() => SelectReconnectParent(string.Empty))">
+                                                <span class="wb-picker-item-label">Root</span>
+                                                <span class="wb-picker-item-key">No parent</span>
+                                            </button>
+                                            @foreach (var parentCandidate in GetReconnectParentSearchMatches())
+                                            {
+                                                <button type="button"
+                                                        class="wb-picker-item @GetPickerSelectionClass(parentCandidate.NodeKey, _reconnectParentNodeKeyInput)"
+                                                        @onclick="@(() => SelectReconnectParent(parentCandidate.NodeKey))">
+                                                    <span class="wb-picker-item-label">@GetNodeDisplayLabel(parentCandidate)</span>
+                                                    <span class="wb-picker-item-key">@parentCandidate.NodeKey</span>
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+                                }
                             </div>
                             @if (HasChildren(_selectedFacilityNode.NodeKey) && !string.Equals(_reconnectParentNodeKeyInput, _selectedFacilityNode.ParentNodeKey ?? string.Empty, StringComparison.OrdinalIgnoreCase))
                             {
                                 <div class="wb-editor-warning-box">
                                     <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" class="me-1 flex-shrink-0" aria-hidden="true"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg>
                                     <div>
-                                        Uzel má child uzly. Přepojením se přesunou <strong>všechny children</strong> spolu s ním.<br />
+                                        This node has children. Reparenting will move <strong>all children</strong> with it.<br />
                                         <label class="d-flex align-items-center gap-2 mt-2">
                                             <input type="checkbox" @bind="_reconnectChildrenWarningConfirmed" />
-                                            <span>Beru na vědomí, potvrzuji přepojení</span>
+                                            <span>I understand and confirm the reparenting</span>
                                         </label>
                                     </div>
                                 </div>
                             }
+
+                            <div class="ep-field mt-3">
+                                <label>Additional Links</label>
+                                @if (GetFocusedNodeAdditionalLinks().Count == 0)
+                                {
+                                    <div class="ep-hint">No additional links.</div>
+                                }
+                                else
+                                {
+                                    <div class="wb-link-list">
+                                        @foreach (var relationship in GetFocusedNodeAdditionalLinks())
+                                        {
+                                            <div class="wb-link-item">
+                                                <div>
+                                                    <div class="wb-link-item-title">@relationship.CounterpartyLabel</div>
+                                                    <div class="wb-link-item-key">@relationship.CounterpartyNodeKey</div>
+                                                    @if (!string.IsNullOrWhiteSpace(relationship.Note))
+                                                    {
+                                                        <div class="wb-link-item-note">@relationship.Note</div>
+                                                    }
+                                                </div>
+                                                <button class="btn btn-sm btn-outline-danger"
+                                                        disabled="@(!_isSchematicEditorEnabled)"
+                                                        @onclick="@(() => RemoveAdditionalRelationshipAsync(relationship.SourceNodeKey, relationship.TargetNodeKey, relationship.StoredRelationshipKind))">
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                @if (!_isAdditionalRelationshipPickerOpen)
+                                {
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-secondary wb-picker-toggle"
+                                            disabled="@(!_isSchematicEditorEnabled)"
+                                            @onclick="OpenAdditionalRelationshipPicker">
+                                        Add additional link
+                                    </button>
+                                }
+                                else
+                                {
+                                    <div class="wb-picker-combobox">
+                                        <input class="form-control form-control-sm"
+                                               @bind="_additionalRelationshipSearchInput"
+                                               @bind:event="oninput"
+                                               placeholder="Search by label or key"
+                                               disabled="@(!_isSchematicEditorEnabled)" />
+                                        <div class="wb-picker-list mt-2">
+                                            @foreach (var nodeCandidate in GetAdditionalRelationshipSearchMatches())
+                                            {
+                                                <button type="button"
+                                                        class="wb-picker-item @GetPickerSelectionClass(nodeCandidate.NodeKey, _additionalRelationshipCounterpartyNodeKeyInput)"
+                                                        disabled="@(!_isSchematicEditorEnabled)"
+                                                        @onclick="@(() => SelectAdditionalRelationshipCounterparty(nodeCandidate.NodeKey))">
+                                                    <span class="wb-picker-item-label">@GetNodeDisplayLabel(nodeCandidate)</span>
+                                                    <span class="wb-picker-item-key">@nodeCandidate.NodeKey</span>
+                                                </button>
+                                            }
+                                        </div>
+                                        <div class="d-flex justify-content-end">
+                                            <button type="button"
+                                                    class="btn btn-sm btn-link text-decoration-none wb-inline-action"
+                                                    disabled="@(!_isSchematicEditorEnabled)"
+                                                    @onclick="CloseAdditionalRelationshipPicker">
+                                                Close
+                                            </button>
+                                        </div>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(_additionalRelationshipCounterpartyNodeKeyInput))
+                                {
+                                    <div class="wb-link-item wb-link-item-compact wb-selected-target-preview">
+                                        <div>
+                                            <div class="wb-link-item-title">Selected target</div>
+                                            <div class="wb-link-item-key">@GetNodeDisplayLabel(_additionalRelationshipCounterpartyNodeKeyInput) (@_additionalRelationshipCounterpartyNodeKeyInput)</div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center gap-2 mt-2">
+                                <button class="btn btn-sm btn-primary"
+                                        disabled="@(!_isSchematicEditorEnabled || string.IsNullOrWhiteSpace(_additionalRelationshipCounterpartyNodeKeyInput))"
+                                        @onclick="AddAdditionalRelationshipAsync">
+                                    Add Link
+                                </button>
+                            </div>
                         </div>
 
                         <div class="ep-section">
-                            <div class="ep-section-label">Tagy</div>
+                            <div class="ep-section-label">Tags</div>
                             @if (!string.IsNullOrWhiteSpace(_editorTagsInput))
                             {
                                 <div class="wb-tag-list mb-2">
@@ -314,13 +494,13 @@
                                 </div>
                             }
                             <input class="form-control form-control-sm" @bind="_editorTagsInput"
-                                   placeholder="např. hvac, maintenance, zone:workshop" />
-                            <div class="ep-hint">Oddělujte čárkou</div>
+                                   placeholder="hvac, maintenance, zone:workshop" />
+                            <div class="ep-hint">Separate with commas</div>
                         </div>
 
                         <div class="ep-section">
-                            <div class="ep-section-label">Poznámka</div>
-                            <textarea class="form-control form-control-sm" rows="2" maxlength="500" @bind="_editorNoteInput" placeholder="Volitelná poznámka k uzlu..."></textarea>
+                            <div class="ep-section-label">Note</div>
+                            <textarea class="form-control form-control-sm" rows="2" maxlength="500" @bind="_editorNoteInput" placeholder="Optional node note"></textarea>
                         </div>
 
                         <div class="ep-footer">
@@ -499,6 +679,141 @@
                     </div>
                 }
 
+                @* ══ TAB: STYLE ════════════════════════════════════════ *@
+                else if (_editorActiveTab == "style")
+                {
+                    @if (!editorHasFocusNode)
+                    {
+                        <div class="ep-node-header ep-node-header-placeholder">
+                            <div class="ep-node-header-label">Style</div>
+                            <div class="ep-node-header-key">Base appearance presets</div>
+                        </div>
+                        <div class="wb-editor-empty-state">
+                            <svg width="22" height="22" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" class="wb-editor-empty-icon"><path d="M12 .25a.75.75 0 0 1 .75.75v2.112a2.75 2.75 0 0 1 1.47 3.78l-4.1 7.38A1.75 1.75 0 0 1 8.59 15H4.75A1.75 1.75 0 0 1 3 13.25v-1.586a1.75 1.75 0 0 1 .256-.91l4.19-6.984A2.75 2.75 0 0 1 10.25 1.1V1A.75.75 0 0 1 11 .25zm-.25 4.5a1.25 1.25 0 0 0-1.072.608l-4.19 6.985a.25.25 0 0 0-.038.128v.779h2.14l4.063-7.314A1.25 1.25 0 0 0 11.75 4.75"/></svg>
+                            <div>Vyberte uzel ve schématu pro přiřazení a úpravu stylu.</div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="ep-node-header">
+                            <div class="ep-node-header-label">@_selectedFacilityNode!.Label</div>
+                            <div class="ep-node-header-key">@_selectedFacilityNode.NodeKey</div>
+                        </div>
+
+                        <div class="ep-section">
+                            <div class="ep-section-label">Preset assignment</div>
+                            <div class="ep-field">
+                                <label>Assigned preset</label>
+                                <select class="form-select form-select-sm"
+                                        @bind="_styleAssignmentPresetKeyInput"
+                                        @bind:after="HandleStyleAssignmentPresetChanged">
+                                    @foreach (var preset in GetOrderedStylePresets())
+                                    {
+                                        <option value="@preset.Key">@GetStylePresetLabel(preset)</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="ep-hint">Changes preview immediately for the selected node. Use Apply to persist the preset reference.</div>
+                            <div class="wb-style-usage-note">Preset usage: @GetStylePresetUsageCount(_styleAssignmentPresetKeyInput) nodes</div>
+                            <div class="ep-footer ep-style-footer">
+                                <button class="btn btn-sm btn-primary ep-btn-save" @onclick="ApplySelectedNodeStylePresetAsync">
+                                    Apply preset to node
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="ep-section">
+                            <div class="ep-section-label">Preset editor</div>
+                            <div class="wb-style-preset-chip">Editing preset: @GetCurrentStylePresetLabel()</div>
+                            <div class="ep-field">
+                                <label>Name</label>
+                                <input class="form-control form-control-sm" @bind="_stylePresetNameInput" @bind:event="oninput" maxlength="80" />
+                            </div>
+                            <div class="ep-field-row">
+                                <div class="ep-field">
+                                    <label>Shape</label>
+                                    <select class="form-select form-select-sm" @bind="_styleShapeInput">
+                                        @foreach (var shape in Enum.GetValues<FacilityNodeShapeKind>())
+                                        {
+                                            <option value="@shape">@shape</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="ep-field">
+                                    <label>Symbol</label>
+                                    <input class="form-control form-control-sm" @bind="_styleSymbolInput" @bind:event="oninput" maxlength="3" placeholder="optional" />
+                                </div>
+                            </div>
+                            <div class="ep-field-row">
+                                <div class="ep-field">
+                                    <label>Size</label>
+                                    <input type="range" class="form-range wb-style-range" min="16" max="60" step="1" @bind="_styleSizeInput" @bind:event="oninput" />
+                                    <div class="wb-style-range-value">@_styleSizeInput.ToString("0") px</div>
+                                </div>
+                                <div class="ep-field">
+                                    <label>Stroke width</label>
+                                    <input type="range" class="form-range wb-style-range" min="1" max="6" step="0.1" @bind="_styleStrokeWidthInput" @bind:event="oninput" />
+                                    <div class="wb-style-range-value">@_styleStrokeWidthInput.ToString("0.0") px</div>
+                                </div>
+                            </div>
+                            <div class="ep-field-row wb-style-color-row">
+                                <div class="ep-field">
+                                    <label>Fill</label>
+                                    <input type="color" class="form-control form-control-color wb-style-color" @bind="_styleFillColorInput" @bind:event="oninput" />
+                                </div>
+                                <div class="ep-field">
+                                    <label>Stroke</label>
+                                    <input type="color" class="form-control form-control-color wb-style-color" @bind="_styleStrokeColorInput" @bind:event="oninput" />
+                                </div>
+                                <div class="ep-field">
+                                    <label>Symbol</label>
+                                    <input type="color" class="form-control form-control-color wb-style-color" @bind="_styleSymbolColorInput" @bind:event="oninput" />
+                                </div>
+                                <div class="ep-field">
+                                    <label>Label</label>
+                                    <input type="color" class="form-control form-control-color wb-style-color" @bind="_styleLabelColorInput" @bind:event="oninput" />
+                                </div>
+                            </div>
+                            <div class="ep-field-row">
+                                <div class="ep-field">
+                                    <label>Label size</label>
+                                    <input type="range" class="form-range wb-style-range" min="6" max="18" step="0.5" @bind="_styleLabelFontSizeInput" @bind:event="oninput" />
+                                    <div class="wb-style-range-value">@_styleLabelFontSizeInput.ToString("0.0") px</div>
+                                </div>
+                                <div class="ep-field">
+                                    <label>Label weight</label>
+                                    <input type="range" class="form-range wb-style-range" min="400" max="800" step="10" @bind="_styleLabelFontWeightInput" @bind:event="oninput" />
+                                    <div class="wb-style-range-value">@_styleLabelFontWeightInput</div>
+                                </div>
+                            </div>
+                            <div class="ep-hint">Editing the preset updates every node using that preset in the live preview. Save persists the preset library.</div>
+                            @if (!CanDeleteSelectedStylePreset())
+                            {
+                                <div class="wb-style-usage-note">@GetDeleteSelectedStylePresetBlockReason()</div>
+                            }
+                            <div class="ep-footer ep-style-footer">
+                                <button class="btn btn-sm btn-outline-secondary" @onclick="DuplicateSelectedStylePresetAsync">
+                                    Duplicate preset
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger"
+                                        @onclick="DeleteSelectedStylePresetAsync"
+                                        disabled="@(!CanDeleteSelectedStylePreset())"
+                                        title="@GetDeleteSelectedStylePresetBlockReason()">
+                                    Delete preset
+                                </button>
+                                <button class="btn btn-sm btn-primary ep-btn-save" @onclick="SaveSelectedStylePresetAsync">
+                                    Save preset
+                                </button>
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(_styleStatusMessage))
+                        {
+                            <div class="ep-status-msg">@_styleStatusMessage</div>
+                        }
+                    }
+                }
+
                 @* ══ TAB: LAYOUT ════════════════════════════════════════ *@
                 else if (_editorActiveTab == "layout")
                 {
@@ -592,24 +907,55 @@
             <div class="wb-schematic">
                 <div class="wb-schematic-toolbar">
                     <div class="toolbar-left">
-                        <span class="text-muted fw-bold small text-uppercase"><i class="bi bi-bezier2 me-1"></i> Facility Schéma</span>
+                        <span class="text-muted fw-bold small text-uppercase"><i class="bi bi-bezier2 me-1"></i> Facility Schematic</span>
                         @if (_selectedFacilityNode is not null)
                         {
-                            <button class="wb-focus-chip" @onclick="ClosePanel" title="Zrušit focus a výběr">
+                            <button class="wb-focus-chip" @onclick="ClosePanel" title="Clear focus and selection">
                                 <i class="bi bi-crosshair2 me-1"></i>@_selectedFacilityNode.Label<i class="bi bi-x ms-1"></i>
                             </button>
                         }
                     </div>
                     <div class="toolbar-right">
+                        <div class="wb-node-search">
+                            <input class="form-control form-control-sm wb-node-search-input"
+                                   @bind="_globalNodeSearchInput"
+                                   @bind:event="oninput"
+                                @onfocus="OpenGlobalNodeSearch"
+                                @onblur="CloseGlobalNodeSearch"
+                                   placeholder="Search node"
+                                   aria-label="Search node" />
+                            @if (ShouldShowGlobalNodeSearchResults)
+                            {
+                                <div class="wb-node-search-results">
+                                    @if (GetGlobalNodeSearchMatches().Count == 0)
+                                    {
+                                        <div class="wb-node-search-empty">No matches</div>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var nodeMatch in GetGlobalNodeSearchMatches())
+                                        {
+                                            <button type="button"
+                                                    class="wb-node-search-result"
+                                                    @onmousedown:preventDefault="true"
+                                                    @onclick="@(() => FocusNodeFromSearchAsync(nodeMatch.NodeKey))">
+                                                <span class="wb-node-search-result-label">@GetNodeDisplayLabel(nodeMatch)</span>
+                                                <span class="wb-node-search-result-key">@nodeMatch.NodeKey</span>
+                                            </button>
+                                        }
+                                    }
+                                </div>
+                            }
+                        </div>
                         <button class="wb-toolbar-icon-btn" @onclick="GoHomeAsync"
-                                title="Domů – výchozí pohled na kořenový uzel" disabled="@(_canvasV2 is null)">
+                            title="Default view" disabled="@(_canvasV2 is null)">
                             <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354z"/></svg>
                         </button>
-                        <button class="wb-toolbar-icon-btn" @onclick="() => ReloadData()" title="Znovu načíst schéma">
+                        <button class="wb-toolbar-icon-btn" @onclick="() => ReloadData()" title="Reload schematic">
                             <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></svg>
                         </button>
                         <button class="wb-toolbar-icon-btn"
-                                @onclick="ToggleSchematicFullscreen" title="Otevřít focus – rozšířený pohled"
+                            @onclick="ToggleSchematicFullscreen" title="Open focus view"
                                 disabled="@(_facility is null)">
                             <svg class="wb-toolbar-icon-svg" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                                 <path d="M1 6V1h5v1.5H2.5V6H1zm9-5h5v5h-1.5V2.5H10V1zm3.5 8.5H15V15h-5v-1.5h3.5V9.5zM6 15H1v-5h1.5v3.5H6V15z"/>
@@ -617,7 +963,7 @@
                         </button>
                         <button class="wb-toolbar-icon-btn wb-toolbar-icon-btn-primary"
                                 @onclick="ToggleEditMode"
-                                title="Upravit schéma"
+                            title="Edit schematic"
                                 disabled="@(_facility is null)">
                             <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/></svg>
                         </button>
@@ -628,7 +974,7 @@
                     {
                         <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
                             <div class="spinner-border mb-3" role="status"></div>
-                            <p class="mb-0">Načítám strukturní data...</p>
+                            <p class="mb-0">Loading structural data...</p>
                         </div>
                     }
                     else
@@ -637,9 +983,10 @@
                                       Layout="_schematicLayout"
                                       InitialFitMode="home"
                                       SelectedElementId="@SessionService.SelectedElementId"
-                                      SelectedElementIds="@_selectionSet"
-                                      SelectedSubtreeNodeKeys="@SelectedSubtreeNodeKeysForCanvas"
-                                      FacilityNodeAlertSeverities="@AlertSeverityByNodeKey"
+                                      SelectedElementIds="@ResolvedSelectionNodeKeysForCanvas"
+                                      SelectedSubtreeNodeKeys="@VisualHighlightNodeKeysForCanvas"
+                                      NodeStylePresetKeysByNodeKey="@EffectiveNodeStylePresetKeysForCanvas"
+                                      StylePresetsByKey="@EffectiveStylePresetsForCanvas"
                                       OnElementSelected="HandleElementSelected"
                                       OnCanvasClicked="HandleCanvasClicked"
                                       OnNodeDragEnd="HandleNodeDragEndAsync" />
@@ -721,6 +1068,16 @@
                             </button>
                         }
                     </div>
+                    @if (HasSelectedNodes)
+                    {
+                        <div class="small text-muted mt-1">
+                            Visual highlight: @VisualHighlightCount uzlů
+                            @if (ContextOnlyHighlightCount > 0)
+                            {
+                                <span> · z toho @ContextOnlyHighlightCount pouze kontextově zvýrazněných</span>
+                            }
+                        </div>
+                    }
                     @if (HasSelectedNodes)
                     {
                         var roleGroups = SelectionSummaryItems
@@ -1772,6 +2129,12 @@
 
 @code {
     private static readonly string[] EnergyAlertNodeKeys = ["pv_main", "chp_main", "cooling_main", "heating_main"];
+    private static readonly IReadOnlySet<string> ExpandedSubtreeAllowedRelationshipKinds = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        SchematicRelationshipKinds.AdditionalLink,
+        SchematicRelationshipKinds.Membership,
+        SchematicRelationshipKinds.Semantic
+    };
     private const int BaselineHistoricalYearsForValidation = 3;
     private const int MaxCompareSetSize = 4;
     private static readonly HashSet<string> CompareSetSupportedNodeKeys =
@@ -1795,6 +2158,7 @@
     private readonly Dictionary<string, DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity> _nodesByKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, List<DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity>> _childrenByParentKey = new(StringComparer.OrdinalIgnoreCase);
     private static readonly IReadOnlySet<string> EmptyNodeKeySet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    private const int NodeSearchResultLimit = 8;
     
     // Facility Node State
     private DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity? _selectedFacilityNode;
@@ -1808,6 +2172,7 @@
     private bool _showBaselineOverlay;
     private readonly List<CompareSetItem> _compareSet = [];
     private string? _compareSetStatusMessage;
+    private FacilitySelectionTraversalMode _selectionTraversalMode = FacilitySelectionTraversalMode.StrictLayoutSubtree;
     private FacilitySemanticPreset _semanticPreset = FacilitySemanticPreset.Hvac;
     private SemanticSelectionMutationMode _semanticSelectionMutationMode = SemanticSelectionMutationMode.Replace;
     private bool _semanticSelectionSupportedOnly = true;
@@ -1816,6 +2181,7 @@
     private string _semanticQueryTagInput = string.Empty;
     private string? _semanticSelectionStatusMessage;
     private readonly Dictionary<string, FacilityNodeEditorState> _editorNodeStatesByKey = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, FacilityNodeStylePreset> _stylePresetsByKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<FacilitySavedWorkingSet> _savedWorkingSets = [];
     private bool _isSchematicEditorEnabled;
     private string _editorLabelInput = string.Empty;
@@ -1826,8 +2192,29 @@
     private string? _editorStatusMessage;
     private bool _isReconnectMode;
     private string _reconnectParentNodeKeyInput = string.Empty;
+    private string _reconnectParentSearchInput = string.Empty;
+    private bool _isReconnectParentPickerOpen;
     private bool _reconnectChildrenWarningConfirmed;
+    private string _additionalRelationshipCounterpartyNodeKeyInput = string.Empty;
+    private string _additionalRelationshipSearchInput = string.Empty;
+    private bool _isAdditionalRelationshipPickerOpen;
+    private string _additionalRelationshipKindInput = SchematicRelationshipKinds.AdditionalLink;
     private string _editorActiveTab = "edit";
+    private string _styleAssignmentPresetKeyInput = FacilityNodeStyleSystem.DefaultPresetKey;
+    private string _stylePresetNameInput = string.Empty;
+    private FacilityNodeShapeKind _styleShapeInput = FacilityNodeShapeKind.Circle;
+    private double _styleSizeInput = 26;
+    private string _styleFillColorInput = "#f1f5f9";
+    private string _styleStrokeColorInput = "#475569";
+    private double _styleStrokeWidthInput = 1.8;
+    private string _styleSymbolInput = string.Empty;
+    private string _styleSymbolColorInput = "#334155";
+    private string _styleLabelColorInput = "#0f172a";
+    private double _styleLabelFontSizeInput = 8.5;
+    private int _styleLabelFontWeightInput = 600;
+    private string? _styleStatusMessage;
+    private string _globalNodeSearchInput = string.Empty;
+    private bool _isGlobalNodeSearchOpen;
     private string _newNodeKeyInput = string.Empty;
     private string _newNodeLabelInput = string.Empty;
     private string _newNodeTypeInput = "subzone";
@@ -1949,6 +2336,8 @@
     };
     private int ActiveAlertCount => GlobalAlertSummaryService.Current.HighCount + GlobalAlertSummaryService.Current.ElevatedCount;
     private int SelectionCount => _selectionSet.Count;
+    private int VisualHighlightCount => VisualHighlightNodeKeysForCanvas.Count;
+    private int ContextOnlyHighlightCount => ContextOnlyHighlightNodeKeysForCanvas.Count;
     private int SelectionAggregateSupportedCount => _selectionAggregateOverview?.SupportedNodeKeys.Count ?? 0;
     private int SelectionAggregateUnsupportedCount => _selectionAggregateOverview?.UnsupportedNodeKeys.Count ?? 0;
     private int SelectionAggregateContextOnlyCount => _selectionAggregateOverview?.ContextOnlyNodeKeys.Count ?? 0;
@@ -1968,6 +2357,7 @@
     private IReadOnlyList<CuratedSelectionContributionItem> SelectionBreakdownItems => _selectionAggregateOverview?.Breakdown ?? [];
     private IReadOnlyList<CuratedSelectionRoleContributionItem> SelectionRoleBreakdownItems => _selectionAggregateOverview?.RoleBreakdown ?? [];
     private IReadOnlyList<DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity> SelectionSummaryItems => GetSelectionSummaryItems();
+    private IReadOnlySet<string> ResolvedSelectionNodeKeysForCanvas => new HashSet<string>(_selectionSet, StringComparer.OrdinalIgnoreCase);
     private bool HasSelectedNodes => SelectionCount > 0;
     private int CompareSetRemainingCapacity => Math.Max(0, MaxCompareSetSize - _compareSet.Count);
     private int SelectionCompareSupportedCount => GetSelectionCompareCandidates().Count;
@@ -1975,7 +2365,11 @@
     private bool IsCompareSetAtCapacity => _compareSet.Count >= MaxCompareSetSize;
     private bool IsSelectedNodeComparePreviewSupported => _selectedFacilityNode is not null && IsCompareSupportedNode(_selectedFacilityNode.NodeKey);
     private bool ShouldShowComparePreview => _isCuratedNode && IsSelectedNodeComparePreviewSupported && GetEffectiveCompareNodeKeysForSelectedNode().Count > 0;
-    private IReadOnlySet<string> SelectedSubtreeNodeKeysForCanvas => GetSelectedSubtreeNodeKeysForCanvas();
+    private IReadOnlySet<string> VisualHighlightNodeKeysForCanvas => GetVisualHighlightNodeKeysForCanvas();
+    private IReadOnlySet<string> ContextOnlyHighlightNodeKeysForCanvas => GetContextOnlyHighlightNodeKeysForCanvas();
+    private RelationshipInspectorViewModel? SelectedRelationshipInspector => BuildSelectedRelationshipInspector();
+    private IReadOnlyDictionary<string, FacilityNodeStylePreset> EffectiveStylePresetsForCanvas => BuildEffectiveStylePresetsForCanvas();
+    private IReadOnlyDictionary<string, string> EffectiveNodeStylePresetKeysForCanvas => BuildEffectiveNodeStylePresetKeysForCanvas();
 
     private IReadOnlyDictionary<string, NodeDeviationSeverity> AlertSeverityByNodeKey =>
         GlobalAlertSummaryService.Current.AlertedNodes
@@ -1987,6 +2381,26 @@
         public required string Label { get; init; }
         public string? NodeType { get; init; }
     }
+
+    private sealed record RelationshipInspectorNodeSummary(string NodeKey, string Label, string? NodeType);
+
+    private sealed record RelationshipInspectorEdgeSummary(
+        string SourceNodeKey,
+        string TargetNodeKey,
+        string CounterpartyNodeKey,
+        string CounterpartyLabel,
+        string? CounterpartyNodeType,
+        string RelationshipKind,
+        string? Note);
+
+    private sealed record RelationshipInspectorViewModel(
+        RelationshipInspectorNodeSummary? PrimaryLayoutParent,
+        IReadOnlyList<RelationshipInspectorNodeSummary> LayoutChildren,
+        IReadOnlyList<RelationshipInspectorEdgeSummary> IncomingExplicitRelationships,
+        IReadOnlyList<RelationshipInspectorEdgeSummary> OutgoingExplicitRelationships,
+        IReadOnlyList<RelationshipInspectorNodeSummary> ContextOnlyHighlightedNodes,
+        int ResolvedSelectionCount,
+        int VisualHighlightCount);
 
     private enum SemanticSelectionMutationMode
     {
@@ -2019,13 +2433,15 @@
 
         var facilityTask = FacilityQueryService.GetMainFacilityAsync();
         var editorStateTask = FacilityEditorStateService.GetNodeStatesByKeyAsync();
+        var stylePresetsTask = FacilityEditorStateService.GetStylePresetsByKeyAsync();
         var workingSetsTask = FacilityEditorStateService.GetWorkingSetsAsync();
 
-        await Task.WhenAll(facilityTask, editorStateTask, workingSetsTask);
+        await Task.WhenAll(facilityTask, editorStateTask, stylePresetsTask, workingSetsTask);
 
         _facility = BuildSchemaFacilityWithoutWeatherNode(facilityTask.Result);
         _schematicLayout = _facility is not null ? SchematicComposerV2.Compose(_facility) : null;
         SyncEditorNodeStateCache(editorStateTask.Result);
+        SyncStylePresetCache(stylePresetsTask.Result);
         SyncWorkingSetCache(workingSetsTask.Result);
         RebuildFacilityNodeIndexes();
         ClearSelectionSetState();
@@ -2443,6 +2859,7 @@
         {
             NodeKey = nodeKey,
             Label = label,
+            StylePresetKey = FacilityNodeStyleSystem.DefaultPresetKey,
             Tags = baselineTags,
             Note = null,
             XHint = xHint,
@@ -2516,6 +2933,141 @@
             .ToList();
     }
 
+    private IReadOnlyList<DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity> GetReconnectParentSearchMatches()
+    {
+        return FilterNodeSearchResults(GetReconnectParentCandidates(_selectedFacilityNode?.NodeKey), _reconnectParentSearchInput);
+    }
+
+    private IReadOnlyList<DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity> GetAdditionalRelationshipCounterpartyCandidates(string? excludedNodeKey)
+    {
+        return _nodesByKey.Values
+            .Where(node => !FacilityNodeSemantics.IsWeatherContextNode(node.NodeKey))
+            .Where(node => string.IsNullOrWhiteSpace(excludedNodeKey)
+                || !node.NodeKey.Equals(excludedNodeKey, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(node => node.Label ?? node.NodeKey, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(node => node.NodeKey, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private IReadOnlyList<DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity> GetAdditionalRelationshipSearchMatches()
+    {
+        return FilterNodeSearchResults(GetAdditionalRelationshipCounterpartyCandidates(_selectedFacilityNode?.NodeKey), _additionalRelationshipSearchInput);
+    }
+
+    private IReadOnlyList<string> GetEditableAdditionalRelationshipKinds()
+    {
+        var kinds = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            SchematicRelationshipKinds.AdditionalLink,
+            SchematicRelationshipKinds.Semantic,
+            SchematicRelationshipKinds.Membership
+        };
+
+        foreach (var edge in _facility?.Edges ?? [])
+        {
+            if (edge is null || edge.IsLayoutEdge)
+            {
+                continue;
+            }
+
+            if (string.Equals(edge.RelationshipKind, SchematicRelationshipKinds.LayoutPrimary, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var normalizedKind = NormalizeOptionalText(edge.RelationshipKind)?.ToLowerInvariant();
+            if (!string.IsNullOrWhiteSpace(normalizedKind))
+            {
+                kinds.Add(normalizedKind);
+            }
+        }
+
+        return kinds
+            .OrderBy(kind => kind.Equals(SchematicRelationshipKinds.AdditionalLink, StringComparison.OrdinalIgnoreCase) ? 0 :
+                kind.Equals(SchematicRelationshipKinds.Semantic, StringComparison.OrdinalIgnoreCase) ? 1 :
+                kind.Equals(SchematicRelationshipKinds.Membership, StringComparison.OrdinalIgnoreCase) ? 2 : 3)
+            .ThenBy(kind => kind, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private string GetDefaultAdditionalRelationshipKind()
+    {
+        var kinds = GetEditableAdditionalRelationshipKinds();
+        return kinds.FirstOrDefault(kind => kind.Equals(SchematicRelationshipKinds.AdditionalLink, StringComparison.OrdinalIgnoreCase))
+               ?? kinds.FirstOrDefault()
+               ?? SchematicRelationshipKinds.AdditionalLink;
+    }
+
+    private IReadOnlySet<string> BuildCurrentNodeKeySet()
+    {
+        return _nodesByKey.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private IReadOnlyList<FacilityAdditionalRelationship> BuildCurrentAdditionalRelationships()
+    {
+        return (_facility?.Edges ?? [])
+            .Where(edge => edge is not null
+                && !edge.IsLayoutEdge
+                && !string.Equals(edge.RelationshipKind, SchematicRelationshipKinds.LayoutPrimary, StringComparison.OrdinalIgnoreCase))
+            .Select(edge => new FacilityAdditionalRelationship
+            {
+                SourceNodeKey = edge.SourceNodeKey,
+                TargetNodeKey = edge.TargetNodeKey,
+                RelationshipKind = NormalizeOptionalText(edge.RelationshipKind)?.ToLowerInvariant() ?? SchematicRelationshipKinds.AdditionalLink,
+                Note = NormalizeOptionalText(edge.Note),
+                UpdatedUtc = DateTime.UtcNow
+            })
+            .ToList();
+    }
+
+    private sealed record AdditionalLinkListItem(
+        string CounterpartyNodeKey,
+        string CounterpartyLabel,
+        string SourceNodeKey,
+        string TargetNodeKey,
+        string StoredRelationshipKind,
+        string? Note);
+
+    private IReadOnlyList<AdditionalLinkListItem> GetFocusedNodeAdditionalLinks()
+    {
+        if (_selectedFacilityNode is null || _facility?.Edges is null)
+        {
+            return [];
+        }
+
+        return _facility.Edges
+            .Where(edge => edge is not null
+                && !edge.IsLayoutEdge
+                && !string.Equals(edge.RelationshipKind, SchematicRelationshipKinds.LayoutPrimary, StringComparison.OrdinalIgnoreCase)
+                && (string.Equals(edge.SourceNodeKey, _selectedFacilityNode.NodeKey, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(edge.TargetNodeKey, _selectedFacilityNode.NodeKey, StringComparison.OrdinalIgnoreCase)))
+            .Select(edge =>
+            {
+                var counterpartyNodeKey = string.Equals(edge.SourceNodeKey, _selectedFacilityNode.NodeKey, StringComparison.OrdinalIgnoreCase)
+                    ? edge.TargetNodeKey
+                    : edge.SourceNodeKey;
+
+                return new AdditionalLinkListItem(
+                    counterpartyNodeKey,
+                    GetNodeDisplayLabel(counterpartyNodeKey),
+                    edge.SourceNodeKey,
+                    edge.TargetNodeKey,
+                    NormalizeOptionalText(edge.RelationshipKind)?.ToLowerInvariant() ?? SchematicRelationshipKinds.AdditionalLink,
+                    NormalizeOptionalText(edge.Note));
+            })
+            .OrderBy(item => item.CounterpartyLabel, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(item => item.CounterpartyNodeKey, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private void ResetAdditionalRelationshipDraft()
+    {
+        _additionalRelationshipSearchInput = string.Empty;
+        _additionalRelationshipCounterpartyNodeKeyInput = string.Empty;
+        _additionalRelationshipKindInput = GetDefaultAdditionalRelationshipKind();
+        _isAdditionalRelationshipPickerOpen = false;
+    }
+
     private (double XHint, double YHint) ResolveNewNodeLayoutHint(string? parentNodeKey)
     {
         if (!string.IsNullOrWhiteSpace(parentNodeKey) && _nodesByKey.TryGetValue(parentNodeKey, out var parentNode))
@@ -2549,6 +3101,10 @@
             _editorTagsInput = string.Empty;
             _editorNoteInput = string.Empty;
             _reconnectParentNodeKeyInput = string.Empty;
+            _reconnectParentSearchInput = string.Empty;
+            _isReconnectParentPickerOpen = false;
+            ResetAdditionalRelationshipDraft();
+            RestoreFocusedNodeStyleDraft();
             return;
         }
 
@@ -2556,6 +3112,9 @@
         _editorNodeTypeInput = _selectedFacilityNode.NodeType ?? string.Empty;
         _editorZoneInput = _selectedFacilityNode.Zone ?? string.Empty;
         _reconnectParentNodeKeyInput = _selectedFacilityNode.ParentNodeKey ?? string.Empty;
+        _reconnectParentSearchInput = string.Empty;
+        _isReconnectParentPickerOpen = false;
+        ResetAdditionalRelationshipDraft();
 
         if (_editorNodeStatesByKey.TryGetValue(_selectedFacilityNode.NodeKey, out var nodeState))
         {
@@ -2570,11 +3129,273 @@
 
             _editorTagsInput = string.Join(", ", nodeState.Tags);
             _editorNoteInput = nodeState.Note ?? string.Empty;
+            RestoreFocusedNodeStyleDraft();
             return;
         }
 
         _editorTagsInput = string.Empty;
         _editorNoteInput = string.Empty;
+        RestoreFocusedNodeStyleDraft();
+    }
+
+    private async Task AddAdditionalRelationshipAsync()
+    {
+        if (!_isSchematicEditorEnabled)
+        {
+            _editorStatusMessage = "Schema editor je vypnutý. Zapněte editor před úpravou relationship.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (_selectedFacilityNode is null || !CanEditFocusedNode)
+        {
+            _editorStatusMessage = "Vyberte editovatelný focus uzel.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var counterpartyNodeKey = NormalizeOptionalText(_additionalRelationshipCounterpartyNodeKeyInput);
+        if (string.IsNullOrWhiteSpace(counterpartyNodeKey))
+        {
+            _editorStatusMessage = "Vyberte counterparty uzel pro novou explicitní relationship.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var sourceNodeKey = _selectedFacilityNode.NodeKey;
+        var targetNodeKey = counterpartyNodeKey;
+
+        var snapshot = await SnapshotEditStateAsync();
+        var result = await FacilityEditorStateService.TryAddAdditionalRelationshipAsync(
+            new FacilityAdditionalRelationship
+            {
+                SourceNodeKey = sourceNodeKey,
+                TargetNodeKey = targetNodeKey,
+                RelationshipKind = SchematicRelationshipKinds.AdditionalLink,
+                Note = null,
+                UpdatedUtc = DateTime.UtcNow
+            },
+            BuildCurrentNodeKeySet(),
+            BuildCurrentAdditionalRelationships());
+
+        _editorStatusMessage = result.Message;
+        if (!result.Success)
+        {
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        PushEditUndoSnapshot(snapshot, $"Přidat vazbu \"{sourceNodeKey} → {targetNodeKey}\"");
+        await ReloadData(preserveSelection: true, preferredFocusNodeKey: _selectedFacilityNode.NodeKey);
+        _editorStatusMessage = result.Message;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private string GetSelectedParentDisplayText()
+    {
+        if (string.IsNullOrWhiteSpace(_reconnectParentNodeKeyInput))
+        {
+            return "Root";
+        }
+
+        return GetNodeDisplayLabel(_reconnectParentNodeKeyInput);
+    }
+
+    private string GetSelectedParentNodeKeyText()
+    {
+        return string.IsNullOrWhiteSpace(_reconnectParentNodeKeyInput)
+            ? "No parent"
+            : _reconnectParentNodeKeyInput;
+    }
+
+    private string GetNodeDisplayLabel(DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity node)
+    {
+        return string.IsNullOrWhiteSpace(node.Label) ? node.NodeKey : node.Label;
+    }
+
+    private string GetNodeDisplayLabel(string? nodeKey)
+    {
+        if (string.IsNullOrWhiteSpace(nodeKey))
+        {
+            return "Root";
+        }
+
+        return _nodesByKey.TryGetValue(nodeKey, out var node)
+            ? GetNodeDisplayLabel(node)
+            : nodeKey;
+    }
+
+    private static string NormalizeNodeSearchText(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        return new string(value
+            .Where(character => character != '.' && character != '_' && !char.IsWhiteSpace(character))
+            .ToArray())
+            .ToLowerInvariant();
+    }
+
+    private IReadOnlyList<DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity> FilterNodeSearchResults(
+        IEnumerable<DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity> candidates,
+        string? searchText)
+    {
+        var normalizedSearch = NormalizeNodeSearchText(searchText);
+
+        var filteredCandidates = candidates
+            .Where(node => string.IsNullOrWhiteSpace(normalizedSearch)
+                || NormalizeNodeSearchText(node.NodeKey).Contains(normalizedSearch, StringComparison.Ordinal)
+                || NormalizeNodeSearchText(node.Label).Contains(normalizedSearch, StringComparison.Ordinal));
+
+        if (!string.IsNullOrWhiteSpace(normalizedSearch))
+        {
+            filteredCandidates = filteredCandidates.Take(NodeSearchResultLimit);
+        }
+
+        return filteredCandidates.ToList();
+    }
+
+    private IReadOnlyList<DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity> GetGlobalNodeSearchMatches()
+    {
+        return FilterNodeSearchResults(
+            _nodesByKey.Values
+                .Where(node => !FacilityNodeSemantics.IsWeatherContextNode(node.NodeKey))
+                .OrderBy(node => node.Label ?? node.NodeKey, StringComparer.CurrentCultureIgnoreCase)
+                .ThenBy(node => node.NodeKey, StringComparer.OrdinalIgnoreCase),
+            _globalNodeSearchInput);
+    }
+
+    private bool ShouldShowGlobalNodeSearchResults => _isGlobalNodeSearchOpen;
+
+    private void OpenGlobalNodeSearch(FocusEventArgs _)
+    {
+        _isGlobalNodeSearchOpen = true;
+    }
+
+    private void CloseGlobalNodeSearch(FocusEventArgs _)
+    {
+        _isGlobalNodeSearchOpen = false;
+    }
+
+    private string GetPickerSelectionClass(string candidateNodeKey, string selectedNodeKey)
+    {
+        return string.Equals(candidateNodeKey, selectedNodeKey, StringComparison.OrdinalIgnoreCase)
+            ? "wb-picker-item-selected"
+            : string.Empty;
+    }
+
+    private void SelectReconnectParent(string? nodeKey)
+    {
+        _reconnectParentNodeKeyInput = nodeKey ?? string.Empty;
+        _reconnectParentSearchInput = string.Empty;
+        _isReconnectParentPickerOpen = false;
+    }
+
+    private void SelectAdditionalRelationshipCounterparty(string nodeKey)
+    {
+        _additionalRelationshipCounterpartyNodeKeyInput = nodeKey;
+        _additionalRelationshipSearchInput = string.Empty;
+        _isAdditionalRelationshipPickerOpen = false;
+    }
+
+    private void OpenReconnectParentPicker()
+    {
+        _isReconnectParentPickerOpen = true;
+    }
+
+    private void ToggleReconnectParentPicker()
+    {
+        _isReconnectParentPickerOpen = !_isReconnectParentPickerOpen;
+        if (!_isReconnectParentPickerOpen)
+        {
+            _reconnectParentSearchInput = string.Empty;
+        }
+    }
+
+    private void CloseReconnectParentPicker()
+    {
+        _isReconnectParentPickerOpen = false;
+        _reconnectParentSearchInput = string.Empty;
+    }
+
+    private void OpenAdditionalRelationshipPicker()
+    {
+        _isAdditionalRelationshipPickerOpen = true;
+    }
+
+    private void CloseAdditionalRelationshipPicker()
+    {
+        _isAdditionalRelationshipPickerOpen = false;
+        _additionalRelationshipSearchInput = string.Empty;
+    }
+
+    private async Task FocusNodeFromSearchAsync(string nodeKey)
+    {
+        if (!_nodesByKey.ContainsKey(nodeKey))
+        {
+            return;
+        }
+
+        await PanToNodeAsync(nodeKey);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task PanToNodeAsync(string nodeKey)
+    {
+        if (_schematicLayout is null)
+        {
+            return;
+        }
+
+        var layoutNode = _schematicLayout.Nodes.FirstOrDefault(node => node.NodeKey.Equals(nodeKey, StringComparison.OrdinalIgnoreCase));
+        if (layoutNode is null)
+        {
+            return;
+        }
+
+        await JSRuntime.InvokeVoidAsync("editorCanvas.panToNode", layoutNode.X, layoutNode.Y, _isEditModeOpen ? 1.8 : 1.6);
+    }
+
+    private async Task RemoveAdditionalRelationshipAsync(string sourceNodeKey, string targetNodeKey, string relationshipKind)
+    {
+        if (!_isSchematicEditorEnabled)
+        {
+            _editorStatusMessage = "Schema editor je vypnutý. Zapněte editor před úpravou relationship.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (_selectedFacilityNode is null || !CanEditFocusedNode)
+        {
+            _editorStatusMessage = "Vyberte editovatelný focus uzel.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var snapshot = await SnapshotEditStateAsync();
+        var result = await FacilityEditorStateService.TryRemoveAdditionalRelationshipAsync(
+            new FacilityAdditionalRelationship
+            {
+                SourceNodeKey = sourceNodeKey,
+                TargetNodeKey = targetNodeKey,
+                RelationshipKind = relationshipKind,
+                UpdatedUtc = DateTime.UtcNow
+            },
+            BuildCurrentAdditionalRelationships());
+
+        _editorStatusMessage = result.Message;
+        if (!result.Success)
+        {
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        PushEditUndoSnapshot(snapshot, $"Odebrat vazbu \"{sourceNodeKey} → {targetNodeKey}\"");
+        await ReloadData(preserveSelection: true, preferredFocusNodeKey: _selectedFacilityNode.NodeKey);
+        _editorStatusMessage = result.Message;
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task SaveFocusedNodeMetadataAsync()
@@ -2615,6 +3436,7 @@
             Label = label,
             NodeType = nodeType,
             Zone = zone,
+            StylePresetKey = existingState?.StylePresetKey,
             Tags = tags,
             Note = note,
             XHint = existingState?.XHint ?? _selectedFacilityNode.XHint,
@@ -2703,6 +3525,9 @@
         {
             NodeKey = move.NodeKey,
             Label = existingState?.Label,
+            NodeType = existingState?.NodeType,
+            Zone = existingState?.Zone,
+            StylePresetKey = existingState?.StylePresetKey,
             Tags = existingState?.Tags ?? [],
             Note = existingState?.Note,
             XHint = xHint,
@@ -2877,6 +3702,16 @@
         }
     }
 
+    private void SyncStylePresetCache(IReadOnlyDictionary<string, FacilityNodeStylePreset> presets)
+    {
+        _stylePresetsByKey.Clear();
+
+        foreach (var pair in FacilityNodeStyleSystem.NormalizePresetLibrary(presets.Values))
+        {
+            _stylePresetsByKey[pair.Key] = pair.Value;
+        }
+    }
+
     private void SyncWorkingSetCache(IReadOnlyList<FacilitySavedWorkingSet> workingSets)
     {
         _savedWorkingSets.Clear();
@@ -2896,10 +3731,369 @@
     private static bool HasNodeStatePayload(FacilityNodeEditorState nodeState)
     {
         return !string.IsNullOrWhiteSpace(nodeState.Label)
+            || !string.IsNullOrWhiteSpace(nodeState.NodeType)
+            || !string.IsNullOrWhiteSpace(nodeState.Zone)
+            || !string.IsNullOrWhiteSpace(nodeState.StylePresetKey)
             || nodeState.XHint.HasValue
             || nodeState.YHint.HasValue
             || !string.IsNullOrWhiteSpace(nodeState.Note)
             || nodeState.Tags.Count > 0;
+    }
+
+    private IReadOnlyDictionary<string, FacilityNodeStylePreset> BuildEffectiveStylePresetsForCanvas()
+    {
+        var effective = FacilityNodeStyleSystem.NormalizePresetLibrary(_stylePresetsByKey.Values)
+            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
+
+        if (_isEditModeOpen && !IsEditorMultiSelectActive && _selectedFacilityNode is not null)
+        {
+            var draftPreset = BuildCurrentStylePresetDraft();
+            effective[draftPreset.Key] = draftPreset;
+        }
+
+        return effective;
+    }
+
+    private IReadOnlyDictionary<string, string> BuildEffectiveNodeStylePresetKeysForCanvas()
+    {
+        var effective = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var pair in _editorNodeStatesByKey)
+        {
+            if (!string.IsNullOrWhiteSpace(pair.Value.StylePresetKey))
+            {
+                effective[pair.Key] = pair.Value.StylePresetKey!;
+            }
+        }
+
+        if (_isEditModeOpen && !IsEditorMultiSelectActive && _selectedFacilityNode is not null)
+        {
+            effective[_selectedFacilityNode.NodeKey] = FacilityNodeStyleSystem.ResolvePresetKey(_styleAssignmentPresetKeyInput, _stylePresetsByKey);
+        }
+
+        return effective;
+    }
+
+    private FacilityNodeStylePreset BuildCurrentStylePresetDraft()
+    {
+        return FacilityNodeStyleSystem.NormalizePreset(new FacilityNodeStylePreset
+        {
+            Key = FacilityNodeStyleSystem.ResolvePresetKey(_styleAssignmentPresetKeyInput, _stylePresetsByKey),
+            Name = _stylePresetNameInput,
+            Shape = _styleShapeInput,
+            Size = _styleSizeInput,
+            FillColor = _styleFillColorInput,
+            StrokeColor = _styleStrokeColorInput,
+            StrokeWidth = _styleStrokeWidthInput,
+            Symbol = _styleSymbolInput,
+            SymbolColor = _styleSymbolColorInput,
+            LabelColor = _styleLabelColorInput,
+            LabelFontSize = _styleLabelFontSizeInput,
+            LabelFontWeight = _styleLabelFontWeightInput
+        });
+    }
+
+    private FacilityNodeStylePreset GetStylePresetByKey(string? presetKey)
+    {
+        var resolvedKey = FacilityNodeStyleSystem.ResolvePresetKey(presetKey, _stylePresetsByKey);
+        if (_stylePresetsByKey.TryGetValue(resolvedKey, out var preset))
+        {
+            return preset;
+        }
+
+        return FacilityNodeStyleSystem.CreateDefaultPresetLibrary()[FacilityNodeStyleSystem.DefaultPresetKey];
+    }
+
+    private string ResolveSelectedNodeStylePresetKey()
+    {
+        if (_selectedFacilityNode is null)
+        {
+            return FacilityNodeStyleSystem.DefaultPresetKey;
+        }
+
+        if (_editorNodeStatesByKey.TryGetValue(_selectedFacilityNode.NodeKey, out var nodeState)
+            && !string.IsNullOrWhiteSpace(nodeState.StylePresetKey))
+        {
+            return FacilityNodeStyleSystem.ResolvePresetKey(nodeState.StylePresetKey, _stylePresetsByKey);
+        }
+
+        return FacilityNodeStyleSystem.DefaultPresetKey;
+    }
+
+    private void LoadStylePresetEditorDraft(string? presetKey)
+    {
+        var preset = GetStylePresetByKey(presetKey);
+        _styleAssignmentPresetKeyInput = preset.Key;
+        _stylePresetNameInput = preset.Name;
+        _styleShapeInput = preset.Shape;
+        _styleSizeInput = preset.Size;
+        _styleFillColorInput = preset.FillColor;
+        _styleStrokeColorInput = preset.StrokeColor;
+        _styleStrokeWidthInput = preset.StrokeWidth;
+        _styleSymbolInput = preset.Symbol;
+        _styleSymbolColorInput = preset.SymbolColor;
+        _styleLabelColorInput = preset.LabelColor;
+        _styleLabelFontSizeInput = preset.LabelFontSize;
+        _styleLabelFontWeightInput = preset.LabelFontWeight;
+    }
+
+    private void RestoreFocusedNodeStyleDraft()
+    {
+        LoadStylePresetEditorDraft(ResolveSelectedNodeStylePresetKey());
+        _styleStatusMessage = null;
+    }
+
+    private Task HandleStyleAssignmentPresetChanged()
+    {
+        LoadStylePresetEditorDraft(_styleAssignmentPresetKeyInput);
+        return Task.CompletedTask;
+    }
+
+    private IReadOnlyList<FacilityNodeStylePreset> GetOrderedStylePresets()
+    {
+        return _stylePresetsByKey.Values
+            .OrderBy(preset => preset.Key.Equals(FacilityNodeStyleSystem.DefaultPresetKey, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .ThenBy(preset => preset.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(preset => preset.Key, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static string GetStylePresetLabel(FacilityNodeStylePreset preset)
+    {
+        return string.IsNullOrWhiteSpace(preset.Name)
+            ? preset.Key
+            : preset.Name;
+    }
+
+    private string GetCurrentStylePresetLabel()
+    {
+        return GetStylePresetLabel(GetStylePresetByKey(_styleAssignmentPresetKeyInput));
+    }
+
+    private int GetStylePresetUsageCount(string presetKey)
+    {
+        var resolvedPresetKey = FacilityNodeStyleSystem.ResolvePresetKey(presetKey, _stylePresetsByKey);
+        return _nodesByKey.Keys.Count(nodeKey =>
+            FacilityNodeStyleSystem.ResolvePresetKey(
+                _isEditModeOpen && _selectedFacilityNode is not null && nodeKey.Equals(_selectedFacilityNode.NodeKey, StringComparison.OrdinalIgnoreCase)
+                    ? _styleAssignmentPresetKeyInput
+                    : _editorNodeStatesByKey.TryGetValue(nodeKey, out var nodeState)
+                        ? nodeState.StylePresetKey
+                        : null,
+                _stylePresetsByKey).Equals(resolvedPresetKey, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private int GetPersistedStylePresetUsageCount(string presetKey)
+    {
+        var resolvedPresetKey = FacilityNodeStyleSystem.ResolvePresetKey(presetKey, _stylePresetsByKey);
+        return _editorNodeStatesByKey.Values.Count(nodeState =>
+            FacilityNodeStyleSystem.ResolvePresetKey(nodeState.StylePresetKey, _stylePresetsByKey)
+                .Equals(resolvedPresetKey, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private bool CanDeleteSelectedStylePreset()
+    {
+        return GetDeleteSelectedStylePresetBlockReason() is null;
+    }
+
+    private string? GetDeleteSelectedStylePresetBlockReason()
+    {
+        var resolvedPresetKey = FacilityNodeStyleSystem.ResolvePresetKey(_styleAssignmentPresetKeyInput, _stylePresetsByKey);
+        if (resolvedPresetKey.Equals(FacilityNodeStyleSystem.DefaultPresetKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return "The default fallback preset cannot be deleted.";
+        }
+
+        var persistedUsageCount = GetPersistedStylePresetUsageCount(resolvedPresetKey);
+        if (persistedUsageCount > 0)
+        {
+            return $"This preset cannot be deleted because it is still used by {persistedUsageCount} node{(persistedUsageCount == 1 ? string.Empty : "s")}.";
+        }
+
+        return null;
+    }
+
+    private async Task ApplySelectedNodeStylePresetAsync()
+    {
+        if (!_isSchematicEditorEnabled)
+        {
+            _styleStatusMessage = "Schematic editor is disabled. Enable edit mode before changing the preset.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (_selectedFacilityNode is null || !CanEditFocusedNode)
+        {
+            _styleStatusMessage = "Select an editable node.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var snapshot = await SnapshotEditStateAsync();
+        _editorNodeStatesByKey.TryGetValue(_selectedFacilityNode.NodeKey, out var existingState);
+        var resolvedPresetKey = FacilityNodeStyleSystem.ResolvePresetKey(_styleAssignmentPresetKeyInput, _stylePresetsByKey);
+        var nextState = new FacilityNodeEditorState
+        {
+            NodeKey = _selectedFacilityNode.NodeKey,
+            Label = existingState?.Label,
+            NodeType = existingState?.NodeType,
+            Zone = existingState?.Zone,
+            StylePresetKey = resolvedPresetKey,
+            Tags = existingState?.Tags ?? [],
+            Note = existingState?.Note,
+            XHint = existingState?.XHint ?? _selectedFacilityNode.XHint,
+            YHint = existingState?.YHint ?? _selectedFacilityNode.YHint,
+            UpdatedUtc = DateTime.UtcNow
+        };
+
+        await FacilityEditorStateService.SaveNodeStatesAsync([nextState]);
+        PushEditUndoSnapshot(snapshot, $"Styl uzlu \"{_selectedFacilityNode.Label}\"");
+        _editorNodeStatesByKey[_selectedFacilityNode.NodeKey] = nextState;
+        _styleStatusMessage = $"Node {_selectedFacilityNode.NodeKey} now uses preset {GetCurrentStylePresetLabel()}.";
+        await ReloadData(preserveSelection: true, preferredFocusNodeKey: _selectedFacilityNode.NodeKey);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SaveSelectedStylePresetAsync()
+    {
+        if (!_isSchematicEditorEnabled)
+        {
+            _styleStatusMessage = "Schematic editor is disabled. Enable edit mode before saving the preset.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (_selectedFacilityNode is null || !CanEditFocusedNode)
+        {
+            _styleStatusMessage = "Select an editable node.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var snapshot = await SnapshotEditStateAsync();
+        var draftPreset = BuildCurrentStylePresetDraft();
+        _stylePresetsByKey[draftPreset.Key] = draftPreset;
+        await FacilityEditorStateService.SaveStylePresetsAsync(_stylePresetsByKey.Values);
+        PushEditUndoSnapshot(snapshot, $"Preset stylu \"{draftPreset.Name}\"");
+        _styleStatusMessage = $"Preset {GetStylePresetLabel(draftPreset)} was saved.";
+        await ReloadData(preserveSelection: true, preferredFocusNodeKey: _selectedFacilityNode.NodeKey);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task DuplicateSelectedStylePresetAsync()
+    {
+        if (!_isSchematicEditorEnabled)
+        {
+            _styleStatusMessage = "Schematic editor is disabled. Enable edit mode before duplicating the preset.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (_selectedFacilityNode is null || !CanEditFocusedNode)
+        {
+            _styleStatusMessage = "Select an editable node.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var snapshot = await SnapshotEditStateAsync();
+        var sourcePreset = BuildCurrentStylePresetDraft();
+        var duplicateKey = CreateDuplicateStylePresetKey(sourcePreset.Key);
+        var duplicateName = CreateDuplicateStylePresetName(sourcePreset.Name);
+        var duplicatePreset = FacilityNodeStyleSystem.NormalizePreset(new FacilityNodeStylePreset
+        {
+            Key = duplicateKey,
+            Name = duplicateName,
+            Shape = sourcePreset.Shape,
+            Size = sourcePreset.Size,
+            FillColor = sourcePreset.FillColor,
+            StrokeColor = sourcePreset.StrokeColor,
+            StrokeWidth = sourcePreset.StrokeWidth,
+            Symbol = sourcePreset.Symbol,
+            SymbolColor = sourcePreset.SymbolColor,
+            LabelColor = sourcePreset.LabelColor,
+            LabelFontSize = sourcePreset.LabelFontSize,
+            LabelFontWeight = sourcePreset.LabelFontWeight
+        });
+
+        _stylePresetsByKey[duplicatePreset.Key] = duplicatePreset;
+        await FacilityEditorStateService.SaveStylePresetsAsync(_stylePresetsByKey.Values);
+        PushEditUndoSnapshot(snapshot, $"Duplicate style preset \"{GetStylePresetLabel(sourcePreset)}\"");
+        _styleAssignmentPresetKeyInput = duplicatePreset.Key;
+        LoadStylePresetEditorDraft(duplicatePreset.Key);
+        _styleStatusMessage = $"Preset {duplicatePreset.Name} was duplicated and is ready to edit.";
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task DeleteSelectedStylePresetAsync()
+    {
+        if (!_isSchematicEditorEnabled)
+        {
+            _styleStatusMessage = "Schematic editor is disabled. Enable edit mode before deleting the preset.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (_selectedFacilityNode is null || !CanEditFocusedNode)
+        {
+            _styleStatusMessage = "Select an editable node.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var blockReason = GetDeleteSelectedStylePresetBlockReason();
+        if (!string.IsNullOrWhiteSpace(blockReason))
+        {
+            _styleStatusMessage = blockReason;
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var snapshot = await SnapshotEditStateAsync();
+        var deletedPreset = GetStylePresetByKey(_styleAssignmentPresetKeyInput);
+        _stylePresetsByKey.Remove(deletedPreset.Key);
+        await FacilityEditorStateService.SaveStylePresetsAsync(_stylePresetsByKey.Values);
+        PushEditUndoSnapshot(snapshot, $"Delete style preset \"{GetStylePresetLabel(deletedPreset)}\"");
+
+        var nextPresetKey = ResolveSelectedNodeStylePresetKey();
+        LoadStylePresetEditorDraft(nextPresetKey);
+        _styleStatusMessage = $"Preset {GetStylePresetLabel(deletedPreset)} was deleted.";
+        await ReloadData(preserveSelection: true, preferredFocusNodeKey: _selectedFacilityNode.NodeKey);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private string CreateDuplicateStylePresetKey(string sourceKey)
+    {
+        var baseKey = string.IsNullOrWhiteSpace(sourceKey)
+            ? "style-preset"
+            : FacilityNodeStyleSystem.NormalizePresetKey(sourceKey);
+
+        var candidate = $"{baseKey}-copy";
+        var suffix = 2;
+        while (_stylePresetsByKey.ContainsKey(candidate))
+        {
+            candidate = $"{baseKey}-copy-{suffix}";
+            suffix++;
+        }
+
+        return candidate;
+    }
+
+    private string CreateDuplicateStylePresetName(string sourceName)
+    {
+        var baseName = string.IsNullOrWhiteSpace(sourceName)
+            ? "Copied preset"
+            : sourceName.Trim();
+
+        var candidate = $"{baseName} copy";
+        var suffix = 2;
+        while (_stylePresetsByKey.Values.Any(preset => preset.Name.Equals(candidate, StringComparison.CurrentCultureIgnoreCase)))
+        {
+            candidate = $"{baseName} copy {suffix}";
+            suffix++;
+        }
+
+        return candidate;
     }
 
     private async Task ApplySemanticPresetAsync()
@@ -3023,6 +4217,8 @@
         IReadOnlyList<string> nodeKeys,
         SemanticSelectionMutationMode mutationMode)
     {
+        ResetSelectionTraversalMode();
+
         var uniqueNodeKeys = nodeKeys
             .Where(key => !string.IsNullOrWhiteSpace(key))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -3508,6 +4704,7 @@
             Label = existing?.Label,
             NodeType = existing?.NodeType,
             Zone = existing?.Zone,
+            StylePresetKey = existing?.StylePresetKey,
             Note = existing?.Note,
             Tags = existing?.Tags ?? [],
             // XHint/YHint > 1.0 are treated as absolute pixel positions by SchematicComposerV2.
@@ -3525,6 +4722,8 @@
     private async Task HandleRectSelectEndAsync((double X1, double Y1, double X2, double Y2, bool Additive) args)
     {
         if (!_isEditModeOpen || _schematicLayout is null) return;
+
+        ResetSelectionTraversalMode();
 
         if (!args.Additive)
             ClearSelectionSetState();
@@ -3570,6 +4769,7 @@
             Label = existing?.Label,
             NodeType = existing?.NodeType,
             Zone = existing?.Zone,
+            StylePresetKey = existing?.StylePresetKey,
             Note = existing?.Note,
             Tags = existing?.Tags ?? [],
             XHint = Math.Round(layoutNode.X + args.DeltaX, 1),
@@ -3614,6 +4814,8 @@
     private async Task HandleNodeCtrlClickedAsync(string nodeKey)
     {
         if (!_isEditModeOpen) return;
+
+        ResetSelectionTraversalMode();
 
         if (_selectionSet.Contains(nodeKey))
         {
@@ -3683,7 +4885,7 @@
             {
                 NodeKey = layoutNode.NodeKey,
                 Label = existing?.Label, NodeType = existing?.NodeType,
-                Zone = existing?.Zone, Note = existing?.Note, Tags = existing?.Tags ?? [],
+                Zone = existing?.Zone, StylePresetKey = existing?.StylePresetKey, Note = existing?.Note, Tags = existing?.Tags ?? [],
                 XHint = alignX ? Math.Round(alignValue, 1) : Math.Round(layoutNode.X, 1),
                 YHint = alignX ? Math.Round(layoutNode.Y, 1) : Math.Round(alignValue, 1),
             };
@@ -3718,7 +4920,7 @@
                 {
                     NodeKey = n.NodeKey,
                     Label = existing?.Label, NodeType = existing?.NodeType,
-                    Zone = existing?.Zone, Note = existing?.Note, Tags = existing?.Tags ?? [],
+                    Zone = existing?.Zone, StylePresetKey = existing?.StylePresetKey, Note = existing?.Note, Tags = existing?.Tags ?? [],
                     XHint = Math.Round(SnapToEditorGrid(minX + step * i), 1),
                     YHint = Math.Round(n.Y, 1)
                 };
@@ -3737,7 +4939,7 @@
                 {
                     NodeKey = n.NodeKey,
                     Label = existing?.Label, NodeType = existing?.NodeType,
-                    Zone = existing?.Zone, Note = existing?.Note, Tags = existing?.Tags ?? [],
+                    Zone = existing?.Zone, StylePresetKey = existing?.StylePresetKey, Note = existing?.Note, Tags = existing?.Tags ?? [],
                     XHint = Math.Round(n.X, 1),
                     YHint = Math.Round(SnapToEditorGrid(minY + step * i), 1)
                 };
@@ -3761,6 +4963,7 @@
         // V edit mode: single-select (Ctrl+click additive goes through HandleNodeCtrlClickedAsync)
         if (_isEditModeOpen)
         {
+            ResetSelectionTraversalMode();
             ClearSelectionSetState();
             AddNodeToSelectionSet(nodeKey);
             _editorActiveTab = "edit";
@@ -3773,11 +4976,14 @@
             return;
         }
 
+        ResetSelectionTraversalMode();
+
         string? nextFocusNodeKey;
 
-        if (IsStructuralNode(node.NodeKey))
+        if (ShouldUseExpandedTraversalOnClick(node))
         {
-            ToggleStructuralSubtreeSelection(node);
+            _selectionTraversalMode = FacilitySelectionTraversalMode.ExpandedSubtree;
+            ToggleExpandedTraversalSelection(node);
             nextFocusNodeKey = _selectionSet.Count == 0 ? null : node.NodeKey;
         }
         else
@@ -3807,6 +5013,38 @@
         {
             InvokeAsync(async () => await ReloadPreviewDataAsync());
         }
+    }
+
+    private bool ShouldUseExpandedTraversalOnClick(DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity node)
+    {
+        return IsStructuralNode(node.NodeKey) || HasTraversableOutgoingExplicitRelationship(node.NodeKey);
+    }
+
+    private bool HasTraversableOutgoingExplicitRelationship(string nodeKey)
+    {
+        if (_facility?.Edges is null)
+        {
+            return false;
+        }
+
+        foreach (var edge in _facility.Edges)
+        {
+            if (edge is null
+                || edge.IsLayoutEdge
+                || string.IsNullOrWhiteSpace(edge.SourceNodeKey)
+                || string.IsNullOrWhiteSpace(edge.TargetNodeKey)
+                || string.IsNullOrWhiteSpace(edge.RelationshipKind)
+                || !edge.SourceNodeKey.Equals(nodeKey, StringComparison.OrdinalIgnoreCase)
+                || edge.RelationshipKind.Equals(SchematicRelationshipKinds.LayoutPrimary, StringComparison.OrdinalIgnoreCase)
+                || !ExpandedSubtreeAllowedRelationshipKinds.Contains(edge.RelationshipKind))
+            {
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     private IReadOnlyList<string> GetSelectionAggregateNodeKeys()
@@ -3896,65 +5134,34 @@
         return false;
     }
 
-    private void ToggleStructuralSubtreeSelection(DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity structuralNode)
+    private void ToggleExpandedTraversalSelection(DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity rootNode)
     {
-        var descendantLeafNodes = GetDescendantLeafOrAnalyticNodes(structuralNode.NodeKey);
-        if (descendantLeafNodes.Count == 0)
+        var subtreeSelection = ResolveSelectionTraversal(rootNode.NodeKey, FacilitySelectionTraversalMode.ExpandedSubtree);
+        var traversedNodeKeys = subtreeSelection.IncludedNodeKeys
+            .Where(_nodesByKey.ContainsKey)
+            .Select(nodeKey => _nodesByKey[nodeKey])
+            .OrderBy(node => node.Label ?? node.NodeKey, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(node => node.NodeKey, StringComparer.OrdinalIgnoreCase)
+            .Select(node => node.NodeKey)
+            .ToList();
+
+        if (traversedNodeKeys.Count == 0)
         {
             return;
         }
 
-        var areAllDescendantsSelected = descendantLeafNodes.All(node => _selectionSet.Contains(node.NodeKey));
-        foreach (var descendant in descendantLeafNodes)
+        var areAllDescendantsSelected = traversedNodeKeys.All(_selectionSet.Contains);
+        foreach (var descendantNodeKey in traversedNodeKeys)
         {
             if (areAllDescendantsSelected)
             {
-                RemoveNodeFromSelectionSet(descendant.NodeKey);
+                RemoveNodeFromSelectionSet(descendantNodeKey);
             }
             else
             {
-                AddNodeToSelectionSet(descendant.NodeKey);
+                AddNodeToSelectionSet(descendantNodeKey);
             }
         }
-    }
-
-    private IReadOnlyList<DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity> GetDescendantLeafOrAnalyticNodes(string parentNodeKey)
-    {
-        if (!_childrenByParentKey.TryGetValue(parentNodeKey, out var directChildren) || directChildren.Count == 0)
-        {
-            return [];
-        }
-
-        var descendants = new List<DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity>();
-        var stack = new Stack<DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity>(directChildren);
-        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        while (stack.Count > 0)
-        {
-            var current = stack.Pop();
-            if (!visited.Add(current.NodeKey))
-            {
-                continue;
-            }
-
-            if (IsLeafOrAnalyticNode(current))
-            {
-                descendants.Add(current);
-            }
-
-            if (_childrenByParentKey.TryGetValue(current.NodeKey, out var children) && children.Count > 0)
-            {
-                foreach (var child in children)
-                {
-                    stack.Push(child);
-                }
-            }
-        }
-
-        return descendants
-            .OrderBy(node => node.Label ?? node.NodeKey, StringComparer.CurrentCultureIgnoreCase)
-            .ThenBy(node => node.NodeKey, StringComparer.OrdinalIgnoreCase)
-            .ToList();
     }
 
     private bool IsLeafOrAnalyticNode(DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity node)
@@ -4003,6 +5210,24 @@
     {
         _selectionSet.Clear();
         _selectionOrder.Clear();
+        ResetSelectionTraversalMode();
+    }
+
+    private FacilitySelectionTraversalResult ResolveSelectionTraversal(string rootNodeKey, FacilitySelectionTraversalMode mode)
+    {
+        return FacilitySelectionTraversal.Resolve(
+            rootNodeKey,
+            _nodesByKey,
+            _childrenByParentKey,
+            _facility?.Edges ?? [],
+            mode,
+            ExpandedSubtreeAllowedRelationshipKinds,
+            IsLeafOrAnalyticNode);
+    }
+
+    private void ResetSelectionTraversalMode()
+    {
+        _selectionTraversalMode = FacilitySelectionTraversalMode.StrictLayoutSubtree;
     }
 
     private IReadOnlyList<DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity> GetSelectionSummaryItems()
@@ -4091,17 +5316,27 @@
         return weatherFilteredFacility;
     }
 
-    private IReadOnlySet<string> GetSelectedSubtreeNodeKeysForCanvas()
+    private IReadOnlySet<string> GetVisualHighlightNodeKeysForCanvas()
     {
         if (_selectionSet.Count == 0)
         {
             return EmptyNodeKeySet;
         }
 
+        if (_selectionTraversalMode == FacilitySelectionTraversalMode.ExpandedSubtree)
+        {
+            return new HashSet<string>(_selectionSet, StringComparer.OrdinalIgnoreCase);
+        }
+
         // In multi-select mode, highlight only the actual selected set.
         // This keeps single and multi modes mutually exclusive and prevents
         // unrelated structural ancestors from appearing as selected.
         if (IsEditorMultiSelectActive)
+        {
+            return new HashSet<string>(_selectionSet, StringComparer.OrdinalIgnoreCase);
+        }
+
+        if (_isEditModeOpen && _selectionSet.Count == 1)
         {
             return new HashSet<string>(_selectionSet, StringComparer.OrdinalIgnoreCase);
         }
@@ -4168,6 +5403,112 @@
         }
 
         return result;
+    }
+
+    private IReadOnlySet<string> GetContextOnlyHighlightNodeKeysForCanvas()
+    {
+        if (_selectionSet.Count == 0)
+        {
+            return EmptyNodeKeySet;
+        }
+
+        var contextOnlyNodeKeys = new HashSet<string>(VisualHighlightNodeKeysForCanvas, StringComparer.OrdinalIgnoreCase);
+        contextOnlyNodeKeys.ExceptWith(_selectionSet);
+        return contextOnlyNodeKeys;
+    }
+
+    private RelationshipInspectorViewModel? BuildSelectedRelationshipInspector()
+    {
+        if (_selectedFacilityNode is null || _nodesByKey.Count == 0)
+        {
+            return null;
+        }
+
+        RelationshipInspectorNodeSummary? primaryLayoutParent = null;
+        if (!string.IsNullOrWhiteSpace(_selectedFacilityNode.ParentNodeKey)
+            && _nodesByKey.TryGetValue(_selectedFacilityNode.ParentNodeKey, out var parentNode))
+        {
+            primaryLayoutParent = ToRelationshipInspectorNodeSummary(parentNode);
+        }
+
+        var layoutChildren = _childrenByParentKey.TryGetValue(_selectedFacilityNode.NodeKey, out var children)
+            ? children
+                .OrderBy(child => child.Label ?? child.NodeKey, StringComparer.CurrentCultureIgnoreCase)
+                .ThenBy(child => child.NodeKey, StringComparer.OrdinalIgnoreCase)
+                .Select(ToRelationshipInspectorNodeSummary)
+                .ToList()
+            : [];
+
+        var explicitEdges = (_facility?.Edges ?? [])
+            .Where(edge => edge is not null
+                && !edge.IsLayoutEdge
+                && !edge.RelationshipKind.Equals(DiplomovaPrace.Persistence.Schematic.SchematicRelationshipKinds.LayoutPrimary, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        var incomingRelationships = explicitEdges
+            .Where(edge => edge.TargetNodeKey.Equals(_selectedFacilityNode.NodeKey, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(edge => ResolveRelationshipCounterpartyLabel(edge.SourceNodeKey), StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(edge => edge.SourceNodeKey, StringComparer.OrdinalIgnoreCase)
+            .Select(edge => ToRelationshipInspectorEdgeSummary(edge.SourceNodeKey, edge.TargetNodeKey, edge.SourceNodeKey, edge.RelationshipKind, edge.Note))
+            .ToList();
+
+        var outgoingRelationships = explicitEdges
+            .Where(edge => edge.SourceNodeKey.Equals(_selectedFacilityNode.NodeKey, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(edge => ResolveRelationshipCounterpartyLabel(edge.TargetNodeKey), StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(edge => edge.TargetNodeKey, StringComparer.OrdinalIgnoreCase)
+            .Select(edge => ToRelationshipInspectorEdgeSummary(edge.SourceNodeKey, edge.TargetNodeKey, edge.TargetNodeKey, edge.RelationshipKind, edge.Note))
+            .ToList();
+
+        var contextOnlyHighlightedNodes = ContextOnlyHighlightNodeKeysForCanvas
+            .Where(_nodesByKey.ContainsKey)
+            .Select(nodeKey => _nodesByKey[nodeKey])
+            .OrderBy(node => node.Label ?? node.NodeKey, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(node => node.NodeKey, StringComparer.OrdinalIgnoreCase)
+            .Select(ToRelationshipInspectorNodeSummary)
+            .ToList();
+
+        return new RelationshipInspectorViewModel(
+            primaryLayoutParent,
+            layoutChildren,
+            incomingRelationships,
+            outgoingRelationships,
+            contextOnlyHighlightedNodes,
+            SelectionCount,
+            VisualHighlightCount);
+    }
+
+    private RelationshipInspectorNodeSummary ToRelationshipInspectorNodeSummary(DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity node)
+    {
+        return new RelationshipInspectorNodeSummary(node.NodeKey, node.Label, node.NodeType);
+    }
+
+    private RelationshipInspectorEdgeSummary ToRelationshipInspectorEdgeSummary(
+        string sourceNodeKey,
+        string targetNodeKey,
+        string counterpartyNodeKey,
+        string relationshipKind,
+        string? note)
+    {
+        var counterpartyLabel = ResolveRelationshipCounterpartyLabel(counterpartyNodeKey);
+        var counterpartyNodeType = _nodesByKey.TryGetValue(counterpartyNodeKey, out var counterpartyNode)
+            ? counterpartyNode.NodeType
+            : null;
+
+        return new RelationshipInspectorEdgeSummary(
+            sourceNodeKey,
+            targetNodeKey,
+            counterpartyNodeKey,
+            counterpartyLabel,
+            counterpartyNodeType,
+            relationshipKind,
+            note);
+    }
+
+    private string ResolveRelationshipCounterpartyLabel(string nodeKey)
+    {
+        return _nodesByKey.TryGetValue(nodeKey, out var node)
+            ? node.Label
+            : nodeKey;
     }
 
     private void ClearFocusNodeState()

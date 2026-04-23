@@ -101,10 +101,21 @@ public class AppDbContext : DbContext
             entity.ToTable("SchematicEdges");
             entity.HasKey(e => e.Id);
 
-            // Hrana musí být unikátní v rámci facility (zamezení duplicit)
-            entity.HasIndex(e => new { e.FacilityId, e.SourceNodeKey, e.TargetNodeKey })
+            entity.Property(e => e.RelationshipKind)
+                  .IsRequired()
+                  .HasMaxLength(64)
+                  .HasDefaultValue(SchematicRelationshipKinds.Semantic);
+
+            entity.Property(e => e.IsLayoutEdge)
+                  .HasDefaultValue(false);
+
+            entity.Property(e => e.Note)
+                  .HasMaxLength(500);
+
+            // Hrana musí být unikátní v rámci facility + relationship kind.
+            entity.HasIndex(e => new { e.FacilityId, e.SourceNodeKey, e.TargetNodeKey, e.RelationshipKind })
                   .IsUnique()
-                  .HasDatabaseName("IX_SchematicEdges_FacilityId_Source_Target");
+                  .HasDatabaseName("IX_SchematicEdges_FacilityId_Source_Target_RelationshipKind");
 
             entity.HasOne(e => e.Facility)
                   .WithMany(f => f.Edges)

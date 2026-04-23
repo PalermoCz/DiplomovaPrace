@@ -13,6 +13,10 @@ DiplomovaPrace/appsettings.Local.json
 publish/
 DiplomovaPrace/bin/
 DiplomovaPrace/obj/
+
+**/build-validation/
+build-validation
+
 DiplomovaPrace/debug_*.txt
 *.db-shm
 *.db-wal

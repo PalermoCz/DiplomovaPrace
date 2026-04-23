@@ -1,46 +1,79 @@
 # Current Task
 
 ## Goal
-Dokončit group drag bugfix v editoru.
+Implement phase 1 of the refined FacilityWorkbench data-presentation cleanup.
 
 ## Problem
-Group drag stále nefunguje, i když single/multi selection, panel split, save/undo a single-click -> Edit už fungují.
+The refined plan is approved.
+The current FacilityWorkbench is overloaded, renders too much at once, and some interactions are slow.
 
-Po ručním průchodu aktuálního kódu jsou nyní hlavní podezřelé body:
+Before adding new literature-backed visualizations, I want to:
+- simplify the workbench
+- split analytics into tabs
+- reduce eager rendering
+- remove the current topbar alert dropdown
+- prepare a cleaner base for future KPI/visualization additions
 
-1. JS group-drag activation je plně závislá na `_selectedNodeKeys` při `onMouseDown`.
-   Pokud JS selected-set není v ten okamžik správně synchronizovaný, kód spadne do single-drag větve místo group-drag větve.
+## Scope
+Implement only the first structural cleanup slice.
 
-2. `groupEls` se v `editor.js` skládají přes globální:
-   `document.querySelectorAll('g[data-node-key]')`
-   místo aby se omezily jen na aktuální schematic / current SVG content root.
-   To může znamenat, že group drag pracuje se špatnými elementy nebo smíšenými instancemi.
+### Required in this phase
+1. Add a tab-based analytics structure inside FacilityWorkbench.
+2. Make only the Overview tab eager/default.
+3. Make other analytics tabs lazy/conditional.
+4. Remove the current topbar alert dropdown.
+5. Reassign current widgets into tabs.
 
-Původní click-collapse bug už pravděpodobně není hlavní problém, protože `groupDrag` mouse-up už nastavuje `_suppressNextClick = true` bezpodmínečně.
+### Suggested tab structure for this phase
+- Overview
+- Breakdown
+- Performance
+- Compare
+- Diagnostics
 
-## Expected behavior
-- box-select více node
-- chytnu jeden z vybraných node
-- bez modifier key se pohne celá selected group
-- group drag se rozhoduje správně už při drag startu
-- group move pracuje jen s node z aktuálního schematic instance
-- relativní pozice group se zachovají
-- dirty/save/undo flow zůstane funkční
-- single-click -> Edit musí zůstat funkční
+### Keep Overview focused on
+- Headline KPI
+- main time-series chart
+- baseline/deviation status
+- essential context only
+
+### Move into Breakdown
+- Disaggregation / Top Contributors
+- Role Breakdown
+- Source Map
+
+### Move into Performance
+- Load Profile
+- Peak Analysis
+- Operating Regime
+
+### Move into Compare
+- Compare Set manager
+- compare chart
+
+### Move into Diagnostics
+- Forecast vs Actual
+- Forecast diagnostics
+
+## Do NOT implement yet
+- load duration curve
+- scatter temperature vs load
+- benchmark / peer comparison
+- EUI / cost per m²
+- larger analytics-method redesign
+- topology/editor/layout redesign
 
 ## Constraints
-- Keep solution narrow
-- Do not reopen Home/root logic
-- Do not reopen grid extent logic
-- Do not break current correct single-vs-multi panel behavior
-- Prefer root-cause fix, not workaround
-- Reuse existing dirty/save/undo flow
+- Work only on FacilityWorkbench as the primary target surface
+- Treat legacy pages as legacy/reference only
+- Keep the solution focused on data presentation and rendering behavior
+- Prefer removing clutter over preserving every current widget in the main default view
+- Topbar alerts should be removed in this phase, not redesigned yet
 
 ## Acceptance criteria
-- dragging one selected node moves the whole selected group
-- no modifier key is needed
-- group drag uses only nodes from the active schematic instance
-- group drag does not silently fall back to single drag when multi-selection is active
-- relative spacing stays preserved
-- save/undo still works
-- single-click -> Edit still works
+- FacilityWorkbench analytics are split into tabs
+- only Overview is eager/default
+- other tabs are lazy/conditional
+- topbar alert dropdown is removed
+- current widgets are redistributed into the new tabs
+- the default view is visibly simpler and lighter

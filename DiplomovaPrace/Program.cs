@@ -73,6 +73,7 @@ var app = builder.Build();
     var factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
     await using var db = await factory.CreateDbContextAsync();
     await db.Database.EnsureCreatedAsync();
+    await AppDbSchemaBootstrap.EnsurePhaseOneRelationshipSchemaAsync(db);
     app.Logger.LogInformation("Databáze inicializována: {Path}", dbPath);
 
     // ── Force migration: pokud je nastaven flag, smaž stávající facility před seedem ──

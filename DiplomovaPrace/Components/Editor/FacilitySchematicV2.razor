@@ -56,17 +56,23 @@
                 var linkTouchesFocus = IsFocusElement(link.SourceNodeKey)
                     || IsFocusElement(link.TargetNodeKey);
 
-                var linkStroke = linkTouchesFocus ? "#1d4ed8"
-                    : linkInSubtree ? "#3b82f6"
-                    : linkTouchesSelection ? "#64748b"
-                    : link.IsParentChild ? "#94a3b8" : "#cbd5e1";
-                var linkWidth = linkTouchesFocus ? "2.4"
-                    : linkInSubtree ? "2.0"
-                    : linkTouchesSelection ? "1.6"
-                    : link.IsParentChild ? "1.3" : "1.0";
-                var linkOpacity = hasAnySelection && !linkInSubtree && !linkTouchesSelection && !linkTouchesFocus
-                    ? "0.15" : linkInSubtree ? "0.9" : "0.65";
-                var linkDash = link.IsParentChild ? "" : "5 3";
+                var linkStroke = link.IsParentChild
+                    ? (linkTouchesFocus ? "#1d4ed8"
+                        : linkInSubtree ? "#3b82f6"
+                        : linkTouchesSelection ? "#64748b"
+                        : "#64748b")
+                    : "#64748b";
+                var linkWidth = link.IsParentChild
+                    ? (linkTouchesFocus ? "2.4"
+                        : linkInSubtree ? "2.0"
+                        : linkTouchesSelection ? "1.6"
+                        : "1.6")
+                    : "1.6";
+                var linkOpacity = link.IsParentChild
+                    ? (hasAnySelection && !linkInSubtree && !linkTouchesSelection && !linkTouchesFocus
+                        ? "0.15" : linkInSubtree ? "0.9" : "0.65")
+                    : "0.8";
+                var linkDash = string.Empty;
 
                 @* Subtree highlight underlay for focused links *@
                 @if (linkInSubtree && linkTouchesFocus)
@@ -93,36 +99,16 @@
                 var isSubtree = SelectedSubtreeNodeKeys.Contains(node.NodeKey);
                 var cx = node.X;
                 var cy = node.Y;
-                var layer = node.Layer;
+                var baseStyle = FacilityNodeStyleSystem.ResolveStyle(ResolveNodeStylePresetKey(node.NodeKey), StylePresetsByKey);
+                var radius = baseStyle.Size / 2.0;
+                var symbol = baseStyle.Symbol;
+                var symbolFontSize = Math.Clamp(radius - 2.5, 7.5, 13).ToString(System.Globalization.CultureInfo.InvariantCulture);
 
-                // Node sizing by layer
-                var radius = layer switch
-                {
-                    SchematicNodeLayerV2.Backbone => 19.0,
-                    SchematicNodeLayerV2.Zone => 17.0,
-                    SchematicNodeLayerV2.Utility => 17.0,
-                    SchematicNodeLayerV2.Distribution => 14.0,
-                    _ => 12.0
-                };
-
-                // Symbol
-                var symbol = GetNodeSymbol(node);
-                var symbolFontSize = symbol.Length > 2 ? "8.5" : "10.5";
-
-                // Colors
-                NodeDeviationSeverity? alertSeverity = null;
-                if (IsEnergyAlertNode(node.NodeKey)
-                    && FacilityNodeAlertSeverities.TryGetValue(node.NodeKey, out var sev))
-                {
-                    alertSeverity = sev;
-                }
-
-                var (fillColor, strokeColor, textColor) = GetNodePalette(alertSeverity);
-                if (alertSeverity is null)
-                    strokeColor = GetLayerAccent(layer);
-
-                var labelColor = node.HasChildren ? "#0f172a" : "#334155";
-                var labelWeight = node.HasChildren ? "640" : "560";
+                var fillColor = baseStyle.FillColor;
+                var strokeColor = baseStyle.StrokeColor;
+                var textColor = baseStyle.SymbolColor;
+                var labelColor = baseStyle.LabelColor;
+                var labelWeight = baseStyle.LabelFontWeight.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 var nodeOpacity = 1.0;
                 var labelOpacity = 1.0;
 
@@ -135,41 +121,16 @@
 
                 if (isSubtree && !isSelected && !isFocus)
                 {
-                    // Structural zone anchors in the subtree path are highlighted more strongly
-                    // (they have children) so the root of the selected subtree is clearly visible.
-                    if (node.HasChildren)
-                    {
-                        fillColor = "#93c5fd";   // medium blue — zone anchor
-                        strokeColor = "#1d4ed8";
-                        textColor = "#1e3a8a";
-                        labelColor = "#1d4ed8";
-                        labelWeight = "700";
-                    }
-                    else
-                    {
-                        fillColor = "#dbeafe";
-                        strokeColor = "#3b82f6";
-                        textColor = "#1e40af";
-                        labelColor = "#1d4ed8";
-                        labelWeight = "640";
-                    }
+                    labelWeight = node.HasChildren ? "700" : "640";
                 }
 
                 if (isSelected && !isFocus)
                 {
-                    fillColor = alertSeverity is null ? "#2563eb" : fillColor;
-                    textColor = alertSeverity is null ? "white" : textColor;
-                    strokeColor = "#1d4ed8";
-                    labelColor = "#1e3a8a";
                     labelWeight = "680";
                 }
 
                 if (isFocus)
                 {
-                    fillColor = alertSeverity is null ? "#1d4ed8" : fillColor;
-                    textColor = alertSeverity is null ? "white" : textColor;
-                    strokeColor = "#0b3ea9";
-                    labelColor = "#0f2f7a";
                     labelWeight = "720";
                 }
 
@@ -181,16 +142,10 @@
                 var haloFill = isFocus ? "#dbeafe" : "none";
                 var haloFillOpacity = isFocus ? "0.4" : "0";
 
-                var labelText = TruncateLabel(node.Label ?? node.NodeKey, node.Layer);
-                var labelFontSize = node.Layer switch
-                {
-                    SchematicNodeLayerV2.Backbone => "10",
-                    SchematicNodeLayerV2.Zone => "9.5",
-                    SchematicNodeLayerV2.Utility => "9",
-                    SchematicNodeLayerV2.Distribution => "8",
-                    _ => "7.5"
-                };
+                var labelText = TruncateLabel(node.Label ?? node.NodeKey, baseStyle.Size);
+                var labelFontSize = baseStyle.LabelFontSize.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 var labelY = cy + radius + 13;
+                var nodeStrokeWidth = isFocus ? "3.5" : isSelected ? "2.8" : baseStyle.StrokeWidth.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
                 <g data-node-key="@node.NodeKey"
                    data-node-x="@Fmt(cx)"
@@ -209,13 +164,33 @@
                                 pointer-events="none" />
                     }
 
-                    @* Node circle *@
-                    <circle cx="@Fmt(cx)" cy="@Fmt(cy)" r="@Fmt(radius)"
-                            fill="@fillColor" stroke="@strokeColor"
-                            stroke-width="@(isFocus ? "3.5" : isSelected ? "2.8" : "1.8")" />
+                    @* Base node shape *@
+                    @if (baseStyle.Shape == FacilityNodeShapeKind.Circle)
+                    {
+                        <circle cx="@Fmt(cx)" cy="@Fmt(cy)" r="@Fmt(radius)"
+                                fill="@fillColor" stroke="@strokeColor"
+                                stroke-width="@nodeStrokeWidth" />
+                    }
+                    else if (baseStyle.Shape == FacilityNodeShapeKind.Square)
+                    {
+                        <rect x="@Fmt(cx - radius)" y="@Fmt(cy - radius)"
+                              width="@Fmt(baseStyle.Size)" height="@Fmt(baseStyle.Size)"
+                              rx="4" ry="4"
+                              fill="@fillColor" stroke="@strokeColor"
+                              stroke-width="@nodeStrokeWidth" />
+                    }
+                    else
+                    {
+                        <polygon points="@BuildDiamondPoints(cx, cy, radius)"
+                                 fill="@fillColor" stroke="@strokeColor"
+                                 stroke-width="@nodeStrokeWidth" />
+                    }
 
                     @* Symbol *@
-                    @((MarkupString)$"<text x=\"{Fmt(cx)}\" y=\"{Fmt(cy + 4)}\" text-anchor=\"middle\" font-size=\"{symbolFontSize}\" font-weight=\"700\" fill=\"{textColor}\" pointer-events=\"none\">{EscapeXml(symbol)}</text>")
+                    @if (!string.IsNullOrWhiteSpace(symbol))
+                    {
+                        @((MarkupString)$"<text x=\"{Fmt(cx)}\" y=\"{Fmt(cy + 4)}\" text-anchor=\"middle\" font-size=\"{symbolFontSize}\" font-weight=\"700\" fill=\"{textColor}\" pointer-events=\"none\">{EscapeXml(symbol)}</text>")
+                    }
 
                     @* Label *@
                     @((MarkupString)$"<text x=\"{Fmt(cx)}\" y=\"{Fmt(labelY)}\" text-anchor=\"middle\" font-size=\"{labelFontSize}\" font-weight=\"{labelWeight}\" fill=\"{labelColor}\" pointer-events=\"none\" opacity=\"{Fmt(labelOpacity)}\">{EscapeXml(labelText)}</text>")
@@ -225,7 +200,7 @@
         else
         {
             @* Empty state *@
-            @((MarkupString)"<text x=\"200\" y=\"145\" text-anchor=\"middle\" font-size=\"14\" fill=\"#94a3b8\" pointer-events=\"none\">Žádná facility data</text>")
+            @((MarkupString)"<text x=\"200\" y=\"145\" text-anchor=\"middle\" font-size=\"14\" fill=\"#64748b\" pointer-events=\"none\">Žádná facility data</text>")
             @((MarkupString)"<text x=\"200\" y=\"165\" text-anchor=\"middle\" font-size=\"11\" fill=\"#cbd5e1\" pointer-events=\"none\">Importujte nebo načtěte facility</text>")
         }
     </g>
@@ -236,7 +211,8 @@
     [Parameter] public string? SelectedElementId { get; set; }
     [Parameter] public IReadOnlySet<string> SelectedElementIds { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     [Parameter] public IReadOnlySet<string> SelectedSubtreeNodeKeys { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-    [Parameter] public IReadOnlyDictionary<string, NodeDeviationSeverity> FacilityNodeAlertSeverities { get; set; } = new Dictionary<string, NodeDeviationSeverity>();
+    [Parameter] public IReadOnlyDictionary<string, string> NodeStylePresetKeysByNodeKey { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    [Parameter] public IReadOnlyDictionary<string, FacilityNodeStylePreset> StylePresetsByKey { get; set; } = new Dictionary<string, FacilityNodeStylePreset>(StringComparer.OrdinalIgnoreCase);
     /// <summary>Controls the initial fit behavior: "home" (default, root-centric), "focus", "edit".</summary>
     [Parameter] public string InitialFitMode { get; set; } = "home";
 
@@ -364,50 +340,17 @@
             ? SelectedElementIds.Contains(key)
             : IsFocusElement(key) || SelectedElementIds.Contains(key);
 
-    private static bool IsEnergyAlertNode(string nodeKey) =>
-        nodeKey is "pv_main" or "chp_main" or "cooling_main" or "heating_main";
-
-    private static string GetNodeSymbol(SchematicNodeLayoutV2 node)
+    private string? ResolveNodeStylePresetKey(string nodeKey)
     {
-        var type = node.NodeType?.Trim().ToLowerInvariant();
-        return type switch
-        {
-            "grid" or "site" or "building" => "g",
-            "transformer" => "t",
-            "generator_pv" => "g",
-            "generator_chp" => "g",
-            "utility_cooling" => "u",
-            "utility_heating" => "h",
-            "zone" => "z",
-            "subzone" => "s",
-            "server" => "s",
-            "ventilation" => "v",
-            "test" => "t",
-            "simulation" => "s",
-            "hvac_branch" => "h",
-            "cooling_branch" => "c",
-            "office_branch" => "o",
-            _ => node.HasChildren ? "s" : "s"
-        };
+        return NodeStylePresetKeysByNodeKey.TryGetValue(nodeKey, out var presetKey)
+            ? presetKey
+            : null;
     }
 
-    private static (string Fill, string Stroke, string Text) GetNodePalette(NodeDeviationSeverity? severity) =>
-        severity switch
-        {
-            NodeDeviationSeverity.High => ("#f87171", "#b91c1c", "white"),
-            NodeDeviationSeverity.Elevated => ("#fcd34d", "#b45309", "#1f2937"),
-            _ => ("#f1f5f9", "#475569", "#334155")
-        };
-
-    private static string GetLayerAccent(SchematicNodeLayerV2 layer) =>
-        layer switch
-        {
-            SchematicNodeLayerV2.Backbone => "#1e40af",
-            SchematicNodeLayerV2.Utility => "#0f766e",
-            SchematicNodeLayerV2.Zone => "#475569",
-            SchematicNodeLayerV2.Distribution => "#6b7280",
-            _ => "#94a3b8"
-        };
+    private static string BuildDiamondPoints(double cx, double cy, double radius)
+    {
+        return FormattableString.Invariant($"{cx},{cy - radius} {cx + radius},{cy} {cx},{cy + radius} {cx - radius},{cy}");
+    }
 
     private static string Fmt(double v) =>
         v.ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -416,15 +359,14 @@
         string.IsNullOrEmpty(s) ? "" :
         s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;");
 
-    private static string TruncateLabel(string label, SchematicNodeLayerV2 layer)
+    private static string TruncateLabel(string label, double size)
     {
-        var maxLen = layer switch
+        var maxLen = size switch
         {
-            SchematicNodeLayerV2.Backbone => 24,
-            SchematicNodeLayerV2.Zone => 18,
-            SchematicNodeLayerV2.Utility => 16,
-            SchematicNodeLayerV2.Distribution => 14,
-            _ => 12
+            >= 34 => 20,
+            >= 28 => 16,
+            >= 22 => 13,
+            _ => 11
         };
         return label.Length <= maxLen ? label : label[..(maxLen - 1)] + "…";
     }

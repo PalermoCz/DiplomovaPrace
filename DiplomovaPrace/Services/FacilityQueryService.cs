@@ -31,6 +31,8 @@ public class FacilityQueryService
             return null;
         }
 
+        NormalizeEdgeMetadata(facility);
+
         var structureStateTask = _editorStateService.GetStructureStateAsync(ct);
         var nodeStatesByKeyTask = _editorStateService.GetNodeStatesByKeyAsync(ct);
 
@@ -84,12 +86,18 @@ public class FacilityQueryService
     {
         return structureState.AddedNodes.Count > 0
             || structureState.RemovedNodeKeys.Count > 0
-            || structureState.ParentOverrides.Count > 0;
+            || structureState.ParentOverrides.Count > 0
+            || structureState.AddedRelationships.Count > 0
+            || structureState.RemovedRelationships.Count > 0;
     }
 
     private static void ApplyStructureEdits(FacilityEntity facility, FacilityStructureState structureState)
     {
         var removedNodeKeys = structureState.RemovedNodeKeys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var preservedEdges = facility.Edges
+            .Where(edge => !removedNodeKeys.Contains(edge.SourceNodeKey) && !removedNodeKeys.Contains(edge.TargetNodeKey))
+            .Select(CloneEdge)
+            .ToList();
         var effectiveNodes = facility.Nodes
             .Where(node => !removedNodeKeys.Contains(node.NodeKey))
             .ToDictionary(node => node.NodeKey, StringComparer.OrdinalIgnoreCase);
@@ -185,16 +193,202 @@ public class FacilityQueryService
             .OrderBy(node => node.NodeKey, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        facility.Edges = facility.Nodes
-            .Where(node => !string.IsNullOrWhiteSpace(node.ParentNodeKey))
-            .Select(node => new SchematicEdgeEntity
+        var effectiveExplicitEdges = ApplyAdditionalRelationshipEdits(
+            facility.Id,
+            preservedEdges,
+            effectiveNodes,
+            structureState);
+
+        facility.Edges = BuildEffectiveEdges(facility.Id, effectiveNodes, effectiveExplicitEdges);
+    }
+
+    private static List<SchematicEdgeEntity> ApplyAdditionalRelationshipEdits(
+        int facilityId,
+        IReadOnlyList<SchematicEdgeEntity> preservedEdges,
+        IReadOnlyDictionary<string, SchematicNodeEntity> effectiveNodes,
+        FacilityStructureState structureState)
+    {
+        var nodeKeys = effectiveNodes.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var removedRelationshipKeys = structureState.RemovedRelationships
+            .Select(BuildEdgeKey)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var result = preservedEdges
+            .Where(edge => nodeKeys.Contains(edge.SourceNodeKey) && nodeKeys.Contains(edge.TargetNodeKey))
+            .Where(edge => !IsLayoutRelationship(edge))
+            .Where(edge => !removedRelationshipKeys.Contains(BuildEdgeKey(edge)))
+            .Select(edge =>
             {
-                FacilityId = facility.Id,
-                SourceNodeKey = node.ParentNodeKey!,
-                TargetNodeKey = node.NodeKey
+                var clone = CloneEdge(edge);
+                clone.FacilityId = facilityId;
+                clone.RelationshipKind = NormalizeRelationshipKind(clone.RelationshipKind, clone.IsLayoutEdge);
+                clone.IsLayoutEdge = false;
+                return clone;
             })
+            .ToList();
+
+        foreach (var relationship in structureState.AddedRelationships)
+        {
+            if (!nodeKeys.Contains(relationship.SourceNodeKey) || !nodeKeys.Contains(relationship.TargetNodeKey))
+            {
+                continue;
+            }
+
+            result.Add(new SchematicEdgeEntity
+            {
+                FacilityId = facilityId,
+                SourceNodeKey = relationship.SourceNodeKey,
+                TargetNodeKey = relationship.TargetNodeKey,
+                RelationshipKind = NormalizeRelationshipKind(relationship.RelationshipKind, isLayoutEdge: false),
+                IsLayoutEdge = false,
+                Note = relationship.Note
+            });
+        }
+
+        return result;
+    }
+
+    private static void NormalizeEdgeMetadata(FacilityEntity facility)
+    {
+        var nodeByKey = facility.Nodes
+            .ToDictionary(node => node.NodeKey, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var edge in facility.Edges)
+        {
+            var isLayoutProjection = nodeByKey.TryGetValue(edge.TargetNodeKey, out var targetNode)
+                && !string.IsNullOrWhiteSpace(targetNode.ParentNodeKey)
+                && targetNode.ParentNodeKey.Equals(edge.SourceNodeKey, StringComparison.OrdinalIgnoreCase);
+
+            if (isLayoutProjection)
+            {
+                edge.RelationshipKind = SchematicRelationshipKinds.LayoutPrimary;
+                edge.IsLayoutEdge = true;
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(edge.RelationshipKind))
+            {
+                edge.RelationshipKind = edge.IsLayoutEdge
+                    ? SchematicRelationshipKinds.LayoutPrimary
+                    : SchematicRelationshipKinds.Semantic;
+            }
+
+            edge.RelationshipKind = edge.RelationshipKind.Trim().ToLowerInvariant();
+            edge.IsLayoutEdge = edge.IsLayoutEdge
+                || edge.RelationshipKind.Equals(SchematicRelationshipKinds.LayoutPrimary, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    private static List<SchematicEdgeEntity> BuildEffectiveEdges(
+        int facilityId,
+        IReadOnlyDictionary<string, SchematicNodeEntity> effectiveNodes,
+        IEnumerable<SchematicEdgeEntity> preservedEdges)
+    {
+        var nodeKeys = effectiveNodes.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var topologyEdges = preservedEdges
+            .Where(edge => nodeKeys.Contains(edge.SourceNodeKey) && nodeKeys.Contains(edge.TargetNodeKey))
+            .Where(edge => !IsLayoutRelationship(edge))
+            .Select(edge =>
+            {
+                var clone = CloneEdge(edge);
+                clone.RelationshipKind = NormalizeRelationshipKind(clone.RelationshipKind, clone.IsLayoutEdge);
+                clone.IsLayoutEdge = false;
+                return clone;
+            })
+            .ToList();
+
+        var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var result = new List<SchematicEdgeEntity>();
+
+        foreach (var edge in topologyEdges)
+        {
+            var key = BuildEdgeKey(edge.SourceNodeKey, edge.TargetNodeKey, edge.RelationshipKind);
+            if (!seenKeys.Add(key))
+            {
+                continue;
+            }
+
+            edge.FacilityId = facilityId;
+            result.Add(edge);
+        }
+
+        foreach (var node in effectiveNodes.Values)
+        {
+            if (string.IsNullOrWhiteSpace(node.ParentNodeKey))
+            {
+                continue;
+            }
+
+            var layoutEdge = new SchematicEdgeEntity
+            {
+                FacilityId = facilityId,
+                SourceNodeKey = node.ParentNodeKey,
+                TargetNodeKey = node.NodeKey,
+                RelationshipKind = SchematicRelationshipKinds.LayoutPrimary,
+                IsLayoutEdge = true
+            };
+
+            var key = BuildEdgeKey(layoutEdge.SourceNodeKey, layoutEdge.TargetNodeKey, layoutEdge.RelationshipKind);
+            if (!seenKeys.Add(key))
+            {
+                continue;
+            }
+
+            result.Add(layoutEdge);
+        }
+
+        return result
             .OrderBy(edge => edge.SourceNodeKey, StringComparer.OrdinalIgnoreCase)
             .ThenBy(edge => edge.TargetNodeKey, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(edge => edge.RelationshipKind, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private static bool IsLayoutRelationship(SchematicEdgeEntity edge)
+    {
+        return edge.IsLayoutEdge
+            || edge.RelationshipKind.Equals(SchematicRelationshipKinds.LayoutPrimary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeRelationshipKind(string? relationshipKind, bool isLayoutEdge)
+    {
+        var normalized = relationshipKind?.Trim().ToLowerInvariant();
+        if (!string.IsNullOrWhiteSpace(normalized))
+        {
+            return normalized;
+        }
+
+        return isLayoutEdge
+            ? SchematicRelationshipKinds.LayoutPrimary
+            : SchematicRelationshipKinds.Semantic;
+    }
+
+    private static string BuildEdgeKey(string sourceNodeKey, string targetNodeKey, string relationshipKind)
+    {
+        return $"{sourceNodeKey}|{targetNodeKey}|{relationshipKind}";
+    }
+
+    private static string BuildEdgeKey(FacilityAdditionalRelationship relationship)
+    {
+        return BuildEdgeKey(relationship.SourceNodeKey, relationship.TargetNodeKey, relationship.RelationshipKind);
+    }
+
+    private static string BuildEdgeKey(SchematicEdgeEntity edge)
+    {
+        return BuildEdgeKey(edge.SourceNodeKey, edge.TargetNodeKey, NormalizeRelationshipKind(edge.RelationshipKind, edge.IsLayoutEdge));
+    }
+
+    private static SchematicEdgeEntity CloneEdge(SchematicEdgeEntity source)
+    {
+        return new SchematicEdgeEntity
+        {
+            Id = source.Id,
+            FacilityId = source.FacilityId,
+            SourceNodeKey = source.SourceNodeKey,
+            TargetNodeKey = source.TargetNodeKey,
+            RelationshipKind = source.RelationshipKind,
+            IsLayoutEdge = source.IsLayoutEdge,
+            Note = source.Note
+        };
     }
 }

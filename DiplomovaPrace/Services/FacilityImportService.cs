@@ -105,34 +105,59 @@ public class FacilityImportService
         // ── 3. Načtení explicitních hran z mvp_edges.csv ──────────────────────
         var explicitEdges = ReadEdgesCsv(edgesPath);
 
-        // Pracujeme s HashSetem (source, target) pro detekci duplicit
-        var edgeSet = new HashSet<(string Source, string Target)>(
-            explicitEdges.Select(e => (e.SourceNodeId, e.TargetNodeId))
-        );
+        var edgeEntities = new List<SchematicEdgeEntity>();
+        var edgeSet = new HashSet<(string Source, string Target, string RelationshipKind)>(
+            EqualityComparer<(string Source, string Target, string RelationshipKind)>.Default);
+
+        foreach (var edge in explicitEdges)
+        {
+            var isLayoutEdge = ParseBooleanFlag(edge.IsLayoutEdge);
+            var relationshipKind = NormalizeRelationshipKind(edge.EdgeKind, isLayoutEdge);
+            var edgeKey = (edge.SourceNodeId, edge.TargetNodeId, relationshipKind);
+            if (!edgeSet.Add(edgeKey))
+            {
+                continue;
+            }
+
+            edgeEntities.Add(new SchematicEdgeEntity
+            {
+                FacilityId = facility.Id,
+                SourceNodeKey = edge.SourceNodeId,
+                TargetNodeKey = edge.TargetNodeId,
+                RelationshipKind = relationshipKind,
+                IsLayoutEdge = isLayoutEdge || IsLayoutPrimaryRelationship(relationshipKind),
+                Note = NullIfEmpty(edge.Note)
+            });
+        }
 
         // ── 4. Dopočítání chybějících hran z parent_node_id ───────────────────
-        // Pokud node má ParentNodeKey a hrana ParentNodeKey -> NodeKey ještě neexistuje,
-        // přidáme ji automaticky — zachová kompletní interní hierarchii grafu.
+        // Pokud node má ParentNodeKey a layout-primary hrana ještě neexistuje,
+        // přidáme ji automaticky — layout projekce tak zůstává explicitně reprezentovaná i v topologii.
         foreach (var node in nodeEntities)
         {
             if (string.IsNullOrEmpty(node.ParentNodeKey)) continue;
 
-            var derivedEdge = (Source: node.ParentNodeKey, Target: node.NodeKey);
+            var derivedEdge = (
+                Source: node.ParentNodeKey,
+                Target: node.NodeKey,
+                RelationshipKind: SchematicRelationshipKinds.LayoutPrimary);
             if (edgeSet.Add(derivedEdge))
             {
+                edgeEntities.Add(new SchematicEdgeEntity
+                {
+                    FacilityId = facility.Id,
+                    SourceNodeKey = derivedEdge.Source,
+                    TargetNodeKey = derivedEdge.Target,
+                    RelationshipKind = derivedEdge.RelationshipKind,
+                    IsLayoutEdge = true
+                });
+
                 _logger.LogDebug("Dopočítána hrana z parent_node_id: {Source} -> {Target}",
                     derivedEdge.Source, derivedEdge.Target);
             }
         }
 
         // ── 5. Uložení finálního edge listu ───────────────────────────────────
-        var edgeEntities = edgeSet.Select(e => new SchematicEdgeEntity
-        {
-            FacilityId    = facility.Id,
-            SourceNodeKey = e.Source,
-            TargetNodeKey = e.Target,
-        }).ToList();
-
         db.SchematicEdges.AddRange(edgeEntities);
         await db.SaveChangesAsync(ct);
         _logger.LogInformation("Uloženo {Count} hran (edges) — {Explicit} explicitních + {Derived} dopočítaných.",
@@ -230,6 +255,38 @@ public class FacilityImportService
         if (string.IsNullOrWhiteSpace(value)) return null;
         return double.TryParse(value.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out var d)
             ? d : null;
+    }
+
+    private static bool ParseBooleanFlag(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var normalized = value.Trim();
+        return normalized.Equals("1", StringComparison.OrdinalIgnoreCase)
+            || normalized.Equals("true", StringComparison.OrdinalIgnoreCase)
+            || normalized.Equals("yes", StringComparison.OrdinalIgnoreCase)
+            || normalized.Equals("y", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeRelationshipKind(string? rawRelationshipKind, bool isLayoutEdge)
+    {
+        var normalized = NullIfEmpty(rawRelationshipKind)?.ToLowerInvariant();
+        if (!string.IsNullOrWhiteSpace(normalized))
+        {
+            return normalized;
+        }
+
+        return isLayoutEdge
+            ? SchematicRelationshipKinds.LayoutPrimary
+            : SchematicRelationshipKinds.Semantic;
+    }
+
+    private static bool IsLayoutPrimaryRelationship(string relationshipKind)
+    {
+        return relationshipKind.Equals(SchematicRelationshipKinds.LayoutPrimary, StringComparison.OrdinalIgnoreCase);
     }
 
     // ── Interní CSV record modely ─────────────────────────────────────────────
