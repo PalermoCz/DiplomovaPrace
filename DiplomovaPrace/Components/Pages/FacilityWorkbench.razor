@@ -7,7 +7,6 @@
 @inject FacilityQueryService FacilityQueryService
 @inject FacilityEditorStateService FacilityEditorStateService
 @inject NodeAnalyticsPreviewService AnalyticsPreview
-@inject FacilityAlertSummaryService GlobalAlertSummaryService
 @inject IEditorSessionService SessionService
 @inject IJSRuntime JSRuntime
 @layout DiplomovaPrace.Components.Layout.FacilityLayout
@@ -158,13 +157,13 @@
                         <div class="wb-editor-toolbar-divider"></div>
                         @* ── Structure tools ── *@
                         <button class="wb-toolbar-icon-btn @(_editorActiveTab == "add" ? "wb-toolbar-icon-btn-active" : "")"
-                                title="@(_selectedFacilityNode is not null && CanEditFocusedNode ? $"Přidat child uzel pod '{_selectedFacilityNode.Label}'" : "Přidat uzel")"
+                                title="@(_selectedFacilityNode is not null && CanEditFocusedNode ? $"Add child node under '{_selectedFacilityNode.Label}'" : "Add node")"
                             disabled="@IsEditorMultiSelectActive"
                                 @onclick="@(() => SwitchEditorTab("add"))">
                             <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 1"/></svg>
                         </button>
                         <button class="wb-toolbar-icon-btn @(_editorActiveTab == "delete" ? "wb-toolbar-icon-btn-active" : "") @(CanRemoveFocusedLeafNode ? "wb-toolbar-icon-btn-danger" : "")"
-                                title="Smazat vybraný uzel"
+                                title="Delete selected node"
                             disabled="@IsEditorMultiSelectActive"
                                 @onclick="@(() => SwitchEditorTab("delete"))">
                             <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg>
@@ -172,13 +171,13 @@
                         <div class="wb-editor-toolbar-divider"></div>
                         @* ── Undo / Redo ── *@
                         <button class="wb-toolbar-icon-btn"
-                                title="@(_editModeCanUndo ? ("Vrátit zpět: " + (_editUndoStack.Count > 0 ? _editUndoStack[^1].Description : "")) : "Zpět — žádná změna")"
+                            title="@(_editModeCanUndo ? ("Undo: " + (_editUndoStack.Count > 0 ? _editUndoStack[^1].Description : "")) : "Undo - no change")"
                                 disabled="@(!_editModeCanUndo)"
                                 @onclick="UndoEditAsync">
                             <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466"/></svg>
                         </button>
                         <button class="wb-toolbar-icon-btn"
-                                title="@(_editModeCanRedo ? ("Znovu: " + (_editRedoStack.Count > 0 ? _editRedoStack[^1].Description : "")) : "Znovu — žádná vrácená změna")"
+                            title="@(_editModeCanRedo ? ("Redo: " + (_editRedoStack.Count > 0 ? _editRedoStack[^1].Description : "")) : "Redo - nothing to restore")"
                                 disabled="@(!_editModeCanRedo)"
                                 @onclick="RedoEditAsync">
                             <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></svg>
@@ -186,7 +185,7 @@
                         <div class="wb-editor-toolbar-divider"></div>
                         @* ── Import Data ── *@
                         <button class="wb-toolbar-icon-btn @(_editorActiveTab == "import" ? "wb-toolbar-icon-btn-active" : "")"
-                                title="Import dat"
+                                title="Import data"
                             disabled="@IsEditorMultiSelectActive"
                                 @onclick="@(() => SwitchEditorTab("import"))">
                             <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></svg>
@@ -195,7 +194,7 @@
                         <div class="wb-editor-toolbar-spacer"></div>
                         @* ── Save ── *@
                         <button class="wb-toolbar-icon-btn @(EditModeDirty ? "wb-toolbar-icon-btn-save-dirty" : "")"
-                                title="@(EditModeDirty ? "Uložit změny (neuložené změny)" : "Uložit změny")"
+                            title="@(EditModeDirty ? "Save changes (unsaved edits)" : "Save changes")"
                                 @onclick="SaveEditModeChangesAsync">
                             @* Floppy disk / kazeta — proper SVG *@
                             <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
@@ -205,7 +204,7 @@
                         </button>
                         @* ── Close editor ── *@
                         <button class="wb-toolbar-icon-btn wb-toolbar-icon-btn-close"
-                                title="Ukončit editor"
+                            title="Close editor"
                                 @onclick="ExitSchematicOverlayAsync">
                             <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/></svg>
                         </button>
@@ -216,7 +215,7 @@
                     {
                         <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
                             <div class="spinner-border mb-3" role="status"></div>
-                            <p class="mb-0">Načítám strukturní data...</p>
+                            <p class="mb-0">Loading structural data...</p>
                         </div>
                     }
                     else
@@ -250,7 +249,7 @@
                     {
                         <button class="wb-editor-tab @(_editorActiveTab == "layout" ? "wb-editor-tab-active" : "")"
                                 @onclick="@(() => SwitchEditorTab("layout"))"
-                                title="Rozvržení — @_selectionSet.Count uzlů vybráno">
+                                title="Layout - @_selectionSet.Count nodes selected">
                             <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5z"/></svg>
                             Layout
                             <span class="wb-editor-tab-count ms-1">@_selectionSet.Count</span>
@@ -308,7 +307,7 @@
                     {
                         <div class="wb-editor-empty-state">
                             <svg width="22" height="22" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" class="wb-editor-empty-icon"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/><path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/></svg>
-                            <div>Vyberte uzel ve schématu pro editaci</div>
+                            <div>Select a node in the schematic to edit it</div>
                         </div>
                     }
                     @if (editorHasFocusNode && CanEditFocusedNode)
@@ -512,16 +511,16 @@
                                     <path d="M11 2H9v3h2z"/>
                                     <path d="M1.5 0h11.586a1.5 1.5 0 0 1 1.06.44l1.415 1.414A1.5 1.5 0 0 1 16 2.914V14.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 14.5v-13A1.5 1.5 0 0 1 1.5 0M1 1.5v13a.5.5 0 0 0 .5.5H2v-4.5A1.5 1.5 0 0 1 3.5 9h9a1.5 1.5 0 0 1 1.5 1.5V15h.5a.5.5 0 0 0 .5-.5V2.914a.5.5 0 0 0-.146-.353l-1.415-1.415A.5.5 0 0 0 13.086 1H13v3.5A1.5 1.5 0 0 1 11.5 6h-7A1.5 1.5 0 0 1 3 4.5V1H1.5a.5.5 0 0 0-.5.5m3 4a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V1H4zM3 15h10v-4.5a.5.5 0 0 0-.5-.5h-9a.5.5 0 0 0-.5.5z"/>
                                 </svg>
-                                Uložit uzel
+                                Save node
                             </button>
                             <button class="btn btn-sm btn-link text-decoration-none p-0 ep-btn-restore" @onclick="RestoreFocusedNodeEditorDraft">
-                                Obnovit draft
+                                Restore draft
                             </button>
                         </div>
                     }
                     else if (editorHasFocusNode)
                     {
-                        <div class="ep-info-note">Uzel @_selectedFacilityNode!.NodeKey je kontextový a nelze ho editovat.</div>
+                        <div class="ep-info-note">Node @_selectedFacilityNode!.NodeKey is contextual and cannot be edited.</div>
                     }
                     @if (!string.IsNullOrWhiteSpace(_editorStatusMessage))
                     {
@@ -536,30 +535,30 @@
                     {
                         <div class="ep-node-header ep-node-header-placeholder">
                             <div class="ep-node-header-label">Add node</div>
-                            <div class="ep-node-header-key">Nový child uzel</div>
+                            <div class="ep-node-header-key">New child node</div>
                         </div>
                         <div class="wb-editor-empty-state">
                             <svg width="22" height="22" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" class="wb-editor-empty-icon"><path d="M8 1a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 1"/></svg>
-                            <div>Vyberte uzel ve schématu — nový uzel se přidá jako jeho child.</div>
+                            <div>Select a node in the schematic. The new node will be added as its child.</div>
                         </div>
                     }
                     else
                     {
                         <div class="ep-node-header">
-                            <div class="ep-node-header-sublabel">Parent uzel</div>
+                            <div class="ep-node-header-sublabel">Parent node</div>
                             <div class="ep-node-header-label">@_selectedFacilityNode!.Label</div>
                             <div class="ep-node-header-key">@_selectedFacilityNode.NodeKey</div>
                         </div>
                         <div class="ep-section" id="editor-add-node-section">
-                            <div class="ep-section-label">Nový child uzel</div>
+                            <div class="ep-section-label">New child node</div>
                             <div class="ep-field">
                                 <label>NodeKey <span class="text-danger">*</span></label>
-                                <input class="form-control form-control-sm" @bind="_newNodeKeyInput" maxlength="100" placeholder="např. workshop_aux_1" />
-                                <div class="ep-hint">Unikátní ID — malá písmena, podtržítko</div>
+                                <input class="form-control form-control-sm" @bind="_newNodeKeyInput" maxlength="100" placeholder="e.g. workshop_aux_1" />
+                                <div class="ep-hint">Unique ID - lowercase letters and underscores</div>
                             </div>
                             <div class="ep-field">
                                 <label>Label <span class="text-danger">*</span></label>
-                                <input class="form-control form-control-sm" @bind="_newNodeLabelInput" maxlength="200" placeholder="Zobrazovaný název" />
+                                <input class="form-control form-control-sm" @bind="_newNodeLabelInput" maxlength="200" placeholder="Display name" />
                             </div>
                             <div class="ep-field-row">
                                 <div class="ep-field">
@@ -568,18 +567,18 @@
                                 </div>
                                 <div class="ep-field">
                                     <label>Zone</label>
-                                    <input class="form-control form-control-sm" @bind="_newNodeZoneInput" maxlength="100" placeholder="volitelně" />
+                                    <input class="form-control form-control-sm" @bind="_newNodeZoneInput" maxlength="100" placeholder="optional" />
                                 </div>
                             </div>
                             <div class="ep-field">
                                 <label>Meter URN</label>
-                                <input class="form-control form-control-sm" @bind="_newNodeMeterUrnInput" maxlength="200" placeholder="volitelně — vazba na měřidlo" />
+                                <input class="form-control form-control-sm" @bind="_newNodeMeterUrnInput" maxlength="200" placeholder="optional - meter binding" />
                             </div>
                         </div>
                         <div class="ep-footer">
                             <button class="btn btn-sm btn-primary ep-btn-save" @onclick="AddNodeAsync">
                                 <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" class="me-1" aria-hidden="true"><path d="M8 1a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 1"/></svg>
-                                Přidat child uzel
+                                Add child node
                             </button>
                         </div>
                     }
@@ -596,17 +595,17 @@
                     {
                         <div class="ep-node-header ep-node-header-placeholder">
                             <div class="ep-node-header-label">Delete</div>
-                            <div class="ep-node-header-key">Smazat uzel</div>
+                            <div class="ep-node-header-key">Delete node</div>
                         </div>
                         <div class="wb-editor-empty-state">
                             <svg width="22" height="22" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" class="wb-editor-empty-icon"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg>
-                            <div>Vyberte uzel ve schématu pro smazání.</div>
+                            <div>Select a node in the schematic to delete it.</div>
                         </div>
                     }
                     else
                     {
                         <div class="ep-node-header">
-                            <div class="ep-node-header-sublabel">Vybraný uzel</div>
+                            <div class="ep-node-header-sublabel">Selected node</div>
                             <div class="ep-node-header-label">@_selectedFacilityNode!.Label</div>
                             <div class="ep-node-header-key">@_selectedFacilityNode.NodeKey</div>
                         </div>
@@ -614,7 +613,7 @@
                         {
                             <div class="wb-editor-warning-box">
                                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" class="me-1 flex-shrink-0" aria-hidden="true"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg>
-                                Tento uzel je kontextový a nelze ho smazat.
+                                This node is contextual and cannot be deleted.
                             </div>
                         }
                         else if (HasChildren(_selectedFacilityNode!.NodeKey))
@@ -622,21 +621,21 @@
                             <div class="wb-editor-warning-box ep-warning-block">
                                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" class="me-1 flex-shrink-0" aria-hidden="true"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg>
                                 <div>
-                                    <strong>Uzel nelze smazat.</strong><br />
-                                    Uzel má child uzly. Nejdříve přepoj nebo smaž všechny children.
+                                    <strong>This node cannot be deleted.</strong><br />
+                                    The node has child nodes. Reconnect or delete all children first.
                                 </div>
                             </div>
                         }
                         else
                         {
                             <div class="ep-section">
-                                <div class="ep-section-label ep-section-label-danger">Nevratná akce</div>
-                                <div class="ep-hint ep-hint-dark">Uzel bude trvale odstraněn ze struktury. Tuto akci nelze vrátit zpět.</div>
+                                <div class="ep-section-label ep-section-label-danger">Irreversible action</div>
+                                <div class="ep-hint ep-hint-dark">The node will be permanently removed from the structure. This action cannot be undone.</div>
                             </div>
                             <div class="ep-footer">
                                 <button class="btn btn-sm btn-danger ep-btn-save" @onclick="RemoveFocusedLeafNodeAsync">
                                     <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" class="me-1" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg>
-                                    Smazat uzel
+                                    Delete node
                                 </button>
                             </div>
                         }
@@ -652,27 +651,27 @@
                 {
                     <div class="ep-node-header ep-node-header-placeholder">
                         <div class="ep-node-header-label">Import data</div>
-                        <div class="ep-node-header-key">Napojení na zdroj dat</div>
+                        <div class="ep-node-header-key">Data source connection</div>
                     </div>
                     <div class="ep-section">
                         <div class="ep-section-label">Data binding</div>
                         <div class="ep-placeholder">
                             <svg width="28" height="28" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" class="ep-placeholder-icon"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></svg>
                             <div class="ep-placeholder-text">
-                                Napojení na datový zdroj bude implementováno v pozdějším kroku.
+                                Data source connection will be implemented in a later step.
                             </div>
-                            <div class="ep-placeholder-sub">External source binding · CSV import · Meter mapping</div>
+                            <div class="ep-placeholder-sub">External source binding - CSV import - Meter mapping</div>
                         </div>
                     </div>
                     @if (editorHasFocusNode && !string.IsNullOrWhiteSpace(_selectedFacilityNode!.MeterUrn))
                     {
                         <div class="ep-section">
-                            <div class="ep-section-label">Aktuální Meter URN</div>
+                            <div class="ep-section-label">Current Meter URN</div>
                             <div class="ep-value-chip">@_selectedFacilityNode.MeterUrn</div>
                         </div>
                     }
                     <div class="ep-footer">
-                        <button class="btn btn-sm btn-outline-secondary ep-btn-save" disabled title="Funkce bude dostupná v pozdějším kroku">
+                        <button class="btn btn-sm btn-outline-secondary ep-btn-save" disabled title="This feature will be available in a later step">
                             <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" class="me-1" aria-hidden="true"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></svg>
                             Import data
                         </button>
@@ -690,7 +689,7 @@
                         </div>
                         <div class="wb-editor-empty-state">
                             <svg width="22" height="22" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" class="wb-editor-empty-icon"><path d="M12 .25a.75.75 0 0 1 .75.75v2.112a2.75 2.75 0 0 1 1.47 3.78l-4.1 7.38A1.75 1.75 0 0 1 8.59 15H4.75A1.75 1.75 0 0 1 3 13.25v-1.586a1.75 1.75 0 0 1 .256-.91l4.19-6.984A2.75 2.75 0 0 1 10.25 1.1V1A.75.75 0 0 1 11 .25zm-.25 4.5a1.25 1.25 0 0 0-1.072.608l-4.19 6.985a.25.25 0 0 0-.038.128v.779h2.14l4.063-7.314A1.25 1.25 0 0 0 11.75 4.75"/></svg>
-                            <div>Vyberte uzel ve schématu pro přiřazení a úpravu stylu.</div>
+                            <div>Select a node in the schematic to assign and edit style.</div>
                         </div>
                     }
                     else
@@ -818,56 +817,56 @@
                 else if (_editorActiveTab == "layout")
                 {
                     <div class="ep-node-header ep-node-header-placeholder">
-                        <div class="ep-node-header-label">Rozvržení</div>
-                        <div class="ep-node-header-key">Zarovnat a rozložit uzly</div>
+                        <div class="ep-node-header-label">Layout</div>
+                        <div class="ep-node-header-key">Align and distribute nodes</div>
                     </div>
                     @if (_selectionSet.Count < 2)
                     {
                         <div class="ep-placeholder ep-layout-empty">
                             <svg width="24" height="24" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" class="ep-placeholder-icon"><path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5z"/></svg>
-                            <div class="ep-placeholder-text">Vyberte 2 nebo více uzlů</div>
-                            <div class="ep-placeholder-sub">Ctrl+klik pro přidání do výběru, nebo přetáhněte výběrový rámeček na prázdném místě schématu.</div>
+                            <div class="ep-placeholder-text">Select 2 or more nodes</div>
+                            <div class="ep-placeholder-sub">Ctrl+click to add to the selection, or drag a selection box over empty schematic space.</div>
                         </div>
                     }
                     else
                     {
                         <div class="ep-section">
-                            <div class="ep-section-label">@_selectionSet.Count uzlů vybráno</div>
-                            <div class="ep-hint ep-hint-dark">Zarovnání se aplikuje na všechny vybrané uzly. Pohyb je zaznamenán do undo historii.</div>
+                            <div class="ep-section-label">@_selectionSet.Count nodes selected</div>
+                            <div class="ep-hint ep-hint-dark">Alignment applies to every selected node. Movement is recorded in the undo history.</div>
                         </div>
                         <div class="ep-section">
-                            <div class="ep-section-label">Zarovnat na osu X</div>
+                            <div class="ep-section-label">Align on the X axis</div>
                             <div class="ep-align-grid">
-                                <button class="ep-align-btn" @onclick="@(() => AlignSelectedNodesAsync("center-h"))" title="Zarovnat na střed (průměr X)">
+                                <button class="ep-align-btn" @onclick="@(() => AlignSelectedNodesAsync("center-h"))" title="Align to the center (average X)">
                                     <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a.5.5 0 0 1 .5.5V3H13a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H8.5v1H11a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H8.5v1.5a.5.5 0 0 1-1 0V13H5a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1h2.5V8H3a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h4.5V1.5A.5.5 0 0 1 8 1"/></svg>
-                                    Na střed X
+                                    Center X
                                 </button>
                             </div>
                         </div>
                         <div class="ep-section">
-                            <div class="ep-section-label">Zarovnat na osu Y</div>
+                            <div class="ep-section-label">Align on the Y axis</div>
                             <div class="ep-align-grid">
-                                <button class="ep-align-btn" @onclick="@(() => AlignSelectedNodesAsync("center-v"))" title="Zarovnat na střed (průměr Y)">
+                                <button class="ep-align-btn" @onclick="@(() => AlignSelectedNodesAsync("center-v"))" title="Align to the center (average Y)">
                                     <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2 8a.5.5 0 0 1 .5-.5H4V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2.5h2V6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2.5h1.5a.5.5 0 0 1 0 1H14V12a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V9.5H8V12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5H2.5A.5.5 0 0 1 2 9z"/></svg>
-                                    Na střed Y
+                                    Center Y
                                 </button>
                             </div>
                         </div>
                         <div class="ep-section">
-                            <div class="ep-section-label">Rozložit rovnoměrně</div>
-                            <div class="ep-hint ep-hint-dark">Potřeba alespoň 3 uzly. Pořadí se odvozuje od aktuální polohy.</div>
+                            <div class="ep-section-label">Distribute evenly</div>
+                            <div class="ep-hint ep-hint-dark">At least 3 nodes are required. Ordering is derived from the current positions.</div>
                             <div class="ep-align-grid mt-1">
                                 <button class="ep-align-btn" disabled="@(_selectionSet.Count < 3)"
                                         @onclick="@(() => DistributeSelectedNodesAsync("horizontal"))"
-                                        title="Rovnoměrně horizontálně (seřazeno dle X)">
+                                        title="Distribute evenly horizontally (sorted by X)">
                                     <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2 1a1 1 0 0 1 1-1h.5a.5.5 0 0 1 0 1H3v12h.5a.5.5 0 0 1 0 1H3a1 1 0 0 1-1-1zm12 0a1 1 0 0 0-1-1h-.5a.5.5 0 0 0 0 1H13v12h-.5a.5.5 0 0 0 0 1H13a1 1 0 0 0 1-1zM6 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1z"/></svg>
-                                    Horizontálně
+                                    Horizontal
                                 </button>
                                 <button class="ep-align-btn" disabled="@(_selectionSet.Count < 3)"
                                         @onclick="@(() => DistributeSelectedNodesAsync("vertical"))"
-                                        title="Rovnoměrně vertikálně (seřazeno dle Y)">
+                                        title="Distribute evenly vertically (sorted by Y)">
                                     <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M1 2a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V1.5a.5.5 0 0 0-1 0V2H2V1.5a.5.5 0 0 0-1 0zm0 12a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v.5a.5.5 0 0 1-1 0V14H2v.5a.5.5 0 0 1-1 0zM4 6a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/></svg>
-                                    Vertikálně
+                                    Vertical
                                 </button>
                             </div>
                         </div>
@@ -882,16 +881,16 @@
             {
                 <div class="wb-discard-guard-overlay" @onclick="() => _showDiscardGuard = false">
                     <div class="wb-discard-guard-modal" @onclick:stopPropagation>
-                        <div class="wb-discard-guard-title">&#9888; Neuložené změny</div>
+                        <div class="wb-discard-guard-title">&#9888; Unsaved changes</div>
                         <div class="wb-discard-guard-body">
-                            Máš neuložené změny v edit mode. Chceš je zahodit a ukončit editor?
+                            You have unsaved changes in edit mode. Do you want to discard them and close the editor?
                         </div>
                         <div class="wb-discard-guard-actions">
                             <button class="btn btn-sm btn-outline-secondary" @onclick="() => _showDiscardGuard = false">
-                                Pokračovat v editaci
+                                Continue editing
                             </button>
                             <button class="btn btn-sm btn-danger" @onclick="DiscardAndExitAsync">
-                                Zahodit změny
+                                Discard changes
                             </button>
                         </div>
                     </div>
@@ -1010,23 +1009,23 @@
                         <button class="cp-preset-btn @(_selectedInterval == "last24h" ? "cp-preset-btn-active" : "")"
                                 @onclick='() => SetIntervalPreset("last24h")'>24h</button>
                         <button class="cp-preset-btn @(_selectedInterval == "last7d" ? "cp-preset-btn-active" : "")"
-                                @onclick='() => SetIntervalPreset("last7d")'>7 dní</button>
+                                @onclick='() => SetIntervalPreset("last7d")'>7 days</button>
                         <button class="cp-preset-btn @(_selectedInterval == "last30d" ? "cp-preset-btn-active" : "")"
-                                @onclick='() => SetIntervalPreset("last30d")'>30 dní</button>
+                                @onclick='() => SetIntervalPreset("last30d")'>30 days</button>
                         <button class="cp-preset-btn @(_selectedInterval == "thisMonth" ? "cp-preset-btn-active" : "")"
-                                @onclick='() => SetIntervalPreset("thisMonth")'>Tento měsíc</button>
+                                @onclick='() => SetIntervalPreset("thisMonth")'>This month</button>
                         <button class="cp-preset-btn @(_selectedInterval == "custom" ? "cp-preset-btn-active" : "")"
-                                @onclick='() => SetIntervalPreset("custom")'>Vlastní</button>
+                                @onclick='() => SetIntervalPreset("custom")'>Custom</button>
                     </div>
                     @if (_selectedInterval == "custom")
                     {
                         <div class="cp-custom-date-row">
                             <div>
-                                <div class="cp-date-label">Od</div>
+                                <div class="cp-date-label">From</div>
                                 <input type="date" class="form-control form-control-sm" value="@CustomFromDateValue" @onchange="OnCustomFromChanged" />
                             </div>
                             <div>
-                                <div class="cp-date-label">Do</div>
+                                <div class="cp-date-label">To</div>
                                 <input type="date" class="form-control form-control-sm" value="@CustomToDateValue" @onchange="OnCustomToChanged" />
                             </div>
                         </div>
@@ -1037,7 +1036,7 @@
                     }
                     @if (ShowPresetAnchorNote)
                     {
-                        <div class="small text-muted mt-1">Anchor: poslední data focus uzlu</div>
+                        <div class="small text-muted mt-1">Anchor: latest data point for the focused node</div>
                     }
                     @* Weather context — integrated into interval section *@
                     <div class="cp-weather-context">
@@ -1048,7 +1047,7 @@
                         }
                         else
                         {
-                            <span>Weather: N/A pro aktuální focus</span>
+                            <span>Weather: N/A for the current focus</span>
                         }
                     </div>
                 </div>
@@ -1059,22 +1058,22 @@
                     <div class="cp-selection-row">
                         <div class="cp-selection-count">
                             <span class="cp-count-big">@SelectionCount</span>
-                            <span class="cp-count-label">vybraných uzlů</span>
+                            <span class="cp-count-label">selected nodes</span>
                         </div>
                         @if (HasSelectedNodes)
                         {
-                            <button class="btn btn-sm btn-outline-secondary cp-clear-btn" @onclick="ClearWorkspaceSelection" title="Zrušit celý výběr">
-                                <i class="bi bi-x-lg me-1"></i>Zrušit výběr
+                            <button class="btn btn-sm btn-outline-secondary cp-clear-btn" @onclick="ClearWorkspaceSelection" title="Clear selection">
+                                <i class="bi bi-x-lg me-1"></i>Clear selection
                             </button>
                         }
                     </div>
                     @if (HasSelectedNodes)
                     {
                         <div class="small text-muted mt-1">
-                            Visual highlight: @VisualHighlightCount uzlů
+                            Visual highlight: @VisualHighlightCount nodes
                             @if (ContextOnlyHighlightCount > 0)
                             {
-                                <span> · z toho @ContextOnlyHighlightCount pouze kontextově zvýrazněných</span>
+                                <span> · @ContextOnlyHighlightCount context-only highlights</span>
                             }
                         </div>
                     }
@@ -1094,13 +1093,13 @@
                             }
                             @if (totalRoleTypes > 3)
                             {
-                                <span class="badge rounded-pill border text-secondary-emphasis bg-light-subtle">+@(totalRoleTypes - 3) rolí</span>
+                                <span class="badge rounded-pill border text-secondary-emphasis bg-light-subtle">+@(totalRoleTypes - 3) roles</span>
                             }
                         </div>
                     }
                     else
                     {
-                        <div class="small text-muted mt-1">Výběr je prázdný — klikněte na uzel ve schématu.</div>
+                        <div class="small text-muted mt-1">Selection is empty. Click a node in the schematic to begin.</div>
                     }
                 </div>
 
@@ -1153,18 +1152,18 @@
                                 </select>
                             </div>
                             @* Row 3: Tags *@
-                            <input class="form-control form-control-sm bg-light mb-1" @bind="_semanticQueryTagInput" placeholder="Tagy (hvac, production…)" />
+                            <input class="form-control form-control-sm bg-light mb-1" @bind="_semanticQueryTagInput" placeholder="Tags (hvac, production...)" />
                             @* Row 4: Checkbox + Apply + Preset apply + Reset *@
                             <div class="cp-sem-actions">
                                 <div class="cp-sem-checkbox">
                                     <input id="semantic-supported-only-cp" class="form-check-input mt-0" type="checkbox" @bind="_semanticSelectionSupportedOnly" />
-                                    <label class="mb-0" for="semantic-supported-only-cp">Jen podporované</label>
+                                    <label class="mb-0" for="semantic-supported-only-cp">Supported only</label>
                                 </div>
                                 <div class="d-flex gap-1">
-                                    <button class="btn btn-sm btn-outline-primary" @onclick="ApplySemanticPresetAsync" disabled="@(_facility is null)" title="Použít preset">
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="ApplySemanticPresetAsync" disabled="@(_facility is null)" title="Apply preset">
                                         <i class="bi bi-magic"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-secondary" @onclick="ApplySemanticQueryAsync" disabled="@(_facility is null)" title="Použít filtr">
+                                    <button class="btn btn-sm btn-outline-secondary" @onclick="ApplySemanticQueryAsync" disabled="@(_facility is null)" title="Apply filter">
                                         <i class="bi bi-funnel"></i>
                                     </button>
                                     <button class="btn btn-sm btn-link text-decoration-none p-0 text-muted" @onclick="ClearSemanticQueryFilters" title="Reset">
@@ -1183,22 +1182,22 @@
                         <div class="cp-tools-content">
                             @* Create row: name + optional description + save *@
                             <div class="cp-wset-create-row">
-                                <input class="form-control form-control-sm bg-light" @bind="_workingSetNameInput" maxlength="80" placeholder="Název setu…" />
-                                <button class="btn btn-sm btn-outline-secondary" title="Uložit aktuální selection" @onclick="SaveCurrentWorkingSetAsync" disabled="@(_facility is null)">
+                                <input class="form-control form-control-sm bg-light" @bind="_workingSetNameInput" maxlength="80" placeholder="Set name..." />
+                                <button class="btn btn-sm btn-outline-secondary" title="Save current selection" @onclick="SaveCurrentWorkingSetAsync" disabled="@(_facility is null)">
                                     <i class="bi bi-bookmark-plus"></i>
                                 </button>
                             </div>
                             @if (_showWorkingSetDescription)
                             {
-                                <input class="form-control form-control-sm bg-light mb-1" @bind="_workingSetDescriptionInput" maxlength="180" placeholder="Popis (volitelné)" />
+                                <input class="form-control form-control-sm bg-light mb-1" @bind="_workingSetDescriptionInput" maxlength="180" placeholder="Description (optional)" />
                             }
                             <button class="btn btn-link btn-sm p-0 mb-1 cp-wset-desc-toggle" @onclick="() => _showWorkingSetDescription = !_showWorkingSetDescription">
-                                @(_showWorkingSetDescription ? "− skrýt popis" : "+ popis")
+                                @(_showWorkingSetDescription ? "− hide description" : "+ description")
                             </button>
                             @* Saved sets list *@
                             @if (_savedWorkingSets.Count == 0)
                             {
-                                <div class="small text-muted mt-1">Žádné uložené sety.</div>
+                                <div class="small text-muted mt-1">No saved sets yet.</div>
                             }
                             else
                             {
@@ -1209,13 +1208,13 @@
                                             <div class="d-flex justify-content-between align-items-center gap-1">
                                                 <div class="small min-w-0">
                                                     <div class="fw-semibold text-dark text-truncate" style="font-size:0.78rem">@workingSet.Name</div>
-                                                    <div class="text-muted" style="font-size:0.68rem">@workingSet.NodeKeys.Count n · @workingSet.UpdatedUtc.ToLocalTime().ToString("dd.MM.")</div>
+                                                    <div class="text-muted" style="font-size:0.68rem">@workingSet.NodeKeys.Count nodes · @workingSet.UpdatedUtc.ToLocalTime().ToString("dd.MM.")</div>
                                                 </div>
                                                 <div class="d-flex align-items-center gap-1 flex-shrink-0">
-                                                    <button class="btn btn-sm btn-outline-primary py-0 px-1" title="Aplikovat" @onclick="() => ApplyWorkingSetAsync(workingSet.Name)">
+                                                    <button class="btn btn-sm btn-outline-primary py-0 px-1" title="Apply" @onclick="() => ApplyWorkingSetAsync(workingSet.Name)">
                                                         <i class="bi bi-check2-circle"></i>
                                                     </button>
-                                                    <button class="btn btn-sm btn-outline-danger py-0 px-1" title="Smazat" @onclick="() => DeleteWorkingSetAsync(workingSet.Name)">
+                                                    <button class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete" @onclick="() => DeleteWorkingSetAsync(workingSet.Name)">
                                                         <i class="bi bi-trash"></i>
                                                     </button>
                                                 </div>
@@ -1243,15 +1242,15 @@
                 <div class="wb-analytics-empty-state">
                     <div class="analytics-empty-card">
                         <div class="analytics-empty-icon"><i class="bi bi-bar-chart-line"></i></div>
-                        <div class="analytics-empty-title">Analytics připraveny</div>
+                        <div class="analytics-empty-title">Analytics ready</div>
                         <div class="analytics-empty-sub">
-                            Vyberte uzly ve schématu pro spuštění aggregate analytics, disaggregace, KPI a časových řad.
+                            Select nodes in the schematic to open aggregate analytics, breakdowns, KPI summaries, and time-series views.
                         </div>
                         <div class="analytics-empty-hints">
-                            <div class="analytics-hint-item"><i class="bi bi-cursor-fill me-1 text-primary"></i>Klikněte na uzel — single select</div>
-                            <div class="analytics-hint-item"><i class="bi bi-diagram-3-fill me-1 text-primary"></i>Klikněte na strukturální uzel — výběr celého subtree</div>
-                            <div class="analytics-hint-item"><i class="bi bi-magic me-1 text-primary"></i>Použijte Semantic Selection v panelu vpravo</div>
-                            <div class="analytics-hint-item"><i class="bi bi-bookmark-fill me-1 text-primary"></i>Aplikujte uložený Working Set</div>
+                            <div class="analytics-hint-item"><i class="bi bi-cursor-fill me-1 text-primary"></i>Click a node for a single-node selection</div>
+                            <div class="analytics-hint-item"><i class="bi bi-diagram-3-fill me-1 text-primary"></i>Click a structural node to expand the subtree selection</div>
+                            <div class="analytics-hint-item"><i class="bi bi-magic me-1 text-primary"></i>Use Semantic Selection in the right panel</div>
+                            <div class="analytics-hint-item"><i class="bi bi-bookmark-fill me-1 text-primary"></i>Apply a saved working set</div>
                         </div>
                     </div>
                 </div>
@@ -1259,13 +1258,41 @@
 
             @if (HasSelectedNodes)
             {
+                <div class="analytics-nav-shell mb-3">
+                    <div class="analytics-tab-bar" role="tablist" aria-label="Analytics navigation">
+                        <button type="button" class="analytics-tab-button @(IsOverviewTabActive ? "analytics-tab-button-active" : "")" title="Core KPI and time-series overview" @onclick='() => ActivateAnalyticsTabAsync(AnalyticsTabOverview)'>
+                            <i class="bi bi-house-door analytics-tab-icon"></i>
+                            <span class="analytics-tab-label">Overview</span>
+                        </button>
+                        <button type="button" class="analytics-tab-button @(IsBreakdownTabActive ? "analytics-tab-button-active" : "")" title="Sources, roles, and analytic coverage" @onclick='() => ActivateAnalyticsTabAsync(AnalyticsTabBreakdown)'>
+                            <i class="bi bi-pie-chart analytics-tab-icon"></i>
+                            <span class="analytics-tab-label">Breakdown</span>
+                        </button>
+                        <button type="button" class="analytics-tab-button @(IsPerformanceTabActive ? "analytics-tab-button-active" : "")" title="Load shape, peak behavior, and EMS hints" @onclick='() => ActivateAnalyticsTabAsync(AnalyticsTabPerformance)'>
+                            <i class="bi bi-speedometer2 analytics-tab-icon"></i>
+                            <span class="analytics-tab-label">Performance</span>
+                        </button>
+                        <button type="button" class="analytics-tab-button @(IsCompareTabActive ? "analytics-tab-button-active" : "")" title="Compare aligned time series for dataset-backed nodes" @onclick='() => ActivateAnalyticsTabAsync(AnalyticsTabCompare)'>
+                            <i class="bi bi-intersect analytics-tab-icon"></i>
+                            <span class="analytics-tab-label">Compare</span>
+                        </button>
+                        <button type="button" class="analytics-tab-button @(IsDiagnosticsTabActive ? "analytics-tab-button-active" : "")" title="Forecast quality, fit, and diagnostic confidence" @onclick='() => ActivateAnalyticsTabAsync(AnalyticsTabDiagnostics)'>
+                            <i class="bi bi-activity analytics-tab-icon"></i>
+                            <span class="analytics-tab-label">Diagnostics</span>
+                        </button>
+                    </div>
+                </div>
+            }
+
+            @if (HasSelectedNodes && IsBreakdownTabActive)
+            {
             <div class="overview-grid secondary-widgets-grid">
                 <div class="overview-widget overview-widget-soft secondary-breakdown-widget">
                     <h6>Disaggregation / Top Contributors</h6>
                     @if (_isPreviewLoading)
                     {
                         <div class="text-muted d-flex align-items-center">
-                            <span class="spinner-border spinner-border-sm me-2" role="status"></span> Připravuji disaggregation a contribution intelligence...
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span> Preparing disaggregation and contribution intelligence...
                         </div>
                     }
                     else if (SelectionContributionIntelligence.TopContributors.Count > 0 || SelectionDisaggregation.MeasuredContributorCount > 0)
@@ -1331,18 +1358,18 @@
 
                         @if (contributionIntelligence.TopContributors.Count == 0)
                         {
-                            <div class="small text-muted mt-2">Top contributors nejsou dostupní, protože selection nemá measured contribution s daty.</div>
+                            <div class="small text-muted mt-2">Top contributors are unavailable because the current selection has no measured contribution data.</div>
                         }
 
                         @if (contributionIntelligence.TopContributors.Count > displayedContributors.Count)
                         {
-                            <div class="small text-muted mt-2">Zobrazeni jsou top 3 contributors z @contributionIntelligence.TopContributors.Count.</div>
+                            <div class="small text-muted mt-2">Showing the top 3 contributors out of @contributionIntelligence.TopContributors.Count.</div>
                         }
 
                         @if (extraContributors.Count > 0)
                         {
                             <details class="mt-2">
-                                <summary class="small text-secondary">Další contributors (@(contributionIntelligence.TopContributors.Count - displayedContributors.Count))</summary>
+                                <summary class="small text-secondary">More contributors (@(contributionIntelligence.TopContributors.Count - displayedContributors.Count))</summary>
                                 <div class="contributor-more-list">
                                     @foreach (var extraContributor in extraContributors)
                                     {
@@ -1376,7 +1403,7 @@
                     }
                     else
                     {
-                        <div class="small text-muted">Disaggregation se zobrazí po výběru podporovaných energetických uzlů v selection setu.</div>
+                        <div class="small text-muted">Disaggregation appears once the selection contains supported energy nodes.</div>
                     }
                 </div>
 
@@ -1385,7 +1412,7 @@
                     @if (_isPreviewLoading)
                     {
                         <div class="text-muted d-flex align-items-center">
-                            <span class="spinner-border spinner-border-sm me-2" role="status"></span> Agreguji contribution podle rolí...
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span> Aggregating contributions by role...
                         </div>
                     }
                     else if (SelectionRoleBreakdownItems.Count > 0)
@@ -1410,11 +1437,11 @@
                                             <div class="breakdown-meta">
                                                 @if (roleContribution.HasData)
                                                 {
-                                                    <span>@contributionRoleLabel · @roleContribution.ContributingNodeCount/@roleContribution.NodeCount uzlů</span>
+                                                    <span>@contributionRoleLabel · @roleContribution.ContributingNodeCount/@roleContribution.NodeCount nodes</span>
                                                 }
                                                 else
                                                 {
-                                                    <span>@roleContribution.NodeCount uzlů bez použitelných dat.</span>
+                                                    <span>@roleContribution.NodeCount nodes without usable data.</span>
                                                 }
                                             </div>
                                         </div>
@@ -1438,12 +1465,12 @@
 
                         @if (SelectionRoleBreakdownItems.Count > 6)
                         {
-                            <div class="small text-muted mt-2">Zobrazeno top 6 rolí z @SelectionRoleBreakdownItems.Count.</div>
+                            <div class="small text-muted mt-2">Showing the top 6 roles out of @SelectionRoleBreakdownItems.Count.</div>
                         }
                     }
                     else
                     {
-                        <div class="small text-muted">Role breakdown se zobrazí po výběru podporovaných uzlů s daty.</div>
+                        <div class="small text-muted">Role breakdown appears once the selection contains supported nodes with data.</div>
                     }
                 </div>
 
@@ -1452,7 +1479,7 @@
                     @if (_isPreviewLoading)
                     {
                         <div class="text-muted d-flex align-items-center">
-                            <span class="spinner-border spinner-border-sm me-2" role="status"></span> Vyhodnocuji issue a anomaly signaly...
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span> Evaluating issue and anomaly signals...
                         </div>
                     }
                     else
@@ -1483,7 +1510,7 @@
                     @if (_isPreviewLoading)
                     {
                         <div class="text-muted d-flex align-items-center">
-                            <span class="spinner-border spinner-border-sm me-2" role="status"></span> Sestavuji mapu zahrnutých a vyloučených zdrojů...
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span> Building the included and excluded source map...
                         </div>
                     }
                     else
@@ -1521,61 +1548,30 @@
 
                             @if (sourceMap.Items.Count > 6)
                             {
-                                <div class="small text-muted mt-2">Zobrazeno 6 položek ze source map (@sourceMap.Items.Count celkem).</div>
+                                <div class="small text-muted mt-2">Showing 6 items from the source map (@sourceMap.Items.Count total).</div>
                             }
                         }
 
                         <div class="aggregate-status-line mt-2">
-                            Coverage ratio: @((SelectionOperationalHealth.IncludedCoverageRatio * 100.0).ToString("N0")) % podporovaných uzlů je analyticky zahrnuto.
+                            Coverage ratio: @((SelectionOperationalHealth.IncludedCoverageRatio * 100.0).ToString("N0")) % of supported nodes are included analytically.
                         </div>
                     }
                 </div>
 
-                <div class="overview-widget overview-widget-soft secondary-compare-widget">
-                    <h6>Compare Set</h6>
-                    <div class="d-flex flex-wrap gap-2 mb-2">
-                        <span class="badge bg-light text-secondary border">@_compareSet.Count/@MaxCompareSetSize v compare</span>
-                        <span class="badge bg-light text-secondary border">@SelectionCompareSupportedCount kandidátů</span>
-                    </div>
-                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                        <button class="btn btn-sm btn-outline-primary" @onclick="AddSelectionSetToCompareSet" disabled="@(!CanAddSelectionSetToCompareSet)">
-                            <i class="bi bi-plus-circle me-1"></i> Přidat selection set do porovnání
-                        </button>
-                        <button class="btn btn-sm btn-outline-secondary" @onclick="ClearCompareSet" disabled="@(_compareSet.Count == 0)">
-                            Vyčistit
-                        </button>
-                    </div>
-                    <div class="small text-muted mb-2">Volná kapacita: @CompareSetRemainingCapacity</div>
-                    @if (!string.IsNullOrWhiteSpace(_compareSetStatusMessage))
-                    {
-                        <div class="small text-muted mb-2">@_compareSetStatusMessage</div>
-                    }
-                    @if (_compareSet.Count == 0)
-                    {
-                        <div class="small text-muted">Compare set je prázdný.</div>
-                    }
-                    else
-                    {
-                        <div class="d-flex flex-wrap gap-2">
-                            @foreach (var item in _compareSet)
-                            {
-                                <span class="badge rounded-pill border text-secondary-emphasis bg-white">@item.Label</span>
-                            }
-                        </div>
-                    }
-                </div>
             </div>
             }
 
             @if (HasSelectedNodes)
             {
+                @if (IsOverviewTabActive)
+                {
                 <div class="overview-grid main-analytics-grid">
                     <div class="overview-widget main-kpi-widget">
                         <h6>Headline KPI</h6>
                         @if (_isPreviewLoading)
                         {
                             <div class="text-muted d-flex align-items-center">
-                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Načítám aggregate KPI...
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Loading aggregate KPI...
                             </div>
                         }
                         else if (_selectionAggregateOverview?.Summary is not null)
@@ -1611,9 +1607,9 @@
                                 }
                             </div>
                             <div class="headline-kpi-grid">
-                                <div class="headline-kpi-cell"><div class="metric-caption">Spotřeba</div><div class="fw-semibold">@_selectionAggregateOverview.TotalConsumptionKwh.ToString("N1") kWh</div></div>
-                                <div class="headline-kpi-cell"><div class="metric-caption">Výroba</div><div class="fw-semibold">@_selectionAggregateOverview.TotalGenerationKwh.ToString("N1") kWh</div></div>
-                                <div class="headline-kpi-cell"><div class="metric-caption">Netto</div><div class="fw-semibold">@FormatSigned(_selectionAggregateOverview.NetEnergyKwh, "N1") kWh</div></div>
+                                <div class="headline-kpi-cell"><div class="metric-caption">Consumption</div><div class="fw-semibold">@_selectionAggregateOverview.TotalConsumptionKwh.ToString("N1") kWh</div></div>
+                                <div class="headline-kpi-cell"><div class="metric-caption">Generation</div><div class="fw-semibold">@_selectionAggregateOverview.TotalGenerationKwh.ToString("N1") kWh</div></div>
+                                <div class="headline-kpi-cell"><div class="metric-caption">Net</div><div class="fw-semibold">@FormatSigned(_selectionAggregateOverview.NetEnergyKwh, "N1") kWh</div></div>
                                 <div class="headline-kpi-cell"><div class="metric-caption">Samples</div><div class="fw-semibold">@_selectionAggregateOverview.Summary.DataPoints.ToString("N0")</div></div>
                             </div>
                             @if (!string.IsNullOrWhiteSpace(_selectionAggregateOverview.Message))
@@ -1623,7 +1619,7 @@
                         }
                         else
                         {
-                            <div class="small text-muted">Pro aktuální selection set není aggregate KPI dostupné.</div>
+                            <div class="small text-muted">No aggregate KPI is available for the current selection set.</div>
                             @if (!string.IsNullOrWhiteSpace(_selectionAggregateOverview?.Message))
                             {
                                 <div class="aggregate-status-line mt-2">@_selectionAggregateOverview.Message</div>
@@ -1632,11 +1628,11 @@
                     </div>
 
                     <div class="overview-widget chart-widget main-chart-widget">
-                        <h6>Hlavní vizualizace</h6>
+                        <h6>Main Time Series</h6>
                         @if (_isPreviewLoading)
                         {
                             <div class="text-muted d-flex align-items-center">
-                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Připravuji aggregate časovou řadu...
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Preparing the aggregate time series...
                             </div>
                         }
                         else if (_selectionAggregateOverview?.TimeSeries is not null)
@@ -1649,7 +1645,7 @@
                         }
                         else
                         {
-                            <div class="small text-muted">Selection set neobsahuje kompatibilní uzly s dostupnou časovou řadou.</div>
+                            <div class="small text-muted">The selection set does not contain compatible nodes with an available time series.</div>
                             @if (!string.IsNullOrWhiteSpace(_selectionAggregateOverview?.Message))
                             {
                                 <div class="aggregate-status-line mt-2">@_selectionAggregateOverview.Message</div>
@@ -1657,14 +1653,17 @@
                         }
                     </div>
                 </div>
+                }
 
+                @if (IsDiagnosticsTabActive)
+                {
                 <div class="overview-grid forecast-analytics-grid">
                     <div class="overview-widget chart-widget forecast-compare-widget">
                         <h6>Forecast vs Actual</h6>
                         @if (_isPreviewLoading)
                         {
                             <div class="text-muted d-flex align-items-center">
-                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Připravuji forecast porovnání...
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Preparing the forecast comparison...
                             </div>
                         }
                         else if (SelectionForecastCompareTimeSeries is not null)
@@ -1682,7 +1681,7 @@
                         @if (_isPreviewLoading)
                         {
                             <div class="text-muted d-flex align-items-center">
-                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Počítám error metriky forecastu...
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Calculating forecast error metrics...
                             </div>
                         }
                         else
@@ -1712,7 +1711,10 @@
                         }
                     </div>
                 </div>
+                }
 
+                @if (IsPerformanceTabActive)
+                {
                 <div class="overview-grid operational-intelligence-grid">
                     <div class="overview-widget overview-widget-soft">
                         <h6>Load Profile</h6>
@@ -1737,7 +1739,7 @@
                                 <div class="d-flex flex-wrap gap-2 mb-2">
                                     <span class="badge @GetLoadProfileModeBadgeClass(loadProfile.Mode)">@loadProfile.ModeLabel</span>
                                     <span class="badge bg-light text-secondary border">Body: @loadProfile.PointCount</span>
-                                    <span class="badge bg-light text-secondary border">Dny: @loadProfile.DistinctDayCount</span>
+                                    <span class="badge bg-light text-secondary border">Days: @loadProfile.DistinctDayCount</span>
                                     @if (loadProfile.HasMixedSigns)
                                     {
                                         <span class="badge bg-info-subtle text-info-emphasis border">Mixed-sign</span>
@@ -1777,7 +1779,7 @@
                         @if (_isPreviewLoading)
                         {
                             <div class="text-muted d-flex align-items-center">
-                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Vyhodnocuji peak eventy...
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Evaluating peak events...
                             </div>
                         }
                         else
@@ -1830,7 +1832,7 @@
                         @if (_isPreviewLoading)
                         {
                             <div class="text-muted d-flex align-items-center">
-                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Vyhodnocuji operating regime...
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Evaluating the operating regime...
                             </div>
                         }
                         else
@@ -1863,144 +1865,96 @@
                         }
                     </div>
                 </div>
+                }
 
-                <div class="overview-grid ems-evaluation-grid">
-                    <div class="overview-widget overview-widget-soft">
-                        <h6>EMS Operational Scorecards</h6>
-                        @if (_isPreviewLoading)
-                        {
-                            <div class="text-muted d-flex align-items-center">
-                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Vyhodnocuji EMS scorecards...
+                @if (IsCompareTabActive)
+                {
+                <div class="overview-grid compare-analytics-grid">
+                    <div class="overview-widget overview-widget-soft compare-sidebar-widget">
+                        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                            <div>
+                                <h6 class="mb-1">Compare setup</h6>
+                                <div class="compare-status-line">Build a compare set from any dataset-backed nodes in the current selection. Duplicates are ignored automatically.</div>
                             </div>
-                        }
-                        else
-                        {
-                            var ems = SelectionEmsEvaluation;
-                            if (ems.IsAvailable && ems.Scorecards.Count > 0)
-                            {
-                                <div class="small text-muted mb-2">@ems.Summary</div>
-
-                                <div class="ems-scorecard-list mb-2">
-                                    @foreach (var card in ems.Scorecards)
-                                    {
-                                        <div class="ems-scorecard-item">
-                                            <div class="ems-item-header">
-                                                <div class="ems-item-title">@card.Label</div>
-                                                <span class="badge @GetScorecardStatusBadgeClass(card.Status)">@GetScorecardStatusText(card.Status)</span>
-                                            </div>
-                                            <div class="ems-item-summary">@card.Summary</div>
-                                            @if (!string.IsNullOrWhiteSpace(card.MetricLabel))
-                                            {
-                                                <div class="ems-item-meta">@card.MetricLabel: @card.MetricDisplay</div>
-                                            }
-                                            @if (!string.IsNullOrWhiteSpace(card.Thresholds))
-                                            {
-                                                <div class="ems-item-meta">Thresholds: @card.Thresholds</div>
-                                            }
-                                        </div>
-                                    }
-                                </div>
-
-                                <div class="small text-muted">@ems.Methodology</div>
-                            }
-                            else
-                            {
-                                <div class="small text-muted">@ems.Summary</div>
-                            }
-                        }
-                    </div>
-
-                    <div class="overview-widget overview-widget-soft">
-                        <h6>Schedule Inefficiency</h6>
-                        @if (_isPreviewLoading)
-                        {
-                            <div class="text-muted d-flex align-items-center">
-                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Kontroluji schedule inefficiency signály...
+                            <div class="compare-summary-chips">
+                                <span class="badge bg-light text-secondary border">@_compareSet.Count @(_compareSet.Count == 1 ? "node in set" : "nodes in set")</span>
+                                <span class="badge bg-light text-secondary border">@SelectionCompareSupportedCount eligible in selection</span>
                             </div>
-                        }
-                        else
+                        </div>
+                        <div class="compare-action-row">
+                            <button class="btn btn-sm btn-outline-primary" @onclick="AddSelectionSetToCompareSet" disabled="@(!CanAddSelectionSetToCompareSet)">
+                                <i class="bi bi-plus-circle me-1"></i> Add current selection
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="ClearCompareSet" disabled="@(_compareSet.Count == 0)">
+                                Clear compare set
+                            </button>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(_compareSetStatusMessage))
                         {
-                            var ems = SelectionEmsEvaluation;
-                            if (ems.IsAvailable)
-                            {
-                                if (ems.Inefficiencies.Count > 0)
+                            <div class="compare-status-line mb-2">@_compareSetStatusMessage</div>
+                        }
+                        @if (_compareSet.Count == 0)
+                        {
+                            <div class="analytics-sparse-card">
+                                @if (SelectionCompareSupportedCount > 0)
                                 {
-                                    <div class="ems-inefficiency-list mb-2">
-                                        @foreach (var inefficiency in ems.Inefficiencies.Take(4))
-                                        {
-                                            <div class="ems-inefficiency-item">
-                                                <div class="ems-item-header">
-                                                    <div class="ems-item-title">@inefficiency.Label</div>
-                                                    <span class="badge @GetInefficiencySeverityBadgeClass(inefficiency.Severity)">@GetInefficiencySeverityText(inefficiency.Severity)</span>
-                                                </div>
-                                                <div class="ems-item-summary">@inefficiency.Summary</div>
-                                                @if (!string.IsNullOrWhiteSpace(inefficiency.Evidence))
-                                                {
-                                                    <div class="ems-item-meta">Evidence: @inefficiency.Evidence</div>
-                                                }
-                                            </div>
-                                        }
-                                    </div>
+                                    <div class="analytics-sparse-title">Start with a compare-ready selection</div>
+                                    <div class="analytics-sparse-copy">Add dataset-backed nodes from the current selection to prepare an aligned comparison view.</div>
+                                    <div class="analytics-sparse-meta">Eligible nodes in the current selection: @SelectionCompareSupportedCount</div>
                                 }
                                 else
                                 {
-                                    <div class="small text-muted mb-2">V aktuálním intervalu není detekována výrazná schedule inefficiency.</div>
+                                    <div class="analytics-sparse-title">No compare-capable nodes in the current selection</div>
+                                    <div class="analytics-sparse-copy">Compare now follows dataset-backed analytics capability. Select nodes with supported time-series bindings to enable this tab.</div>
+                                    <div class="analytics-sparse-meta">If no eligible nodes exist, the compare set remains intentionally empty.</div>
                                 }
-
-                                <div class="small text-muted">@ems.DistinctionNote</div>
-                            }
-                            else
-                            {
-                                <div class="small text-muted">@ems.Summary</div>
-                            }
-                        }
-                    </div>
-
-                    <div class="overview-widget overview-widget-soft">
-                        <h6>Opportunity Summary</h6>
-                        @if (_isPreviewLoading)
-                        {
-                            <div class="text-muted d-flex align-items-center">
-                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Skládám opportunity kandidáty...
                             </div>
                         }
                         else
                         {
-                            var ems = SelectionEmsEvaluation;
-                            if (ems.IsAvailable && ems.Opportunities.Count > 0)
-                            {
-                                <div class="ems-opportunity-list mb-2">
-                                    @foreach (var opportunity in ems.Opportunities.Take(3))
-                                    {
-                                        <div class="ems-opportunity-item">
-                                            <div class="ems-item-summary">@opportunity</div>
+                            <div class="compare-set-list">
+                                @foreach (var item in _compareSet)
+                                {
+                                    <div class="compare-set-item">
+                                        <div class="compare-set-item-copy">
+                                            <div class="compare-set-item-label">@item.Label</div>
+                                            <div class="compare-set-item-meta">@item.NodeKey@(string.IsNullOrWhiteSpace(item.NodeType) ? string.Empty : $" - {item.NodeType}")</div>
                                         </div>
-                                    }
-                                </div>
+                                        <button type="button" class="btn btn-sm btn-outline-danger compare-set-remove" @onclick="() => RemoveNodeFromCompareSet(item.NodeKey)">
+                                            Remove
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
 
-                                <div class="d-flex flex-wrap gap-2">
-                                    @if (ems.HasMixedSigns)
-                                    {
-                                        <span class="badge bg-info-subtle text-info-emphasis border">Mixed-sign selection</span>
-                                    }
-                                    @if (ems.HasGeneration)
-                                    {
-                                        <span class="badge bg-success-subtle text-success-emphasis border">Generation-aware</span>
-                                    }
-                                    @if (ems.HasConsumption)
-                                    {
-                                        <span class="badge bg-warning-subtle text-warning-emphasis border">Load-aware</span>
-                                    }
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="small text-muted">@ems.Summary</div>
-                            }
+                    <div class="overview-widget chart-widget compare-preview-widget">
+                        <h6>Compare chart</h6>
+                        @if (_isPreviewLoading)
+                        {
+                            <div class="text-muted d-flex align-items-center">
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Preparing the comparison view...
+                            </div>
+                        }
+                        else if (ShouldShowComparePreview)
+                        {
+                            <FacilityCompareTimeSeriesPanel Data="@_curatedCompareTimeSeriesData" />
+                        }
+                        else
+                        {
+                            <div class="analytics-sparse-card analytics-sparse-card-emphasis">
+                                <div class="analytics-sparse-title">Comparison chart will appear here</div>
+                                <div class="analytics-sparse-copy">Select a dataset-backed focus node and keep at least one other node in the compare set to render aligned time series.</div>
+                                <div class="analytics-sparse-meta">The chart appears once the focused node and compare set share usable dataset-backed time series.</div>
+                            </div>
                         }
                     </div>
                 </div>
+                }
 
+                @if (IsOverviewTabActive)
+                {
                 @if (SessionService.SelectedElementType == EditorSelectionType.FacilityNode && _selectedFacilityNode is not null)
                 {
                     @if (_isCuratedNode)
@@ -2011,75 +1965,35 @@
                                 @if (_isPreviewLoading)
                                 {
                                     <div class="text-muted d-flex align-items-center">
-                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span> Vyhodnocuji baseline...
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span> Evaluating baseline...
                                     </div>
                                 }
                                 else if (_curatedDeviationData?.IsAvailable == true)
                                 {
                                     <div class="d-flex align-items-center gap-2 mb-2">
                                         <span class="badge @GetDeviationBadgeClass(_curatedDeviationData.Severity)">@GetDeviationBadgeText(_curatedDeviationData.Severity)</span>
-                                        <span class="small text-muted">Ref. intervaly: @_curatedDeviationData.ReferenceIntervalsUsed</span>
+                                        <span class="small text-muted">Reference intervals: @_curatedDeviationData.ReferenceIntervalsUsed</span>
                                     </div>
                                     <div class="micro-grid">
-                                        <div class="micro-kpi"><div class="metric-caption">Aktuální</div><div class="fw-semibold">@(_curatedDeviationData.CurrentValue?.ToString("N1") ?? "N/A")</div></div>
+                                        <div class="micro-kpi"><div class="metric-caption">Current</div><div class="fw-semibold">@(_curatedDeviationData.CurrentValue?.ToString("N1") ?? "N/A")</div></div>
                                         <div class="micro-kpi"><div class="metric-caption">Baseline</div><div class="fw-semibold">@(_curatedDeviationData.BaselineValue?.ToString("N1") ?? "N/A")</div></div>
-                                        <div class="micro-kpi"><div class="metric-caption">Δ abs</div><div class="fw-semibold">@FormatSigned(_curatedDeviationData.DeltaAbsolute, "N1")</div></div>
-                                        <div class="micro-kpi"><div class="metric-caption">Δ %</div><div class="fw-semibold">@FormatSigned(_curatedDeviationData.DeltaPercent, "N1") %</div></div>
+                                        <div class="micro-kpi"><div class="metric-caption">Delta abs</div><div class="fw-semibold">@FormatSigned(_curatedDeviationData.DeltaAbsolute, "N1")</div></div>
+                                        <div class="micro-kpi"><div class="metric-caption">Delta %</div><div class="fw-semibold">@FormatSigned(_curatedDeviationData.DeltaPercent, "N1") %</div></div>
                                     </div>
                                 }
                                 else
                                 {
-                                    <div class="small text-muted">@(_curatedDeviationData?.Message ?? "Baseline není dostupná pro focus uzel.")</div>
+                                    <div class="small text-muted">@(_curatedDeviationData?.Message ?? "Baseline is unavailable for the focused node.")</div>
                                 }
                             </div>
-
-                            <div class="overview-widget widget-col-6">
-                                <h6>Alert Detail</h6>
-                                @if (_isPreviewLoading)
-                                {
-                                    <div class="text-muted d-flex align-items-center">
-                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span> Vyhodnocuji alert stav...
-                                    </div>
-                                }
-                                else
-                                {
-                                    var nodeKey = _selectedFacilityNode?.NodeKey;
-                                    var colorHint = GetSchematicAlertColorHint(nodeKey, _curatedDeviationData);
-                                    <div class="mb-1">
-                                        <span class="badge @GetAlertBadgeClass(nodeKey, _curatedDeviationData)">@GetAlertStatusText(nodeKey, _curatedDeviationData)</span>
-                                    </div>
-                                    <div class="small text-muted">@GetAlertReasonText(nodeKey, _curatedDeviationData)</div>
-                                    <div class="small text-muted mt-1">Barva uzlu: @colorHint.Token</div>
-                                }
-                            </div>
-
-                            <div class="overview-widget widget-col-6">
-                                <h6>Focus Metadata</h6>
-                                <div class="small text-muted">Název: @_selectedFacilityNode!.Label</div>
-                                <div class="small text-muted">NodeKey: @_selectedFacilityNode.NodeKey</div>
-                                <div class="small text-muted">Typ: @(_selectedFacilityNode.NodeType ?? "Neznámý")</div>
-                                <div class="small text-muted">Role: @FacilityNodeSemantics.GetRoleLabel(ResolveNodeRole(_selectedFacilityNode))</div>
-                                @if (!string.IsNullOrWhiteSpace(_selectedFacilityNode.Zone))
-                                {
-                                    <div class="small text-muted">Zóna: @_selectedFacilityNode.Zone</div>
-                                }
-                            </div>
-
-                            @if (ShouldShowComparePreview)
-                            {
-                                <div class="overview-widget widget-col-12">
-                                    <h6>Compare Preview</h6>
-                                    <FacilityCompareTimeSeriesPanel Data="@_curatedCompareTimeSeriesData" />
-                                </div>
-                            }
                         </div>
                     }
                     else if (string.IsNullOrEmpty(_selectedFacilityNode?.MeterUrn))
                     {
                         <div class="overview-grid">
                             <div class="overview-widget widget-col-12">
-                                <h6>Strukturální uzel</h6>
-                                <div class="small text-muted">Focus uzel je strukturální (site/building/zone) a slouží jako selector. Hlavní analytika běží nad aggregate Selection Setem.</div>
+                                <h6>Structural Node</h6>
+                                <div class="small text-muted">The focused node is structural (site/building/zone) and acts as a selector. The main analytics run over the aggregate selection set.</div>
                             </div>
                         </div>
                     }
@@ -2087,26 +2001,26 @@
                     {
                         <div class="overview-grid">
                             <div class="overview-widget widget-col-4">
-                                <h6>Měřitelný uzel</h6>
+                                <h6>Measured Node</h6>
                                 <div class="small text-muted">Meter URN</div>
                                 <div class="fw-semibold text-break">@_selectedFacilityNode!.MeterUrn</div>
                             </div>
                             <div class="overview-widget widget-col-8">
-                                <h6>KPI Přehled</h6>
+                                <h6>KPI Summary</h6>
                                 @if (_isPreviewLoading)
                                 {
                                     <div class="text-muted d-flex align-items-center">
-                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span> Načítám data...
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span> Loading data...
                                     </div>
                                 }
                                 else if (_nodePreviewData is not null)
                                 {
                                     <div class="fs-4 fw-bold text-dark">@(_nodePreviewData.TotalConsumptionKWh?.ToString("N0") ?? "0") <span class="fs-6 text-muted">kWh</span></div>
-                                    <div class="small text-muted">Průměrný výkon: @(_nodePreviewData.AveragePowerKW?.ToString("N2") ?? "0") kW</div>
+                                    <div class="small text-muted">Average power: @(_nodePreviewData.AveragePowerKW?.ToString("N2") ?? "0") kW</div>
                                 }
                                 else
                                 {
-                                    <div class="small text-muted">Pro tento měřitelný uzel není v aktuálním intervalu dostupná časová řada.</div>
+                                    <div class="small text-muted">No time series is available for this measured node in the current interval.</div>
                                 }
                             </div>
                         </div>
@@ -2117,9 +2031,10 @@
                     <div class="overview-grid">
                         <div class="overview-widget widget-col-12">
                             <h6>Focus Detail</h6>
-                            <div class="small text-muted">Focus uzel není zvolen. Hlavní overview analytika běží nad Selection Setem.</div>
+                            <div class="small text-muted">No focus node is selected. The main overview analytics run over the current selection set.</div>
                         </div>
                     </div>
+                }
                 }
             }
 
@@ -2128,7 +2043,11 @@
 </div> @* closes facility-workbench *@
 
 @code {
-    private static readonly string[] EnergyAlertNodeKeys = ["pv_main", "chp_main", "cooling_main", "heating_main"];
+    private const string AnalyticsTabOverview = "overview";
+    private const string AnalyticsTabBreakdown = "breakdown";
+    private const string AnalyticsTabPerformance = "performance";
+    private const string AnalyticsTabCompare = "compare";
+    private const string AnalyticsTabDiagnostics = "diagnostics";
     private static readonly IReadOnlySet<string> ExpandedSubtreeAllowedRelationshipKinds = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         SchematicRelationshipKinds.AdditionalLink,
@@ -2136,15 +2055,6 @@
         SchematicRelationshipKinds.Semantic
     };
     private const int BaselineHistoricalYearsForValidation = 3;
-    private const int MaxCompareSetSize = 4;
-    private static readonly HashSet<string> CompareSetSupportedNodeKeys =
-    [
-        "heating_main",
-        "cooling_main",
-        "pv_main",
-        "chp_main"
-    ];
-    private const string CompareSetSupportedNodeListText = "heating_main, cooling_main, pv_main, chp_main";
     private static readonly FacilitySemanticPreset[] SemanticPresetOptions = Enum.GetValues<FacilitySemanticPreset>();
     private static readonly FacilityNodeRole[] SemanticRoleOptions = Enum.GetValues<FacilityNodeRole>();
     private static readonly FacilityNodeSemanticType[] SemanticTypeOptions = Enum.GetValues<FacilityNodeSemanticType>();
@@ -2227,6 +2137,11 @@
     private string? _workingSetStatusMessage;
     private bool _isPreviewLoading;
     private string _workflowTab = "semantic"; // "semantic" | "workingsets"
+    private string _analyticsTab = AnalyticsTabOverview;
+    private readonly HashSet<string> _activatedAnalyticsTabs = new(StringComparer.OrdinalIgnoreCase)
+    {
+        AnalyticsTabOverview
+    };
     private bool _showWorkingSetDescription;
 
     // ── Edit mode draft/staging state ────────────────────────────────────────
@@ -2330,11 +2245,10 @@
         "last24h" => "24h",
         "last7d" => "7d",
         "last30d" => "30d",
-        "thisMonth" => "Tento měsíc",
+        "thisMonth" => "This month",
         "custom" => "Custom",
         _ => "7d"
     };
-    private int ActiveAlertCount => GlobalAlertSummaryService.Current.HighCount + GlobalAlertSummaryService.Current.ElevatedCount;
     private int SelectionCount => _selectionSet.Count;
     private int VisualHighlightCount => VisualHighlightNodeKeysForCanvas.Count;
     private int ContextOnlyHighlightCount => ContextOnlyHighlightNodeKeysForCanvas.Count;
@@ -2359,21 +2273,76 @@
     private IReadOnlyList<DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity> SelectionSummaryItems => GetSelectionSummaryItems();
     private IReadOnlySet<string> ResolvedSelectionNodeKeysForCanvas => new HashSet<string>(_selectionSet, StringComparer.OrdinalIgnoreCase);
     private bool HasSelectedNodes => SelectionCount > 0;
-    private int CompareSetRemainingCapacity => Math.Max(0, MaxCompareSetSize - _compareSet.Count);
     private int SelectionCompareSupportedCount => GetSelectionCompareCandidates().Count;
-    private bool CanAddSelectionSetToCompareSet => GetSelectionCompareCandidates().Any(node => !_compareSet.Any(x => x.NodeKey.Equals(node.NodeKey, StringComparison.OrdinalIgnoreCase))) && !IsCompareSetAtCapacity;
-    private bool IsCompareSetAtCapacity => _compareSet.Count >= MaxCompareSetSize;
+    private bool CanAddSelectionSetToCompareSet => GetSelectionCompareCandidates().Any(node => !_compareSet.Any(x => x.NodeKey.Equals(node.NodeKey, StringComparison.OrdinalIgnoreCase)));
     private bool IsSelectedNodeComparePreviewSupported => _selectedFacilityNode is not null && IsCompareSupportedNode(_selectedFacilityNode.NodeKey);
     private bool ShouldShowComparePreview => _isCuratedNode && IsSelectedNodeComparePreviewSupported && GetEffectiveCompareNodeKeysForSelectedNode().Count > 0;
+    private bool IsOverviewTabActive => string.Equals(_analyticsTab, AnalyticsTabOverview, StringComparison.OrdinalIgnoreCase);
+    private bool IsBreakdownTabActive => string.Equals(_analyticsTab, AnalyticsTabBreakdown, StringComparison.OrdinalIgnoreCase);
+    private bool IsPerformanceTabActive => string.Equals(_analyticsTab, AnalyticsTabPerformance, StringComparison.OrdinalIgnoreCase);
+    private bool IsCompareTabActive => string.Equals(_analyticsTab, AnalyticsTabCompare, StringComparison.OrdinalIgnoreCase);
+    private bool IsDiagnosticsTabActive => string.Equals(_analyticsTab, AnalyticsTabDiagnostics, StringComparison.OrdinalIgnoreCase);
+    private bool IsBreakdownTabActivated => _activatedAnalyticsTabs.Contains(AnalyticsTabBreakdown);
+    private bool IsPerformanceTabActivated => _activatedAnalyticsTabs.Contains(AnalyticsTabPerformance);
+    private bool IsCompareTabActivated => _activatedAnalyticsTabs.Contains(AnalyticsTabCompare);
+    private bool IsDiagnosticsTabActivated => _activatedAnalyticsTabs.Contains(AnalyticsTabDiagnostics);
     private IReadOnlySet<string> VisualHighlightNodeKeysForCanvas => GetVisualHighlightNodeKeysForCanvas();
     private IReadOnlySet<string> ContextOnlyHighlightNodeKeysForCanvas => GetContextOnlyHighlightNodeKeysForCanvas();
     private RelationshipInspectorViewModel? SelectedRelationshipInspector => BuildSelectedRelationshipInspector();
     private IReadOnlyDictionary<string, FacilityNodeStylePreset> EffectiveStylePresetsForCanvas => BuildEffectiveStylePresetsForCanvas();
     private IReadOnlyDictionary<string, string> EffectiveNodeStylePresetKeysForCanvas => BuildEffectiveNodeStylePresetKeysForCanvas();
 
-    private IReadOnlyDictionary<string, NodeDeviationSeverity> AlertSeverityByNodeKey =>
-        GlobalAlertSummaryService.Current.AlertedNodes
-            .ToDictionary(x => x.NodeKey, x => x.Severity, StringComparer.OrdinalIgnoreCase);
+    private CuratedSelectionAggregateRequestOptions CurrentAggregateRequestOptions => new()
+    {
+        IncludeBreakdown = IsBreakdownTabActivated,
+        IncludePerformance = IsPerformanceTabActivated,
+        IncludeDiagnostics = IsDiagnosticsTabActivated
+    };
+
+    private string CurrentAnalyticsTabEyebrow => _analyticsTab switch
+    {
+        AnalyticsTabBreakdown => "Breakdown workspace",
+        AnalyticsTabPerformance => "Performance workspace",
+        AnalyticsTabCompare => "Comparison workspace",
+        AnalyticsTabDiagnostics => "Diagnostics workspace",
+        _ => "Overview workspace"
+    };
+
+    private string CurrentAnalyticsTabTitle => _analyticsTab switch
+    {
+        AnalyticsTabBreakdown => "Energy composition and analytic coverage",
+        AnalyticsTabPerformance => "Operational shape and peak behavior",
+        AnalyticsTabCompare => "Prepare and inspect curated node comparisons",
+        AnalyticsTabDiagnostics => "Forecast fit and diagnostic confidence",
+        _ => "Selection summary and primary time-series context"
+    };
+
+    private string CurrentAnalyticsTabDescription => _analyticsTab switch
+    {
+        AnalyticsTabBreakdown => "Use this tab to understand where the selected energy comes from, which roles contribute most, and what was excluded from the analytic slice.",
+        AnalyticsTabPerformance => "This tab keeps the performance story focused on load shape, peak significance, and operating regime signals.",
+        AnalyticsTabCompare => "Build a compare set from dataset-backed nodes, then inspect aligned curves once a compare-compatible focus node is active.",
+        AnalyticsTabDiagnostics => "Open diagnostics when you want forecast quality, alignment coverage, and fit notes without crowding the default view.",
+        _ => "The default overview keeps the product surface simple: headline KPI, main time series, and the focused baseline slice when available."
+    };
+
+    private async Task ActivateAnalyticsTabAsync(string tabKey)
+    {
+        if (string.IsNullOrWhiteSpace(tabKey) || string.Equals(_analyticsTab, tabKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _analyticsTab = tabKey;
+        var firstActivation = _activatedAnalyticsTabs.Add(tabKey);
+        if (firstActivation && HasSelectedNodes)
+        {
+            await ReloadPreviewDataAsync();
+            return;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
 
     private sealed class CompareSetItem
     {
@@ -2480,7 +2449,6 @@
             SessionService.ClearSelection();
         }
 
-        await RefreshGlobalAlertSummaryAsync();
     }
 
     private async void HandleSessionChanged()
@@ -2533,14 +2501,9 @@
         }
     }
 
-    private static bool IsCompareSupportedNode(string? nodeKey)
+    private bool IsCompareSupportedNode(string? nodeKey)
     {
-        if (string.IsNullOrWhiteSpace(nodeKey))
-        {
-            return false;
-        }
-
-        return CompareSetSupportedNodeKeys.Contains(nodeKey);
+        return AnalyticsPreview.SupportsComparePreview(nodeKey);
     }
 
     private List<string> GetEffectiveCompareNodeKeysForSelectedNode()
@@ -2617,7 +2580,7 @@
     {
         if (_selectionSet.Count == 0)
         {
-            _compareSetStatusMessage = "Selection set je prázdný. Nejprve vyberte uzly ve schématu.";
+            _compareSetStatusMessage = "The selection set is empty. Select nodes in the schematic first.";
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -2625,26 +2588,19 @@
         var candidates = GetSelectionCompareCandidates();
         if (candidates.Count == 0)
         {
-            _compareSetStatusMessage = "V aktuálním selection setu nejsou uzly podporované pro compare set.";
+            _compareSetStatusMessage = "The current selection set does not contain nodes with dataset-backed compare capability.";
             await InvokeAsync(StateHasChanged);
             return;
         }
 
         var added = 0;
         var duplicates = 0;
-        var skippedByCapacity = 0;
 
         foreach (var node in candidates)
         {
             if (_compareSet.Any(x => x.NodeKey.Equals(node.NodeKey, StringComparison.OrdinalIgnoreCase)))
             {
                 duplicates++;
-                continue;
-            }
-
-            if (_compareSet.Count >= MaxCompareSetSize)
-            {
-                skippedByCapacity++;
                 continue;
             }
 
@@ -2660,26 +2616,21 @@
 
         if (added > 0)
         {
-            var statusParts = new List<string> { $"Přidáno {added} uzlů z selection setu." };
+            var statusParts = new List<string> { $"Added {added} node(s) from the selection set." };
             if (duplicates > 0)
             {
-                statusParts.Add($"{duplicates} už bylo v compare setu");
-            }
-
-            if (skippedByCapacity > 0)
-            {
-                statusParts.Add($"{skippedByCapacity} se nevešlo kvůli limitu");
+                statusParts.Add($"{duplicates} already present in the compare set.");
             }
 
             _compareSetStatusMessage = string.Join(" ", statusParts);
         }
         else if (duplicates > 0)
         {
-            _compareSetStatusMessage = "Všechny podporované uzly ze selection setu už v compare setu jsou.";
+            _compareSetStatusMessage = "All supported nodes from the selection set are already in the compare set.";
         }
         else
         {
-            _compareSetStatusMessage = "Compare set je plný. Pro přidání dalších uzlů nejprve některé odeberte.";
+            _compareSetStatusMessage = "No new nodes were added to the compare set.";
         }
 
         await RefreshComparePreviewAfterCompareSetChangedAsync();
@@ -2689,8 +2640,8 @@
     {
         var removedCount = _compareSet.RemoveAll(x => x.NodeKey.Equals(nodeKey, StringComparison.OrdinalIgnoreCase));
         _compareSetStatusMessage = removedCount > 0
-            ? "Uzel byl odebrán z compare setu."
-            : "Uzel v compare setu nebyl nalezen.";
+            ? "Node removed from the compare set."
+            : "Node not found in the compare set.";
 
         await RefreshComparePreviewAfterCompareSetChangedAsync();
     }
@@ -2699,13 +2650,13 @@
     {
         if (_compareSet.Count == 0)
         {
-            _compareSetStatusMessage = "Compare set je už prázdný.";
+            _compareSetStatusMessage = "The compare set is already empty.";
             await InvokeAsync(StateHasChanged);
             return;
         }
 
         _compareSet.Clear();
-        _compareSetStatusMessage = "Compare set byl vyčištěn.";
+        _compareSetStatusMessage = "Compare set cleared.";
         await RefreshComparePreviewAfterCompareSetChangedAsync();
     }
 
@@ -2714,10 +2665,10 @@
         _isSchematicEditorEnabled = !_isSchematicEditorEnabled;
         _isReconnectMode = false;
         _editorStatusMessage = _isSchematicEditorEnabled
-            ? "Schema editor je zapnutý. Drag uzlů a metadata změny se budou ukládat."
-            : "Schema editor je vypnutý.";
+            ? "Schematic editor is enabled. Node dragging and metadata changes will be saved."
+            : "Schematic editor is disabled.";
         _structureStatusMessage = _isSchematicEditorEnabled
-            ? "Structure editing je připravené: reconnect, add node, remove leaf."
+            ? "Structure editing is ready: reconnect, add node, remove leaf."
             : null;
     }
 
@@ -2725,15 +2676,15 @@
     {
         if (!_isSchematicEditorEnabled || !CanEditFocusedNode || _selectedFacilityNode is null)
         {
-            _structureStatusMessage = "Reconnect režim je dostupný jen při aktivním editor mode a focus uzlu.";
+            _structureStatusMessage = "Reconnect mode is available only when editor mode is active and a focus node is selected.";
             return;
         }
 
         _isReconnectMode = !_isReconnectMode;
         _reconnectParentNodeKeyInput = _selectedFacilityNode.ParentNodeKey ?? string.Empty;
         _structureStatusMessage = _isReconnectMode
-            ? "Reconnect režim zapnutý. Vyberte nový parent a potvrďte reconnect."
-            : "Reconnect režim vypnutý.";
+            ? "Reconnect mode is enabled. Select a new parent and confirm the reconnect."
+            : "Reconnect mode is disabled.";
     }
 
     private async Task ToggleReconnectModeAndScrollAsync()
@@ -2752,14 +2703,14 @@
     {
         if (!_isSchematicEditorEnabled)
         {
-            _structureStatusMessage = "Nejprve zapněte editor mode.";
+            _structureStatusMessage = "Enable editor mode first.";
             await InvokeAsync(StateHasChanged);
             return;
         }
 
         if (_selectedFacilityNode is null || !CanEditFocusedNode)
         {
-            _structureStatusMessage = "Pro reconnect vyberte editovatelný focus uzel.";
+            _structureStatusMessage = "Select an editable focus node before reconnecting.";
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -2795,7 +2746,7 @@
     {
         if (!_isSchematicEditorEnabled)
         {
-            _structureStatusMessage = "Nejprve zapněte editor mode.";
+            _structureStatusMessage = "Enable editor mode first.";
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -2805,14 +2756,14 @@
 
         if (string.IsNullOrWhiteSpace(nodeKey) || string.IsNullOrWhiteSpace(label))
         {
-            _structureStatusMessage = "Pro add node vyplňte NodeKey i Label.";
+            _structureStatusMessage = "Provide both NodeKey and Label before adding a node.";
             await InvokeAsync(StateHasChanged);
             return;
         }
 
         if (FacilityNodeSemantics.IsWeatherContextNode(nodeKey))
         {
-            _structureStatusMessage = "weather_main je context-only uzel a nelze ho přidat přes schema editor.";
+            _structureStatusMessage = "weather_main is a context-only node and cannot be added through the schematic editor.";
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -2851,7 +2802,7 @@
             return;
         }
 
-        PushEditUndoSnapshot(snapshot, $"Přidat uzel \"{label}\"");
+        PushEditUndoSnapshot(snapshot, $"Add node \"{label}\"");
 
         // Nový node dostane baseline tagy podle metadata/type, aby semantic query fungovala ihned.
         var baselineTags = FacilityNodeSemantics.DeriveTags(nodeKey, nodeType, label, zone, meterUrn);
@@ -2875,7 +2826,7 @@
         _newNodeZoneInput = string.Empty;
 
         await ReloadData(preserveSelection: true, preferredFocusNodeKey: nodeKey);
-        _editorStatusMessage = $"Uzel {nodeKey} přidán — upravte metadata níže.";
+        _editorStatusMessage = $"Node {nodeKey} was added. Update its metadata below.";
         await ReloadPreviewDataAsync();
         // Scroll na metadata nového uzlu
         await Task.Delay(80);
@@ -2887,14 +2838,14 @@
     {
         if (!_isSchematicEditorEnabled)
         {
-            _structureStatusMessage = "Nejprve zapněte editor mode.";
+            _structureStatusMessage = "Enable editor mode first.";
             await InvokeAsync(StateHasChanged);
             return;
         }
 
         if (_selectedFacilityNode is null)
         {
-            _structureStatusMessage = "Pro remove node vyberte focus uzel.";
+            _structureStatusMessage = "Select a focus node before removing a node.";
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -2916,7 +2867,7 @@
             return;
         }
 
-        PushEditUndoSnapshot(snapshot, $"Smazat uzel \"{removedLabel}\"");
+        PushEditUndoSnapshot(snapshot, $"Delete node \"{removedLabel}\"");
 
         await ReloadData(preserveSelection: true);
         await ReloadPreviewDataAsync();
@@ -3142,14 +3093,14 @@
     {
         if (!_isSchematicEditorEnabled)
         {
-            _editorStatusMessage = "Schema editor je vypnutý. Zapněte editor před úpravou relationship.";
+            _editorStatusMessage = "Schematic editor is disabled. Turn it on before editing relationships.";
             await InvokeAsync(StateHasChanged);
             return;
         }
 
         if (_selectedFacilityNode is null || !CanEditFocusedNode)
         {
-            _editorStatusMessage = "Vyberte editovatelný focus uzel.";
+            _editorStatusMessage = "Select an editable focus node.";
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -3157,7 +3108,7 @@
         var counterpartyNodeKey = NormalizeOptionalText(_additionalRelationshipCounterpartyNodeKeyInput);
         if (string.IsNullOrWhiteSpace(counterpartyNodeKey))
         {
-            _editorStatusMessage = "Vyberte counterparty uzel pro novou explicitní relationship.";
+            _editorStatusMessage = "Select a counterparty node for the new explicit relationship.";
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -3185,7 +3136,7 @@
             return;
         }
 
-        PushEditUndoSnapshot(snapshot, $"Přidat vazbu \"{sourceNodeKey} → {targetNodeKey}\"");
+        PushEditUndoSnapshot(snapshot, $"Add link \"{sourceNodeKey} -> {targetNodeKey}\"");
         await ReloadData(preserveSelection: true, preferredFocusNodeKey: _selectedFacilityNode.NodeKey);
         _editorStatusMessage = result.Message;
         await InvokeAsync(StateHasChanged);
@@ -3362,14 +3313,14 @@
     {
         if (!_isSchematicEditorEnabled)
         {
-            _editorStatusMessage = "Schema editor je vypnutý. Zapněte editor před úpravou relationship.";
+            _editorStatusMessage = "Schematic editor is disabled. Turn it on before editing relationships.";
             await InvokeAsync(StateHasChanged);
             return;
         }
 
         if (_selectedFacilityNode is null || !CanEditFocusedNode)
         {
-            _editorStatusMessage = "Vyberte editovatelný focus uzel.";
+            _editorStatusMessage = "Select an editable focus node.";
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -3392,7 +3343,7 @@
             return;
         }
 
-        PushEditUndoSnapshot(snapshot, $"Odebrat vazbu \"{sourceNodeKey} → {targetNodeKey}\"");
+        PushEditUndoSnapshot(snapshot, $"Remove link \"{sourceNodeKey} -> {targetNodeKey}\"");
         await ReloadData(preserveSelection: true, preferredFocusNodeKey: _selectedFacilityNode.NodeKey);
         _editorStatusMessage = result.Message;
         await InvokeAsync(StateHasChanged);
@@ -3402,21 +3353,21 @@
     {
         if (!_isSchematicEditorEnabled)
         {
-            _editorStatusMessage = "Schema editor je vypnutý. Zapněte editor před uložením.";
+            _editorStatusMessage = "Schematic editor is disabled. Turn it on before saving.";
             await InvokeAsync(StateHasChanged);
             return;
         }
 
         if (_selectedFacilityNode is null)
         {
-            _editorStatusMessage = "Nejprve vyberte focus uzel.";
+            _editorStatusMessage = "Select a focus node first.";
             await InvokeAsync(StateHasChanged);
             return;
         }
 
         if (!CanEditFocusedNode)
         {
-            _editorStatusMessage = "Tento uzel je kontextový a jeho metadata se v editoru nemění.";
+            _editorStatusMessage = "This node is contextual and its metadata cannot be changed in the editor.";
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -3462,7 +3413,7 @@
 
             if (!reconnectResult.Success)
             {
-                _editorStatusMessage = $"Metadata uložena, ale změna parenta selhala: {reconnectResult.Message}";
+                _editorStatusMessage = $"Metadata was saved, but the parent change failed: {reconnectResult.Message}";
                 await InvokeAsync(StateHasChanged);
                 return;
             }
@@ -3492,7 +3443,7 @@
         }
 
         await ReloadData(preserveSelection: true, preferredFocusNodeKey: nodeKey);
-        _editorStatusMessage = $"Uzel {nodeKey} byl uložen.";
+        _editorStatusMessage = $"Node {nodeKey} was saved.";
         await InvokeAsync(StateHasChanged);
     }
 
@@ -3555,7 +3506,7 @@
         var workingSetName = NormalizeOptionalText(_workingSetNameInput);
         if (string.IsNullOrWhiteSpace(workingSetName))
         {
-            _workingSetStatusMessage = "Zadejte název working setu.";
+            _workingSetStatusMessage = "Enter a working set name.";
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -3568,7 +3519,7 @@
 
         if (nodeKeys.Count == 0)
         {
-            _workingSetStatusMessage = "Selection set je prázdný. Nejprve vyberte uzly ve schématu.";
+            _workingSetStatusMessage = "The selection set is empty. Select nodes in the schematic first.";
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -3586,7 +3537,7 @@
         await ReloadWorkingSetsAsync();
 
         _workingSetNameInput = workingSet.Name;
-        _workingSetStatusMessage = $"Working set {workingSet.Name} byl uložen ({workingSet.NodeKeys.Count} uzlů).";
+        _workingSetStatusMessage = $"Working set {workingSet.Name} saved ({workingSet.NodeKeys.Count} nodes).";
         await InvokeAsync(StateHasChanged);
     }
 
@@ -3600,7 +3551,7 @@
         var workingSet = _savedWorkingSets.FirstOrDefault(item => item.Name.Equals(workingSetName, StringComparison.OrdinalIgnoreCase));
         if (workingSet is null)
         {
-            _workingSetStatusMessage = "Working set nebyl nalezen.";
+            _workingSetStatusMessage = "Working set not found.";
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -3612,7 +3563,7 @@
 
         if (nodeKeys.Count == 0)
         {
-            _workingSetStatusMessage = "Working set neobsahuje žádné aktuálně dostupné uzly.";
+            _workingSetStatusMessage = "This working set does not contain any currently available nodes.";
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -3628,8 +3579,8 @@
 
         var unavailableCount = Math.Max(0, workingSet.NodeKeys.Count - nodeKeys.Count);
         _workingSetStatusMessage = unavailableCount > 0
-            ? $"Working set {workingSet.Name} aplikován. {unavailableCount} uzlů už není ve schématu dostupných."
-            : $"Working set {workingSet.Name} aplikován ({nodeKeys.Count} uzlů).";
+            ? $"Working set {workingSet.Name} applied. {unavailableCount} nodes are no longer available in the schematic."
+            : $"Working set {workingSet.Name} applied ({nodeKeys.Count} nodes).";
 
         if (!focusChanged)
         {
@@ -3645,13 +3596,13 @@
         var removed = await FacilityEditorStateService.DeleteWorkingSetAsync(workingSetName);
         if (!removed)
         {
-            _workingSetStatusMessage = "Working set se nepodařilo odstranit (nenalezen).";
+            _workingSetStatusMessage = "Working set could not be removed because it was not found.";
             await InvokeAsync(StateHasChanged);
             return;
         }
 
         await ReloadWorkingSetsAsync();
-        _workingSetStatusMessage = $"Working set {workingSetName} byl smazán.";
+        _workingSetStatusMessage = $"Working set {workingSetName} deleted.";
         await InvokeAsync(StateHasChanged);
     }
 
@@ -3947,7 +3898,7 @@
         };
 
         await FacilityEditorStateService.SaveNodeStatesAsync([nextState]);
-        PushEditUndoSnapshot(snapshot, $"Styl uzlu \"{_selectedFacilityNode.Label}\"");
+        PushEditUndoSnapshot(snapshot, $"Node style \"{_selectedFacilityNode.Label}\"");
         _editorNodeStatesByKey[_selectedFacilityNode.NodeKey] = nextState;
         _styleStatusMessage = $"Node {_selectedFacilityNode.NodeKey} now uses preset {GetCurrentStylePresetLabel()}.";
         await ReloadData(preserveSelection: true, preferredFocusNodeKey: _selectedFacilityNode.NodeKey);
@@ -3974,7 +3925,7 @@
         var draftPreset = BuildCurrentStylePresetDraft();
         _stylePresetsByKey[draftPreset.Key] = draftPreset;
         await FacilityEditorStateService.SaveStylePresetsAsync(_stylePresetsByKey.Values);
-        PushEditUndoSnapshot(snapshot, $"Preset stylu \"{draftPreset.Name}\"");
+        PushEditUndoSnapshot(snapshot, $"Style preset \"{draftPreset.Name}\"");
         _styleStatusMessage = $"Preset {GetStylePresetLabel(draftPreset)} was saved.";
         await ReloadData(preserveSelection: true, preferredFocusNodeKey: _selectedFacilityNode.NodeKey);
         await InvokeAsync(StateHasChanged);
@@ -4121,7 +4072,7 @@
         _semanticQueryRoleFilterValue = string.Empty;
         _semanticQueryTypeFilterValue = string.Empty;
         _semanticQueryTagInput = string.Empty;
-        _semanticSelectionStatusMessage = "Filtry semantic query byly resetovány.";
+        _semanticSelectionStatusMessage = "Semantic query filters were reset.";
     }
 
     private FacilityNodeSemanticQuery BuildSemanticQueryFromFilters()
@@ -4151,7 +4102,7 @@
     {
         if (_facility is null || _facility.Nodes.Count == 0)
         {
-            _semanticSelectionStatusMessage = "Facility data nejsou načtena. Semantic selection se nespustila.";
+            _semanticSelectionStatusMessage = "Facility data is not loaded. Semantic selection did not run.";
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -4177,7 +4128,7 @@
             }
             catch
             {
-                supportedFilterNotice = "Supported filtr nebyl dostupný, použil se plný výsledek query.";
+                supportedFilterNotice = "The supported-only filter was unavailable, so the full query result was used.";
             }
         }
 
@@ -4208,7 +4159,8 @@
             interval.From,
             interval.To,
             _timeSeriesMode,
-            _showBaselineOverlay);
+            _showBaselineOverlay,
+            CurrentAggregateRequestOptions);
 
         return aggregate.SupportedNodeKeys.ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
@@ -4313,15 +4265,15 @@
         string baseMessage;
         if (matchedCount == 0)
         {
-            baseMessage = $"{sourceLabel}: žádné uzly neodpovídají ({scopeLabel}).";
+            baseMessage = $"{sourceLabel}: no nodes matched ({scopeLabel}).";
         }
         else if (!mutationResult.HasChanges)
         {
-            baseMessage = $"{sourceLabel}: nalezeno {matchedCount} uzlů ({scopeLabel}), selection beze změny ({mutationLabel}).";
+            baseMessage = $"{sourceLabel}: found {matchedCount} nodes ({scopeLabel}), selection unchanged ({mutationLabel}).";
         }
         else
         {
-            baseMessage = $"{sourceLabel}: nalezeno {matchedCount} uzlů ({scopeLabel}), změna selection {mutationLabel}: +{mutationResult.AddedCount} / -{mutationResult.RemovedCount}.";
+            baseMessage = $"{sourceLabel}: found {matchedCount} nodes ({scopeLabel}), selection change {mutationLabel}: +{mutationResult.AddedCount} / -{mutationResult.RemovedCount}.";
         }
 
         if (string.IsNullOrWhiteSpace(note))
@@ -4362,7 +4314,7 @@
     {
         if (e.Value is not string raw || !TryParseHtmlDate(raw, out var parsedDateUtc))
         {
-            _customIntervalValidationMessage = "Custom interval není ve validním formátu data.";
+            _customIntervalValidationMessage = "The custom interval uses an invalid date format.";
             return;
         }
 
@@ -4380,7 +4332,7 @@
     {
         if (e.Value is not string raw || !TryParseHtmlDate(raw, out var parsedDateUtc))
         {
-            _customIntervalValidationMessage = "Custom interval není ve validním formátu data.";
+            _customIntervalValidationMessage = "The custom interval uses an invalid date format.";
             return;
         }
 
@@ -4437,8 +4389,12 @@
 
         if (!hasSelectionContext && !hasFocusAnalyticsContext)
         {
+            _nodePreviewData = null;
+            _curatedPreviewData = null;
+            _curatedDeviationData = null;
+            _curatedTimeSeriesData = null;
+            _curatedCompareTimeSeriesData = null;
             _selectionAggregateOverview = null;
-            await RefreshGlobalAlertSummaryAsync();
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -4475,7 +4431,7 @@
                         {
                             IsAvailable = false,
                             Message = customValidationMessage,
-                            Methodology = "Validace custom intervalu: analytika se spouští pouze pro validní a datově smysluplný rozsah."
+                            Methodology = "Custom interval validation: analytics runs only for a valid and data-meaningful range."
                         };
                     }
                     else
@@ -4499,8 +4455,16 @@
                     interval.From,
                     interval.To,
                     _timeSeriesMode,
-                    _showBaselineOverlay);
+                    _showBaselineOverlay,
+                    CurrentAggregateRequestOptions);
             }
+
+                    _nodePreviewData = null;
+                    _curatedPreviewData = null;
+                    _curatedDeviationData = null;
+                    _curatedTimeSeriesData = null;
+                    _curatedCompareTimeSeriesData = null;
+                    _selectionAggregateOverview = skipPostRefresh ? _selectionAggregateOverview : null;
 
             if (!skipPostRefresh && _isCuratedNode)
             {
@@ -4518,7 +4482,7 @@
                     var effectiveCompareNodeKeys = GetEffectiveCompareNodeKeysForSelectedNode();
                     Task<CuratedNodeCompareTimeSeriesResult?>? compareTask = null;
 
-                    if (IsSelectedNodeComparePreviewSupported && effectiveCompareNodeKeys.Count > 0)
+                    if (IsCompareTabActivated && IsSelectedNodeComparePreviewSupported && effectiveCompareNodeKeys.Count > 0)
                     {
                         compareTask = AnalyticsPreview.GetCuratedCompareTimeSeriesAsync(
                             focusNode.NodeKey,
@@ -4540,40 +4504,33 @@
                     }
 
                     await Task.WhenAll(loadTasks);
+
                     _curatedPreviewData = summaryTask.Result;
                     _curatedDeviationData = deviationTask.Result;
                     _curatedTimeSeriesData = timeSeriesTask.Result;
                     _curatedCompareTimeSeriesData = compareTask?.Result;
                     _selectionAggregateOverview = aggregateTask?.Result;
                 }
+            }
+            else if (!skipPostRefresh && _selectedFacilityNode is not null && !string.IsNullOrWhiteSpace(_selectedFacilityNode.MeterUrn))
+            {
+                var previewTask = AnalyticsPreview.GetPreviewDataAsync(_selectedFacilityNode.MeterUrn, interval.From, interval.To);
+
+                if (aggregateTask is not null)
+                {
+                    await Task.WhenAll(previewTask, aggregateTask);
+                    _selectionAggregateOverview = aggregateTask.Result;
+                }
                 else
                 {
-                    _curatedPreviewData = null;
-                    _curatedDeviationData = null;
-                    _curatedTimeSeriesData = null;
-                    _curatedCompareTimeSeriesData = null;
-                    _selectionAggregateOverview = aggregateTask is not null
-                        ? await aggregateTask
-                        : null;
+                    _selectionAggregateOverview = null;
+                    await previewTask;
                 }
-            }
-            else if (!skipPostRefresh && _selectedFacilityNode is not null && !string.IsNullOrEmpty(_selectedFacilityNode.MeterUrn))
-            {
-                _curatedDeviationData = null;
-                _curatedTimeSeriesData = null;
-                _curatedCompareTimeSeriesData = null;
-                _nodePreviewData = await AnalyticsPreview.GetPreviewDataAsync(_selectedFacilityNode.MeterUrn!, interval.From, interval.To);
-                _selectionAggregateOverview = aggregateTask is not null
-                    ? await aggregateTask
-                    : null;
+
+                _nodePreviewData = previewTask.Result;
             }
             else if (!skipPostRefresh)
             {
-                _nodePreviewData = null;
-                _curatedPreviewData = null;
-                _curatedDeviationData = null;
-                _curatedTimeSeriesData = null;
-                _curatedCompareTimeSeriesData = null;
                 _selectionAggregateOverview = aggregateTask is not null
                     ? await aggregateTask
                     : null;
@@ -4582,88 +4539,7 @@
         finally
         {
             _isPreviewLoading = false;
-        }
-
-        if (skipPostRefresh)
-        {
             await InvokeAsync(StateHasChanged);
-            return;
-        }
-
-        await RefreshGlobalAlertSummaryAsync();
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task RefreshGlobalAlertSummaryAsync(CancellationToken ct = default)
-    {
-        try
-        {
-            // Global summary musí používat stejný aktuální analysis window jako detail/schéma.
-            var interval = GetInterval();
-
-            var deviationTasks = EnergyAlertNodeKeys.Select(async nodeKey =>
-            {
-                var deviation = await AnalyticsPreview.GetCuratedDeviationSummaryAsync(nodeKey, interval.From, interval.To, ct);
-                return (NodeKey: nodeKey, Deviation: deviation);
-            }).ToArray();
-
-            await Task.WhenAll(deviationTasks);
-
-            var labelByNodeKey = _facility?.Nodes
-                .ToDictionary(n => n.NodeKey, n => n.Label, StringComparer.OrdinalIgnoreCase)
-                ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            var facilityName = !string.IsNullOrWhiteSpace(_facility?.Name)
-                ? _facility!.Name
-                : "Smart Company Facility";
-
-            var alertedNodes = new List<FacilityAlertNodeSummaryItem>();
-            foreach (var task in deviationTasks)
-            {
-                var result = task.Result;
-                if (result.Deviation.IsAvailable != true)
-                {
-                    continue;
-                }
-
-                if (result.Deviation.Severity is not (NodeDeviationSeverity.High or NodeDeviationSeverity.Elevated))
-                {
-                    continue;
-                }
-
-                alertedNodes.Add(new FacilityAlertNodeSummaryItem
-                {
-                    NodeKey = result.NodeKey,
-                    Label = labelByNodeKey.TryGetValue(result.NodeKey, out var label) && !string.IsNullOrWhiteSpace(label)
-                        ? label
-                        : result.NodeKey,
-                    FacilityName = facilityName,
-                    Severity = result.Deviation.Severity!.Value
-                });
-            }
-
-            var orderedNodes = alertedNodes
-                .OrderByDescending(n => n.Severity)
-                .ThenBy(n => n.Label, StringComparer.CurrentCulture)
-                .ToList();
-
-            GlobalAlertSummaryService.Update(new FacilityGlobalAlertSummary
-            {
-                HighCount = orderedNodes.Count(n => n.Severity == NodeDeviationSeverity.High),
-                ElevatedCount = orderedNodes.Count(n => n.Severity == NodeDeviationSeverity.Elevated),
-                ActiveFacilityName = facilityName,
-                AlertedNodes = orderedNodes,
-                UpdatedUtc = DateTime.UtcNow
-            });
-        }
-        catch
-        {
-            GlobalAlertSummaryService.Update(new FacilityGlobalAlertSummary
-            {
-                HighCount = 0,
-                ElevatedCount = 0,
-                ActiveFacilityName = _facility?.Name ?? "Smart Company Facility",
-                AlertedNodes = []
-            });
         }
     }
 
@@ -4714,7 +4590,7 @@
         await FacilityEditorStateService.SaveNodeStatesAsync([updated]);
 
         // Push to undo stack → marks EditModeDirty = true → orange save diskette activates.
-        PushEditUndoSnapshot(snapshot, $"Přesun \"{args.NodeKey}\"");
+        PushEditUndoSnapshot(snapshot, $"Move \"{args.NodeKey}\"");
 
         await ReloadData(preserveSelection: true);
     }
@@ -4782,7 +4658,7 @@
 
     await FacilityEditorStateService.SaveNodeStatesAsync(updatedStates);
 
-    PushEditUndoSnapshot(snapshot, $"Přesun skupiny ({preservedSelection.Length} uzlů)");
+    PushEditUndoSnapshot(snapshot, $"Move group ({preservedSelection.Length} nodes)");
 
     await ReloadData(preserveSelection: true);
 
@@ -4892,7 +4768,7 @@
         }).ToList();
 
         await FacilityEditorStateService.SaveNodeStatesAsync(updatedStates);
-        PushEditUndoSnapshot(snapshot, $"Zarovnat {direction} ({_selectionSet.Count} uzlů)");
+        PushEditUndoSnapshot(snapshot, $"Align {direction} ({_selectionSet.Count} nodes)");
         await ReloadData(preserveSelection: true);
         await SyncEditorSelectionToJsAsync();
     }
@@ -4947,7 +4823,7 @@
         }
 
         await FacilityEditorStateService.SaveNodeStatesAsync(updatedStates);
-        PushEditUndoSnapshot(snapshot, $"Rozložit {direction} ({_selectionSet.Count} uzlů)");
+        PushEditUndoSnapshot(snapshot, $"Distribute {direction} ({_selectionSet.Count} nodes)");
         await ReloadData(preserveSelection: true);
         await SyncEditorSelectionToJsAsync();
     }
@@ -5568,7 +5444,7 @@
         var enteringEdit = _isEditModeOpen;
         if (enteringEdit)
         {
-            Task.Delay(80).ContinueWith(_ => InvokeAsync(async () =>
+            _ = Task.Delay(80).ContinueWith(_ => InvokeAsync(async () =>
             {
                 await JSRuntime.InvokeVoidAsync("editorCanvas.setGrid", true, 20);
                 await JSRuntime.InvokeVoidAsync("editorCanvas.setFacilityNodeDragEnabled", true);
@@ -5577,7 +5453,7 @@
         }
         else
         {
-            Task.Delay(80).ContinueWith(_ => InvokeAsync(async () =>
+            _ = Task.Delay(80).ContinueWith(_ => InvokeAsync(async () =>
             {
                 await JSRuntime.InvokeVoidAsync("editorCanvas.setGrid", false, 20);
                 await JSRuntime.InvokeVoidAsync("editorCanvas.setFacilityNodeDragEnabled", false);
@@ -5816,10 +5692,10 @@
     {
         return role switch
         {
-            CuratedEnergyContributionRole.Consumption => "spotřeba",
-            CuratedEnergyContributionRole.Generation => "výroba",
+            CuratedEnergyContributionRole.Consumption => "consumption",
+            CuratedEnergyContributionRole.Generation => "generation",
             CuratedEnergyContributionRole.MixedSigned => "mixed-sign",
-            _ => "neutrální"
+            _ => "neutral"
         };
     }
 
@@ -5838,9 +5714,9 @@
     {
         return direction switch
         {
-            CuratedContributionDirection.IncreasesLoad => "zvyšuje load",
-            CuratedContributionDirection.ReducesNetBalance => "snižuje netto",
-            _ => "neutrální"
+            CuratedContributionDirection.IncreasesLoad => "increases load",
+            CuratedContributionDirection.ReducesNetBalance => "reduces net balance",
+            _ => "neutral"
         };
     }
 
@@ -6029,7 +5905,7 @@
     {
         return timestampUtc.HasValue
             ? timestampUtc.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
-            : "Timestamp není dostupný";
+            : "Timestamp unavailable";
     }
 
     private static IReadOnlyList<string> BuildForecastDiagnosticsPoints(CuratedSelectionForecastDiagnosticsSummary diagnostics)
@@ -6037,25 +5913,25 @@
         var points = new List<string>();
 
         points.Add($"Forecast principle: {diagnostics.ForecastPrinciple}.");
-        points.Add($"Coverage aligned bodu: {(diagnostics.AlignmentCoverageRatio * 100.0).ToString("N0")} % actual rady.");
+        points.Add($"Aligned coverage: {(diagnostics.AlignmentCoverageRatio * 100.0).ToString("N0")} % of the actual series.");
 
         if (diagnostics.ForecastMissingNodeCount > 0)
         {
-            points.Add($"Forecast reference chybi pro {diagnostics.ForecastMissingNodeCount}/{Math.Max(1, diagnostics.IncludedNodeCount)} analyticky zahrnutych uzlu.");
+            points.Add($"Forecast reference missing for {diagnostics.ForecastMissingNodeCount}/{Math.Max(1, diagnostics.IncludedNodeCount)} analytically included nodes.");
         }
 
         if (diagnostics.HasMixedSignedSelection)
         {
-            points.Add("Mixed-sign selection: SMAPE neni pouzito, metriky jsou MAE/RMSE/Bias + WAPE nad |actual|.");
+            points.Add("Mixed-sign selection: SMAPE is skipped, so the tab uses MAE/RMSE/Bias plus WAPE over |actual|.");
         }
         else
         {
-            points.Add("Consumption/generation-only selection: MAE/RMSE/Bias + WAPE pro rychle cteni shody.");
+            points.Add("Consumption-only or generation-only selection: MAE/RMSE/Bias plus WAPE for a quick fit readout.");
         }
 
         if (points.Count == 0)
         {
-            points.Add("Forecast diagnostika je zatim nedostupna.");
+            points.Add("Forecast diagnostics are not available yet.");
         }
 
         return points;
@@ -6067,22 +5943,22 @@
 
         if (health.HighDeviationNodeCount > 0)
         {
-            points.Add($"Silna deviation: {health.HighDeviationNodeCount} uzlu.");
+            points.Add($"High deviation: {health.HighDeviationNodeCount} nodes.");
         }
 
         if (health.ElevatedDeviationNodeCount > 0)
         {
-            points.Add($"Elevated deviation: {health.ElevatedDeviationNodeCount} uzlu.");
+            points.Add($"Elevated deviation: {health.ElevatedDeviationNodeCount} nodes.");
         }
 
         if (health.HasWeakCoverage)
         {
-            points.Add($"Slabe coverage: {(health.IncludedCoverageRatio * 100.0).ToString("N0")} % podporovanych uzlu je zahrnuto.");
+            points.Add($"Weak coverage: {(health.IncludedCoverageRatio * 100.0).ToString("N0")} % of supported nodes are included.");
         }
 
         if (health.HasMixedSignedSelection)
         {
-            points.Add("Mixed-sign selection: netto zahrnuje spotrebu i vyrobu.");
+            points.Add("Mixed-sign selection: the net view includes both consumption and generation.");
         }
 
         if (health.HasAbruptAggregateShift)
@@ -6090,17 +5966,17 @@
             var abruptRatioText = health.AbruptShiftRatio.HasValue
                 ? health.AbruptShiftRatio.Value.ToString("N1")
                 : "N/A";
-            points.Add($"Nahly skok aggregate rady (ratio {abruptRatioText}).");
+            points.Add($"Abrupt aggregate-series shift detected (ratio {abruptRatioText}).");
         }
 
         if (health.UnsupportedNodeCount > 0 || health.ContextOnlyNodeCount > 0 || health.NoDataNodeCount > 0)
         {
-            points.Add($"Datove omezeni: unsupported {health.UnsupportedNodeCount}, context-only {health.ContextOnlyNodeCount}, no-data {health.NoDataNodeCount}.");
+            points.Add($"Data constraints: unsupported {health.UnsupportedNodeCount}, context-only {health.ContextOnlyNodeCount}, no-data {health.NoDataNodeCount}.");
         }
 
         if (points.Count == 0)
         {
-            points.Add("Bez aktivnich issue signalu v aktualnim intervalu.");
+            points.Add("No active issue signals in the current interval.");
         }
 
         return points;
@@ -6115,29 +5991,29 @@
             switch (signal)
             {
                 case "high_peak_to_average":
-                    points.Add("Peak-to-average ratio je vysoký: režim je špičkový.");
+                    points.Add("Peak-to-average ratio is high, which points to a peak-driven regime.");
                     break;
                 case "high_variability":
-                    points.Add("Variabilita je vysoká i po převedení na |kW|.");
+                    points.Add("Variability stays high even after normalizing to |kW|.");
                     break;
                 case "elevated_variability":
-                    points.Add("Variabilita je zvýšená a mění denní provozní režim.");
+                    points.Add("Variability is elevated and changes the daily operating pattern.");
                     break;
                 case "stable_baseload_shape":
-                    points.Add("Baseload proxy je relativně vysoká vůči průměru.");
+                    points.Add("The baseload proxy is relatively high versus the average level.");
                     break;
                 case "weekday_weekend_split":
-                    points.Add("Rozdíl mezi weekday a weekend profilem je významný.");
+                    points.Add("The split between weekday and weekend behavior is meaningful.");
                     break;
                 case "mixed_sign_selection":
-                    points.Add("Mixed-sign selection: režim počítá metriky nad absolutní magnitudou.");
+                    points.Add("Mixed-sign selection: regime metrics are computed over absolute magnitude.");
                     break;
             }
         }
 
         if (points.Count == 0)
         {
-            points.Add("Bez výrazného provozního signálu mimo běžné pásmo.");
+            points.Add("No strong operating signal stands out beyond the usual band.");
         }
 
         return points;
@@ -6147,9 +6023,9 @@
     {
         return severity switch
         {
-            NodeDeviationSeverity.High => "silná odchylka",
-            NodeDeviationSeverity.Elevated => "výraznější odchylka",
-            _ => "v normě"
+            NodeDeviationSeverity.High => "high deviation",
+            NodeDeviationSeverity.Elevated => "elevated deviation",
+            _ => "within range"
         };
     }
 
@@ -6172,10 +6048,10 @@
     {
         return status switch
         {
-            WeatherExplanationStatus.SupportedByWeather => "počasí podporuje vysvětlení",
-            WeatherExplanationStatus.NotSupportedByWeather => "počasí nepodporuje vysvětlení",
-            WeatherExplanationStatus.WeatherChangeNeutral => "počasí je téměř beze změny",
-            _ => "vysvětlení není dostupné"
+            WeatherExplanationStatus.SupportedByWeather => "weather supports the explanation",
+            WeatherExplanationStatus.NotSupportedByWeather => "weather does not support the explanation",
+            WeatherExplanationStatus.WeatherChangeNeutral => "weather change is nearly neutral",
+            _ => "explanation unavailable"
         };
     }
 
@@ -6199,14 +6075,14 @@
 
         if (deviation?.IsAvailable != true)
         {
-            return "bez vyhodnocení";
+            return "not evaluated";
         }
 
         return deviation.Severity switch
         {
-            NodeDeviationSeverity.High => "kritická odchylka",
-            NodeDeviationSeverity.Elevated => "pozornost",
-            _ => "v normě"
+            NodeDeviationSeverity.High => "critical deviation",
+            NodeDeviationSeverity.Elevated => "attention",
+            _ => "normal"
         };
     }
 
@@ -6234,19 +6110,19 @@
     {
         if (IsWeatherNode(nodeKey))
         {
-            return "Uzel weather_main je v tomto sprintu jen vysvětlující faktor, energetický alert se zde záměrně nevyhodnocuje.";
+            return "The weather_main node is only an explanatory factor in this sprint, so energy alerts are intentionally not evaluated here.";
         }
 
         if (deviation?.IsAvailable != true)
         {
-            return deviation?.Message ?? "Odchylka vůči baseline není pro vybraný interval dostupná, alert stav proto nelze zatím vyhodnotit.";
+            return deviation?.Message ?? "Baseline deviation is unavailable for the selected interval, so alert state cannot be evaluated yet.";
         }
 
         return deviation.Severity switch
         {
-            NodeDeviationSeverity.High => "Absolutní relativní odchylka vůči baseline je nad 25 %.",
-            NodeDeviationSeverity.Elevated => "Absolutní relativní odchylka vůči baseline je v pásmu 10-25 %.",
-            _ => "Absolutní relativní odchylka vůči baseline je pod 10 %."
+            NodeDeviationSeverity.High => "Absolute relative deviation versus baseline is above 25%.",
+            NodeDeviationSeverity.Elevated => "Absolute relative deviation versus baseline is between 10% and 25%.",
+            _ => "Absolute relative deviation versus baseline is below 10%."
         };
     }
 
@@ -6254,15 +6130,15 @@
     {
         if (IsWeatherNode(nodeKey))
         {
-            return "Weather uzel je explicitně mimo energetické alert hodnocení. Zůstává explanatory kontext pro ostatní systémy.";
+            return "The weather node is explicitly outside energy-alert evaluation. It remains explanatory context for the other systems.";
         }
 
         if (deviation?.IsAvailable == true)
         {
-            return "Alert stav je přímo mapovaný z deviation severity: Normal -> v normě, Elevated -> pozornost, High -> kritická odchylka. Severity je odvozena z |delta %| vůči baseline (<10, 10-25, >25).";
+            return "Alert state maps directly from deviation severity: Normal -> normal, Elevated -> attention, High -> critical deviation. Severity is derived from |delta %| versus baseline (<10, 10-25, >25).";
         }
 
-        return "Alert foundation je navázaný na deviation/baseline vrstvu. Pokud deviation není dostupná, uzel zůstává ve stavu bez vyhodnocení (bez improvizovaného fallback alertu).";
+        return "Alert foundation is tied to the deviation and baseline layer. If deviation is unavailable, the node remains not evaluated without an improvised fallback alert.";
     }
 
     private static (string Token, string Hex) GetSchematicAlertColorHint(string? nodeKey, CuratedNodeDeviationSummary? deviation)
@@ -6307,17 +6183,17 @@
     {
         if (_customFromUtc == default || _customToUtcExclusive == default)
         {
-            return "Custom interval není kompletně vyplněný.";
+            return "The custom interval is incomplete.";
         }
 
         if (_customToUtcExclusive <= _customFromUtc)
         {
-            return "Koncové datum musí být později než počáteční datum.";
+            return "The end date must be later than the start date.";
         }
 
         if (_customFromUtc.Year <= BaselineHistoricalYearsForValidation)
         {
-            return "Počáteční datum je příliš brzké pro baseline porovnání vůči minulým letům.";
+            return "The start date is too early for baseline comparison against previous years.";
         }
 
         if (_selectedFacilityNode is null || !_isCuratedNode)
@@ -6337,7 +6213,7 @@
 
         if (!hasOverlap)
         {
-            return $"Vybraný custom interval je mimo dostupný rozsah dat pro uzel {_selectedFacilityNode.NodeKey} ({domainMin:dd.MM.yyyy} - {domain.MaxUtc.Value:dd.MM.yyyy}).";
+            return $"The selected custom interval is outside the available data range for node {_selectedFacilityNode.NodeKey} ({domainMin:dd.MM.yyyy} - {domain.MaxUtc.Value:dd.MM.yyyy}).";
         }
 
         return null;

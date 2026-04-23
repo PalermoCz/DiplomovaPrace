@@ -1,9 +1,6 @@
 @using DiplomovaPrace.Components.Editor
 @using DiplomovaPrace.Services
-@inject FacilityAlertSummaryService AlertSummaryService
-@inject IEditorSessionService SessionService
 @inject NavigationManager Navigation
-@implements IDisposable
 
 <header class="facility-topbar text-white d-flex align-items-center px-3 px-lg-4" style="height: 72px; box-shadow: 0 2px 8px rgba(2, 6, 23, 0.35); flex-shrink: 0; position: relative; z-index: 1050;">
     @* Leva cast: Branding & Navigace *@
@@ -57,107 +54,18 @@
 
     @* Prava cast: Utility *@
     <div class="d-flex justify-content-end align-items-center gap-2" style="flex: 1; min-width: 0;">
-        <div class="position-relative">
-            <button type="button"
-                    class="facility-alert-trigger d-flex align-items-center"
-                    @onclick="ToggleAlertPanel"
-                    aria-expanded="@_isAlertPanelOpen"
-                    title="Globální alert souhrn">
-                <i class="bi bi-bell-fill me-2"></i>
-                <span class="small fw-semibold">Alerty</span>
-                <span @key="_criticalPulseVersion"
-                      class="badge ms-2 facility-badge-critical @(AlertSummaryService.Current.HighCount > 0 ? "facility-badge-critical-pulse" : string.Empty)">
-                    Kritická @AlertSummaryService.Current.HighCount
-                </span>
-                <span class="badge ms-1 facility-badge-elevated">Pozornost @AlertSummaryService.Current.ElevatedCount</span>
-            </button>
-
-            @if (_isAlertPanelOpen)
-            {
-                <div class="card shadow border-0 position-absolute end-0 mt-2" style="width: 420px; z-index: 1200;">
-                    <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
-                        <div class="fw-semibold">Global alert summary</div>
-                        <button class="btn btn-sm btn-outline-secondary" @onclick="CloseAlertPanel">Zavřít</button>
-                    </div>
-                    <div class="card-body p-0">
-                        @if (AlertSummaryService.Current.AlertedNodes.Count == 0)
-                        {
-                            <div class="p-3 text-muted small">
-                                Aktuálně nejsou evidované energetické alerty pro high-level uzly.
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="list-group list-group-flush">
-                                @foreach (var alertNode in AlertSummaryService.Current.AlertedNodes)
-                                {
-                                    <button type="button"
-                                            class="list-group-item list-group-item-action d-flex align-items-center justify-content-between"
-                                            @onclick="() => OpenNodeFromAlertList(alertNode.NodeKey)">
-                                        <div class="d-flex flex-column align-items-start">
-                                            <span class="small text-muted">@alertNode.FacilityName</span>
-                                            <span class="fw-semibold">@alertNode.Label</span>
-                                            <span class="small text-muted">@alertNode.NodeKey</span>
-                                        </div>
-                                        <span class="badge @GetAlertSeverityBadgeClass(alertNode.Severity)">@GetAlertSeverityText(alertNode.Severity)</span>
-                                    </button>
-                                }
-                            </div>
-                        }
-                    </div>
-                </div>
-            }
-        </div>
-
         @* Vyhrazeno pro pripadne utility buttony - Refresh se presune primo sem z FacilityWorkbench *@
         <div id="facility-toolbar-portal-right"></div>
     </div>
 </header>
 
 @code {
-    private bool _isAlertPanelOpen;
     private bool _isFacilitySelectorOpen;
-    private int _criticalPulseVersion = 1;
-    private int _lastHighCount;
-
-    private string CurrentFacilityName =>
-        !string.IsNullOrWhiteSpace(AlertSummaryService.Current.ActiveFacilityName)
-            ? AlertSummaryService.Current.ActiveFacilityName
-            : "Smart Company Facility";
-
-    protected override void OnInitialized()
-    {
-        AlertSummaryService.OnChanged += HandleAlertSummaryChanged;
-        _lastHighCount = AlertSummaryService.Current.HighCount;
-        TriggerCriticalPulse();
-    }
-
-    private void ToggleAlertPanel()
-    {
-        _isAlertPanelOpen = !_isAlertPanelOpen;
-        if (_isAlertPanelOpen)
-        {
-            _isFacilitySelectorOpen = false;
-        }
-
-        if (_isAlertPanelOpen)
-        {
-            TriggerCriticalPulse();
-        }
-    }
-
-    private void CloseAlertPanel()
-    {
-        _isAlertPanelOpen = false;
-    }
+    private string CurrentFacilityName => "Smart Company Facility";
 
     private void ToggleFacilitySelector()
     {
         _isFacilitySelectorOpen = !_isFacilitySelectorOpen;
-        if (_isFacilitySelectorOpen)
-        {
-            _isAlertPanelOpen = false;
-        }
     }
 
     private void CloseFacilitySelector()
@@ -175,62 +83,6 @@
         }
     }
 
-    private void OpenNodeFromAlertList(string nodeKey)
-    {
-        _isAlertPanelOpen = false;
-
-        if (!Navigation.Uri.Contains("/facility", StringComparison.OrdinalIgnoreCase))
-        {
-            Navigation.NavigateTo("/facility");
-        }
-
-        SessionService.SetActiveTool(EditorTool.Select);
-        SessionService.SelectElement(nodeKey, EditorSelectionType.FacilityNode);
-    }
-
-    private void HandleAlertSummaryChanged()
-    {
-        if (AlertSummaryService.Current.HighCount != _lastHighCount)
-        {
-            _lastHighCount = AlertSummaryService.Current.HighCount;
-            TriggerCriticalPulse();
-        }
-
-        _ = InvokeAsync(StateHasChanged);
-    }
-
-    private void TriggerCriticalPulse()
-    {
-        if (AlertSummaryService.Current.HighCount > 0)
-        {
-            _criticalPulseVersion++;
-        }
-    }
-
-    private static string GetAlertSeverityText(NodeDeviationSeverity severity)
-    {
-        return severity switch
-        {
-            NodeDeviationSeverity.High => "kritická odchylka",
-            NodeDeviationSeverity.Elevated => "pozornost",
-            _ => "v normě"
-        };
-    }
-
-    private static string GetAlertSeverityBadgeClass(NodeDeviationSeverity severity)
-    {
-        return severity switch
-        {
-            NodeDeviationSeverity.High => "bg-danger",
-            NodeDeviationSeverity.Elevated => "bg-warning text-dark",
-            _ => "bg-success"
-        };
-    }
-
-    public void Dispose()
-    {
-        AlertSummaryService.OnChanged -= HandleAlertSummaryChanged;
-    }
 }
 
 <style>

@@ -68,12 +68,12 @@
                 <div class="text-muted text-uppercase fw-bold ts-panel-title">@PanelTitle</div>
                 @if (Data?.Points.Count > 0)
                 {
-                    <span class="badge bg-light text-dark border">@Data.Points.Count.ToString("N0") bodů</span>
+                    <span class="badge bg-light text-dark border">@Data.Points.Count.ToString("N0") points</span>
                 }
             </div>
 
             <div class="ts-panel-controls-row">
-                <div class="ts-mode-buttons" role="group" aria-label="Režim granularit časové řady">
+                <div class="ts-mode-buttons" role="group" aria-label="Time-series granularity mode">
                     @foreach (var mode in _availableModes)
                     {
                         <button type="button"
@@ -98,38 +98,38 @@
         </div>
 
         <div class="d-flex flex-wrap align-items-center gap-3 small text-muted mb-2">
-            <span>Režim zobrazení: <strong>@GetModeLabel(SelectedMode)</strong></span>
+            <span>Display mode: <strong>@GetModeLabel(SelectedMode)</strong></span>
             @if (ShowBaselineOverlay)
             {
-                <span>Baseline: <strong>@(Data?.BaselineOverlayAvailable == true ? "dostupný" : "nedostupný")</strong></span>
+                <span>Baseline: <strong>@(Data?.BaselineOverlayAvailable == true ? "available" : "unavailable")</strong></span>
             }
         </div>
 
         @if (_jsInteropUnavailable)
         {
             <div class="alert alert-secondary py-2 mb-0 border-0">
-                Časový graf není dostupný, protože se nepodařilo inicializovat chart runtime.
+                The time-series chart is unavailable because the chart runtime could not be initialized.
             </div>
         }
         else if (Data is null)
         {
             <div class="alert alert-secondary py-2 mb-0 border-0">
-                Pro tento uzel zatím není chart data source připraven.
+                A chart data source is not ready for this node yet.
             </div>
         }
         else if (Data.Points.Count == 0)
         {
             <div class="alert alert-info py-2 mb-0 border-0 d-flex align-items-start">
                 <i class="bi bi-info-circle-fill text-info me-2"></i>
-                <div>@(Data.NoDataMessage ?? "Pro vybraný interval nejsou dostupná data časové řady.")</div>
+                <div>@(Data.NoDataMessage ?? "No time-series data is available for the selected interval.")</div>
             </div>
-            <div class="small text-muted mt-2">Status: bez dat pro zvolený interval.</div>
+            <div class="small text-muted mt-2">Status: no data is available for the selected interval.</div>
         }
         else
         {
             <div id="@_chartElementId" class="ts-chart-host"></div>
             <div class="small text-muted mt-2">
-                Status: <strong>@Data.GranularityLabel</strong> · Osa Y: <strong>@Data.YAxisLabel</strong>@(ShowBaselineOverlay ? $" · Baseline: {(Data.BaselineOverlayAvailable ? "aktivní" : "nedostupná")}" : string.Empty)
+                Status: <strong>@Data.GranularityLabel</strong> · Y axis: <strong>@Data.YAxisLabel</strong>@(ShowBaselineOverlay ? $" · Baseline: {(Data.BaselineOverlayAvailable ? "active" : "unavailable")}" : string.Empty)
             </div>
         }
     </div>
@@ -156,8 +156,8 @@
     private bool _jsInteropUnavailable;
 
     private string PanelTitle => string.Equals(Data?.NodeKey, "selection_set", StringComparison.OrdinalIgnoreCase)
-        ? "Aggregate časová řada"
-        : "Single-node časová řada";
+        ? "Aggregate time series"
+        : "Single-node time series";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -243,11 +243,11 @@
     {
         return mode switch
         {
-            CuratedNodeTimeSeriesMode.Auto => "Auto (adaptivní volba podle délky intervalu)",
-            CuratedNodeTimeSeriesMode.Raw15Min => "15min (ruční override)",
-            CuratedNodeTimeSeriesMode.HourlyAverage => "Hourly (ruční override)",
-            CuratedNodeTimeSeriesMode.DailyAverage => "Daily (ruční override)",
-            _ => "Auto (adaptivní volba podle délky intervalu)"
+            CuratedNodeTimeSeriesMode.Auto => "Auto (adaptive by interval length)",
+            CuratedNodeTimeSeriesMode.Raw15Min => "15 min (manual override)",
+            CuratedNodeTimeSeriesMode.HourlyAverage => "Hourly (manual override)",
+            CuratedNodeTimeSeriesMode.DailyAverage => "Daily (manual override)",
+            _ => "Auto (adaptive by interval length)"
         };
     }
 
@@ -256,7 +256,7 @@
         return new
         {
             title = data.Title,
-            actualSeriesName = "Aktuální výkon",
+            actualSeriesName = "Actual power",
             baselineSeriesName = "Baseline reference",
             unit = data.Unit,
             yAxisLabel = data.YAxisLabel,

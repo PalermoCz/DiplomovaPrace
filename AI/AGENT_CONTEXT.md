@@ -10,7 +10,7 @@
 - CSV files are seed/import source, not runtime graph truth.
 - facility-editor-state.json can structurally override parents and edges.
 - The current graph model is tree-first for layout, but explicit edges exist.
-- One layout parent + optional secondary edges.
+- One primary layout parent plus explicit non-layout additional links.
 - Secondary/non-layout edges are important and must be preserved.
 
 ## Imported dataset state
@@ -79,7 +79,7 @@
 - Single selection and multi-selection must be mutually exclusive.
 - If exactly one node is selected:
   - show only the single-node editor tabs/panels
-  - visible tabs should be: Edit, Add node, Delete, Import
+  - visible tabs should be: Edit, Add node, Delete, Import, Style
   - do not show Layout tools in single-select mode
 - If multiple nodes are selected:
   - clear single-node focus
@@ -119,30 +119,50 @@
 - Full dataset import is working.
 - Binding-based data loading is working.
 - Editor-only grid/drag/save flow is working.
-- Single-select and multi-select editor behavior is now functional.
+- Single-select and multi-select editor behavior is functional.
 - Group drag is working.
+- Relationship editing UI for additional links is implemented.
+- Universal node style preset system is implemented.
+- Style tab with live preview is implemented.
+- FacilityWorkbench analytics have been split into tabs.
+- Topbar alert dropdown was removed.
+- Current active milestone is data presentation cleanup and literature-backed analytics design.
 
 ## Graph relationship architecture
 - Do not model the graph as a true multi-parent layout tree.
 - Prefer exactly one primary layout parent per node.
-- Preserve additional parent-like / semantic / membership relationships as explicit edges.
+- Preserve additional parent-like relationships as explicit non-layout edges.
 - Keep layout structure, topology, and selection semantics as separate concerns.
-- Strict layout subtree selection and expanded relationship-based selection should remain distinct modes.
+- UI should treat non-layout relationships as one generic additional-link concept unless a later milestone introduces a strong reason to distinguish kinds again.
 
-- Relationship inspection UI is needed before relationship editing UI.
-- Resolved selection set and visual highlight set must remain understandable and, if different, that difference must be explicit in the UI/logic.
-
+## Relationship editing status
 - Relationship inspection UI was a transitional/debugging step.
-- The next milestone is relationship editing UI for additional explicit relationships.
-- Primary layout parent editing and additional relationship editing must remain separate actions.
+- Relationship editing for additional links is now implemented.
+- Primary layout parent editing and additional-link editing must remain separate actions.
+
 
 ## Node appearance direction
-- Node appearance should move away from dataset-specific hardcoded layer/type rules.
-- Prefer a universal style preset system.
+- Node appearance should be driven by a universal style preset system, not dataset-specific hardcoded layer/type rules.
 - Style editing should live in a separate Style editor surface, not in the normal single-node Edit form.
 - Live preview is required.
-- Alert-based appearance logic is not a current priority and should be removed from the future style model.
+- Alert-based appearance is not part of the intended base style model.
 - Selection, focus, and subtree highlight should remain overlay states separate from base node appearance.
+
+
+## Data presentation direction
+- FacilityWorkbench is the primary future product surface for analytics and data display.
+- Older pages such as DashboardView, KpiView, BuildingView, and EditorView should be treated as legacy/reference only.
+- The workbench analytics area should move toward a cleaner tab-based structure.
+- Prefer a smaller default analytics surface and lazy/conditional loading for secondary tabs.
+- Future visualization work should be literature-backed and prioritized.
+- Preferred candidate directions currently include:
+  - benchmark / peer comparison
+  - load duration curve
+  - scatter: temperature vs load
+  - baseline vs actual
+  - peak demand / load factor / after-hours load
+  - EUI / cost per m²
+- Do not add new analytics opportunistically; first keep the workbench information architecture coherent.
 
 
 

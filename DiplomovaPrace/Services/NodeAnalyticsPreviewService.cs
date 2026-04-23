@@ -34,7 +34,7 @@ public sealed class CuratedNodeTimeSeriesResult
     public string YAxisLabel { get; init; } = string.Empty;
     public CuratedNodeTimeSeriesGranularity Granularity { get; init; } = CuratedNodeTimeSeriesGranularity.Raw15Min;
     public string GranularityLabel { get; init; } = "15min detail";
-    public string AggregationMethod { get; init; } = "Bez agregace (raw Ĺ™ada).";
+    public string AggregationMethod { get; init; } = "No aggregation (raw series).";
     public string InterpretationNote { get; init; } = string.Empty;
     public CuratedNodeTimeSeriesMode RequestedMode { get; init; } = CuratedNodeTimeSeriesMode.Auto;
     public string RequestedModeLabel { get; init; } = "Auto";
@@ -63,7 +63,7 @@ public sealed class CuratedNodeCompareTimeSeriesResult
     public string YAxisLabel { get; init; } = string.Empty;
     public CuratedNodeTimeSeriesGranularity Granularity { get; init; } = CuratedNodeTimeSeriesGranularity.Raw15Min;
     public string GranularityLabel { get; init; } = "15min detail";
-    public string AggregationMethod { get; init; } = "Bez agregace (raw Ĺ™ada).";
+    public string AggregationMethod { get; init; } = "No aggregation (raw series).";
     public string InterpretationNote { get; init; } = string.Empty;
     public CuratedNodeTimeSeriesMode RequestedMode { get; init; } = CuratedNodeTimeSeriesMode.Auto;
     public string RequestedModeLabel { get; init; } = "Auto";
@@ -95,7 +95,7 @@ public sealed class CuratedSelectionAggregateOverviewResult
     public double TotalGenerationKwh { get; init; }
     public double NetEnergyKwh { get; init; }
     public double HeadlineValueKwh { get; init; }
-    public string HeadlineLabel { get; init; } = "Netto bilance energie";
+    public string HeadlineLabel { get; init; } = "Net energy balance";
     public string HeadlineDescription { get; init; } = string.Empty;
     public bool IsNetHeadline { get; init; }
     public IReadOnlyList<string> SupportedNodeKeys { get; init; } = [];
@@ -104,6 +104,20 @@ public sealed class CuratedSelectionAggregateOverviewResult
     public IReadOnlyList<string> NoDataNodeKeys { get; init; } = [];
     public IReadOnlyList<string> IncludedNodeKeys { get; init; } = [];
     public string? Message { get; init; }
+}
+
+public sealed class CuratedSelectionAggregateRequestOptions
+{
+    public bool IncludeBreakdown { get; init; } = true;
+    public bool IncludePerformance { get; init; } = true;
+    public bool IncludeDiagnostics { get; init; } = true;
+
+    public static CuratedSelectionAggregateRequestOptions OverviewOnly { get; } = new()
+    {
+        IncludeBreakdown = false,
+        IncludePerformance = false,
+        IncludeDiagnostics = false
+    };
 }
 
 public sealed class CuratedSelectionContributionItem
@@ -470,7 +484,7 @@ public sealed class WeatherExplanationSummary
 
 public class NodeAnalyticsPreviewService
 {
-    private const string BaselineMethodology = "Analysis window je vĹľdy pĹ™Ă­mo vybranĂ˝ interval uĹľivatele. Baseline strategy je urÄŤena separĂˇtnÄ›: priorita je stejnĂ© obdobĂ­ v minulĂ˝ch letech, fallback jsou pĹ™edchozĂ­ srovnatelnĂˇ obdobĂ­ stejnĂ© dĂ©lky. U Ĺ™ad s pĹ™Ă­ponou P se pĹ™ed souÄŤtem pĹ™evĂˇdĂ­ vĂ˝kon na energii podle kroku ÄŤasovĂ© Ĺ™ady (inferovanĂ˝ krok, fallback 15 min).";
+    private const string BaselineMethodology = "The analysis window is always the user-selected interval. Baseline strategy is determined separately: priority goes to the same period in prior years, with fallback to previous comparable windows of the same length. For series with a P suffix, power is converted to energy before summation using the inferred time step, with a 15 min fallback.";
     private const double DefaultPowerSampleStepHours = 0.25;
     private const int MaxHistoricalYearsForBaseline = 3;
     private const int RecentComparableWindowsForBaseline = 4;
@@ -478,13 +492,6 @@ public class NodeAnalyticsPreviewService
     private const double WeatherExplanationDeltaThresholdC = 0.8;
     private static readonly TimeSpan RawTimeSeriesThreshold = TimeSpan.FromDays(7);
     private static readonly TimeSpan HourlyTimeSeriesThreshold = TimeSpan.FromDays(45);
-    private static readonly HashSet<string> ComparePreviewSupportedNodeKeys = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "heating_main",
-        "cooling_main",
-        "pv_main",
-        "chp_main"
-    };
 
     private readonly IKpiService _kpiService;
     private readonly IWebHostEnvironment _env;
@@ -509,6 +516,11 @@ public class NodeAnalyticsPreviewService
             return null;
 
         return result;
+    }
+
+    public bool SupportsComparePreview(string? nodeKey)
+    {
+        return !string.IsNullOrWhiteSpace(nodeKey) && _bindingRegistry.IsSupported(nodeKey);
     }
 
     public async Task<CuratedNodeSummary?> GetCuratedSummaryAsync(string nodeKey, DateTime from, DateTime to, CancellationToken ct = default)
@@ -562,10 +574,10 @@ public class NodeAnalyticsPreviewService
                 BaselineOverlayAvailable = false,
                 BaselineOverlayMessage = includeBaselineOverlay
                     ? (source.SupportsDeviation
-                        ? "Baseline overlay nenĂ­ dostupnĂ˝: chybĂ­ lokĂˇlnĂ­ reduced source."
-                        : "Baseline overlay nenĂ­ pro tento uzel podporovĂˇn.")
+                        ? "Baseline overlay is unavailable because the local reduced source is missing."
+                        : "Baseline overlay is not supported for this node.")
                     : null,
-                NoDataMessage = "ChybĂ­ lokĂˇlnĂ­ reduced source pro vykreslenĂ­ ÄŤasovĂ© Ĺ™ady."
+                NoDataMessage = "The local reduced source required to render this time series is missing."
             };
         }
 
@@ -578,8 +590,10 @@ public class NodeAnalyticsPreviewService
         DateTime to,
         CuratedNodeTimeSeriesMode mode = CuratedNodeTimeSeriesMode.Auto,
         bool includeBaselineOverlay = false,
+        CuratedSelectionAggregateRequestOptions? options = null,
         CancellationToken ct = default)
     {
+        options ??= new CuratedSelectionAggregateRequestOptions();
         selectedNodeKeys ??= [];
 
         var distinctNodeKeys = selectedNodeKeys
@@ -646,29 +660,29 @@ public class NodeAnalyticsPreviewService
                 LoadProfile = new CuratedSelectionLoadProfileSummary
                 {
                     IsAvailable = false,
-                    Summary = "Load profile nenĂ­ dostupnĂ˝, protoĹľe selection set neobsahuje podporovanĂ© energetickĂ© uzly.",
-                    Methodology = "Daily profile v1 pouĹľĂ­vĂˇ transparentnĂ­ agregaci aggregate vĂ˝konovĂ© Ĺ™ady Selection Setu (hour-of-day average nebo fallback interval snapshot).",
-                    DifferenceFromForecast = "Forecast je predikce budoucĂ­ho prĹŻbÄ›hu, load profile je popis typickĂ©ho historickĂ©ho chovĂˇnĂ­.",
-                    DifferenceFromMainChart = "HlavnĂ­ chart zobrazuje prĹŻbÄ›h konkrĂ©tnĂ­ho intervalu; load profile agreguje opakujĂ­cĂ­ se pattern napĹ™Ă­ÄŤ intervalem."
+                    Summary = "Load profile is unavailable because the selection set contains no supported energy nodes.",
+                    Methodology = "Daily profile v1 uses transparent aggregation of the selection-set power series, with an hour-of-day average or an interval-snapshot fallback.",
+                    DifferenceFromForecast = "Forecast predicts future behavior, while the load profile describes typical historical behavior.",
+                    DifferenceFromMainChart = "The main chart shows the course of the selected interval, while the load profile aggregates repeating patterns across it."
                 },
                 PeakAnalysis = new CuratedSelectionPeakAnalysisSummary
                 {
                     IsAvailable = false,
-                    Summary = "Peak analysis nenĂ­ dostupnĂˇ bez podporovanĂ˝ch uzlĹŻ.",
-                    Methodology = "Peak analysis v1 vyhodnocuje peak demand, peak generation/export a peak net absolute event z aggregate vĂ˝konovĂ© Ĺ™ady."
+                    Summary = "Peak analysis is unavailable without supported nodes.",
+                    Methodology = "Peak analysis v1 evaluates peak demand, peak generation/export, and the peak net absolute event from the aggregate power series."
                 },
                 OperatingRegime = new CuratedSelectionOperatingRegimeSummary
                 {
                     IsAvailable = false,
-                    Summary = "Operating regime summary nenĂ­ dostupnĂˇ bez aggregate ÄŤasovĂ© Ĺ™ady.",
-                    Methodology = "Operating regime v1 pouĹľĂ­vĂˇ transparentnĂ­ heuristiky nad aggregate vĂ˝konem: baseload proxy, peak-to-average, variabilitu a weekday/weekend signal."
+                    Summary = "Operating regime summary is unavailable without an aggregate time series.",
+                    Methodology = "Operating regime v1 uses transparent heuristics over aggregate power: baseload proxy, peak-to-average, variability, and a weekday/weekend signal."
                 },
                 EmsEvaluation = new CuratedSelectionEmsEvaluationSummary
                 {
                     IsAvailable = false,
-                    Summary = "EMS evaluation nenĂ­ dostupnĂˇ: selection set neobsahuje podporovanĂ© energetickĂ© uzly.",
-                    Methodology = "EMS evaluation v1 stavĂ­ transparentnĂ­ scorecards pouze nad aggregate load profile, peak a operating regime metrikami.",
-                    DistinctionNote = "Issue = datovĂ˝/coverage problĂ©m, anomaly = odchylka proti baseline, inefficiency = provoznĂ­ neefektivita reĹľimu."
+                    Summary = "EMS evaluation is unavailable because the selection set contains no supported energy nodes.",
+                    Methodology = "EMS evaluation v1 builds transparent scorecards only on aggregate load-profile, peak, and operating-regime metrics.",
+                    DistinctionNote = "Issue = a data or coverage problem, anomaly = a baseline deviation, inefficiency = persistent operational inefficiency."
                 },
                 Disaggregation = emptyDisaggregation,
                 ContributionIntelligence = emptyContributionIntelligence,
@@ -682,10 +696,10 @@ public class NodeAnalyticsPreviewService
                 ForecastDiagnostics = new CuratedSelectionForecastDiagnosticsSummary
                 {
                     Status = CuratedSelectionForecastStatus.Unavailable,
-                    Summary = "Forecast nenĂ­ dostupnĂ˝, protoĹľe selection set neobsahuje podporovanĂ© energetickĂ© uzly.",
-                    ForecastPrinciple = "Comparable windows v1 (transparentnĂ­)",
-                    Methodology = "Forecast pouĹľĂ­vĂˇ jen historickĂˇ referenÄŤnĂ­ okna pĹ™ed target intervalem; unsupported uzly se do vĂ˝poÄŤtu nezahrnujĂ­.",
-                    MetricsNote = "DiagnostickĂ© metriky MAE/RMSE/Bias/WAPE se poÄŤĂ­tajĂ­ pouze pĹ™i dostupnĂ© forecast i actual sĂ©rii.",
+                    Summary = "Forecast is unavailable because the selection set contains no supported energy nodes.",
+                    ForecastPrinciple = "Comparable windows v1 (transparent)",
+                    Methodology = "Forecast uses only historical reference windows before the target interval; unsupported nodes are excluded from the calculation.",
+                    MetricsNote = "Diagnostic metrics such as MAE, RMSE, Bias, and WAPE are calculated only when both forecast and actual series are available.",
                     SupportedNodeCount = 0,
                     IncludedNodeCount = 0,
                     ForecastProviderNodeCount = 0,
@@ -693,7 +707,7 @@ public class NodeAnalyticsPreviewService
                     UsesTargetLeakage = false,
                     Signals = ["no_supported_nodes"]
                 },
-                Message = "Selection set neobsahuje kompatibilnĂ­ energetickĂ© uzly pro agregaci overview."
+                Message = "The selection set contains no compatible energy nodes for aggregate analytics."
             };
         }
 
@@ -874,7 +888,7 @@ public class NodeAnalyticsPreviewService
         {
             var summaryTitle = supportedNodeKeys.Count == 1
                 ? summaries[0].Title
-                : "Selection Set agregace";
+                : "Selection set aggregate";
             var totalStatsSamples = summaries.Sum(x => x.DataPoints);
             var weightedAverage = totalStatsSamples > 0
                 ? summaries.Sum(x => x.Average * x.DataPoints) / totalStatsSamples
@@ -891,7 +905,7 @@ public class NodeAnalyticsPreviewService
                 Unit = "kWh",
                 SummaryLabel = headlineSemantics.HeadlineLabel,
                 StatsUnit = "kW",
-                StatsLabel = "AgregovanĂ˝ vĂ˝kon"
+                StatsLabel = "Aggregated power"
             };
         }
 
@@ -910,23 +924,23 @@ public class NodeAnalyticsPreviewService
             {
                 if (baselineProviders == 0)
                 {
-                    baselineOverlayMessage = "Baseline overlay nenĂ­ v aggregate reĹľimu dostupnĂ˝ pro ĹľĂˇdnĂ˝ podporovanĂ˝ uzel.";
+                    baselineOverlayMessage = "Baseline overlay is unavailable in aggregate mode for all supported nodes.";
                 }
                 else if (baselineProviders < timeSeries.Count)
                 {
-                    baselineOverlayMessage = $"Baseline overlay je agregovĂˇn z {baselineProviders}/{timeSeries.Count} podporovanĂ˝ch uzlĹŻ.";
+                    baselineOverlayMessage = $"Baseline overlay is aggregated from {baselineProviders}/{timeSeries.Count} supported nodes.";
                 }
             }
 
             aggregateTimeSeries = new CuratedNodeTimeSeriesResult
             {
                 NodeKey = "selection_set",
-                Title = supportedNodeKeys.Count == 1 ? template.Title : "Aggregate vĂ˝kon Selection Setu",
+                Title = supportedNodeKeys.Count == 1 ? template.Title : "Selection set aggregate power",
                 Unit = template.Unit,
                 YAxisLabel = template.YAxisLabel,
                 Granularity = template.Granularity,
                 GranularityLabel = template.GranularityLabel,
-                AggregationMethod = $"{template.AggregationMethod} Selection aggregate: suma vĂ˝konĹŻ podporovanĂ˝ch uzlĹŻ v kaĹľdĂ©m ÄŤasovĂ©m bodÄ›.",
+                AggregationMethod = $"{template.AggregationMethod} Selection aggregate: sum of supported-node power at each timestamp.",
                 InterpretationNote = ResolveSelectionAggregateInterpretationNote(template.Granularity, energyProfile),
                 RequestedMode = template.RequestedMode,
                 RequestedModeLabel = template.RequestedModeLabel,
@@ -935,7 +949,7 @@ public class NodeAnalyticsPreviewService
                 BaselineOverlayMessage = baselineOverlayMessage,
                 BaselinePoints = baselinePoints,
                 NoDataMessage = points.Count == 0
-                    ? "Pro podporovanĂ© uzly selection setu nejsou v intervalu dostupnĂ© body ÄŤasovĂ© Ĺ™ady."
+                    ? "No time-series points are available in the interval for supported selection nodes."
                     : null,
                 Points = points
             };
@@ -957,45 +971,119 @@ public class NodeAnalyticsPreviewService
         var messageParts = new List<string>();
         if (unsupportedNodeKeys.Count > 0)
         {
-            messageParts.Add($"IgnorovĂˇno nepodporovanĂ˝ch uzlĹŻ: {unsupportedNodeKeys.Count}");
+            messageParts.Add($"Unsupported nodes ignored: {unsupportedNodeKeys.Count}");
         }
 
         if (contextOnlyNodeKeys.Count > 0)
         {
-            messageParts.Add($"Context-only/excluded uzly: {contextOnlyNodeKeys.Count}");
+            messageParts.Add($"Context-only or excluded nodes: {contextOnlyNodeKeys.Count}");
         }
 
         if (noDataNodeKeys.Count > 0)
         {
-            messageParts.Add($"UzlĹŻ bez dat v intervalu: {noDataNodeKeys.Count}");
+            messageParts.Add($"Nodes with no interval data: {noDataNodeKeys.Count}");
         }
 
         var message = messageParts.Count > 0
             ? string.Join(". ", messageParts) + "."
             : null;
 
-        var operationalHealth = BuildOperationalHealthSummary(
-            coverage,
-            energyProfile,
-            deviationSummaries,
-            aggregateTimeSeries);
-        var loadProfile = BuildLoadProfileSummary(
-            aggregateTimeSeries,
-            from,
-            to,
-            energyProfile,
-            includedNodeKeys.Count);
-        var peakAnalysis = BuildPeakAnalysisSummary(aggregateTimeSeries, energyProfile);
-        var operatingRegime = BuildOperatingRegimeSummary(aggregateTimeSeries, energyProfile);
-        var emsEvaluation = BuildEmsEvaluationSummary(
-            aggregateTimeSeries,
-            loadProfile,
-            peakAnalysis,
-            operatingRegime,
-            energyProfile,
-            totalConsumptionKwh,
-            totalGenerationKwh,
-            netEnergyKwh);
+        var operationalHealth = options.IncludePerformance
+            ? BuildOperationalHealthSummary(
+                coverage,
+                energyProfile,
+                deviationSummaries,
+                aggregateTimeSeries)
+            : new CuratedSelectionOperationalHealthSummary
+            {
+                SelectedNodeCount = coverage.SelectedNodeCount,
+                SupportedNodeCount = coverage.SupportedNodeCount,
+                IncludedNodeCount = coverage.IncludedNodeCount,
+                UnsupportedNodeCount = coverage.UnsupportedNodeCount,
+                ContextOnlyNodeCount = coverage.ContextOnlyNodeCount,
+                NoDataNodeCount = coverage.NoDataNodeCount,
+                SupportedSelectionRatio = coverage.SelectedNodeCount > 0
+                    ? (double)coverage.SupportedNodeCount / coverage.SelectedNodeCount
+                    : 0,
+                IncludedCoverageRatio = coverage.SupportedNodeCount > 0
+                    ? (double)coverage.IncludedNodeCount / coverage.SupportedNodeCount
+                    : 0,
+                Summary = "Operational Health loads when the Performance tab is opened."
+            };
+        var loadProfile = options.IncludePerformance
+            ? BuildLoadProfileSummary(
+                aggregateTimeSeries,
+                from,
+                to,
+                energyProfile,
+                includedNodeKeys.Count)
+            : new CuratedSelectionLoadProfileSummary
+            {
+                Summary = "Load Profile loads when the Performance tab is opened."
+            };
+        var peakAnalysis = options.IncludePerformance
+            ? BuildPeakAnalysisSummary(aggregateTimeSeries, energyProfile)
+            : new CuratedSelectionPeakAnalysisSummary
+            {
+                Summary = "Peak Analysis loads when the Performance tab is opened."
+            };
+        var operatingRegime = options.IncludePerformance
+            ? BuildOperatingRegimeSummary(aggregateTimeSeries, energyProfile)
+            : new CuratedSelectionOperatingRegimeSummary
+            {
+                Summary = "Operating Regime loads when the Performance tab is opened."
+            };
+        var emsEvaluation = options.IncludePerformance
+            ? BuildEmsEvaluationSummary(
+                aggregateTimeSeries,
+                loadProfile,
+                peakAnalysis,
+                operatingRegime,
+                energyProfile,
+                totalConsumptionKwh,
+                totalGenerationKwh,
+                netEnergyKwh)
+            : new CuratedSelectionEmsEvaluationSummary
+            {
+                Summary = "EMS evaluation is not part of the phase 1 default load."
+            };
+
+        var effectiveBreakdown = options.IncludeBreakdown ? breakdown : [];
+        var effectiveRoleBreakdown = options.IncludeBreakdown ? roleBreakdown : [];
+        var effectiveDisaggregation = options.IncludeBreakdown
+            ? disaggregation
+            : new CuratedSelectionDisaggregationSummary
+            {
+                CompositionSummary = "Breakdown loads when the Breakdown tab is opened.",
+                Methodology = "Disaggregation is computed only after the Breakdown tab is activated."
+            };
+        var effectiveContributionIntelligence = options.IncludeBreakdown
+            ? contributionIntelligence
+            : new CuratedSelectionContributionIntelligenceSummary();
+        var effectiveSourceMap = options.IncludeBreakdown
+            ? sourceMap
+            : new CuratedSelectionSourceMapSummary
+            {
+                Summary = "Source Map loads when the Breakdown tab is opened.",
+                IncludedMeasuredCount = includedNodeKeys.Count,
+                UnsupportedCount = unsupportedNodeKeys.Count,
+                NoDataCount = noDataNodeKeys.Count,
+                ContextOnlyCount = contextOnlyNodeKeys.Count
+            };
+
+        var effectiveForecastCompareTimeSeries = options.IncludeDiagnostics
+            ? forecastCompareTimeSeries
+            : null;
+        var effectiveForecastDiagnostics = options.IncludeDiagnostics
+            ? forecastDiagnostics
+            : new CuratedSelectionForecastDiagnosticsSummary
+            {
+                Summary = "Diagnostics load when the Diagnostics tab is opened.",
+                SupportedNodeCount = coverage.SupportedNodeCount,
+                IncludedNodeCount = coverage.IncludedNodeCount,
+                ForecastProviderNodeCount = forecastProviderNodeCount,
+                ForecastMissingNodeCount = Math.Max(0, coverage.IncludedNodeCount - forecastProviderNodeCount)
+            };
 
         return new CuratedSelectionAggregateOverviewResult
         {
@@ -1005,15 +1093,15 @@ public class NodeAnalyticsPreviewService
             PeakAnalysis = peakAnalysis,
             OperatingRegime = operatingRegime,
             EmsEvaluation = emsEvaluation,
-            Breakdown = breakdown,
-            RoleBreakdown = roleBreakdown,
-            Disaggregation = disaggregation,
-            ContributionIntelligence = contributionIntelligence,
-            SourceMap = sourceMap,
+            Breakdown = effectiveBreakdown,
+            RoleBreakdown = effectiveRoleBreakdown,
+            Disaggregation = effectiveDisaggregation,
+            ContributionIntelligence = effectiveContributionIntelligence,
+            SourceMap = effectiveSourceMap,
             Coverage = coverage,
             OperationalHealth = operationalHealth,
-            ForecastCompareTimeSeries = forecastCompareTimeSeries,
-            ForecastDiagnostics = forecastDiagnostics,
+            ForecastCompareTimeSeries = effectiveForecastCompareTimeSeries,
+            ForecastDiagnostics = effectiveForecastDiagnostics,
             EnergyProfile = energyProfile,
             HasNegativeContributions = hasNegativeContributions,
             TotalConsumptionKwh = totalConsumptionKwh,
@@ -1041,9 +1129,9 @@ public class NodeAnalyticsPreviewService
     {
         var baseDiagnostics = new CuratedSelectionForecastDiagnosticsSummary
         {
-            ForecastPrinciple = "Comparable windows v1 (transparentnĂ­)",
-            Methodology = "Forecast je konstruovĂˇn z historickĂ˝ch referenÄŤnĂ­ch oken (stejnĂ© obdobĂ­ v minulĂ˝ch letech + recent comparable intervaly). Do forecastu vstupujĂ­ pouze data dostupnĂˇ pĹ™ed target intervalem; leakage z target okna nenĂ­ pouĹľit.",
-            MetricsNote = "MAE, RMSE a Bias jsou poÄŤĂ­tĂˇny nad podepsanĂ˝m vĂ˝konem (kW). WAPE pouĹľĂ­vĂˇ sumu absolutnĂ­ch actual hodnot, takĹľe je robustnĂ­ i pro mixed-sign selection.",
+            ForecastPrinciple = "Comparable windows v1 (transparent)",
+            Methodology = "Forecast is constructed from historical reference windows, including the same period in prior years and recent comparable intervals. Only data available before the target interval is used, so no target-window leakage is introduced.",
+            MetricsNote = "MAE, RMSE, and Bias are computed over signed power (kW). WAPE uses the sum of absolute actual values, so it remains robust for mixed-sign selections.",
             SupportedNodeCount = Math.Max(0, coverage.SupportedNodeCount),
             IncludedNodeCount = Math.Max(0, coverage.IncludedNodeCount),
             ForecastProviderNodeCount = Math.Max(0, forecastProviderNodeCount),
@@ -1057,7 +1145,7 @@ public class NodeAnalyticsPreviewService
             return (null, baseDiagnostics with
             {
                 Status = CuratedSelectionForecastStatus.Unavailable,
-                Summary = "Forecast vs actual nelze vyhodnotit, protoĹľe aggregate actual Ĺ™ada nemĂˇ body.",
+                Summary = "Forecast vs actual cannot be evaluated because the aggregate actual series has no points.",
                 Signals = ["missing_actual_series"]
             });
         }
@@ -1069,7 +1157,7 @@ public class NodeAnalyticsPreviewService
                 Status = CuratedSelectionForecastStatus.LimitedData,
                 ActualPointCount = aggregateActualTimeSeries.Points.Count,
                 ForecastPointCount = 0,
-                Summary = "Forecast reference nenĂ­ pro aktuĂˇlnĂ­ interval dostupnĂˇ (nedostateÄŤnĂ© historical windows).",
+                Summary = "Forecast reference is unavailable for the current interval because historical windows are insufficient.",
                 Signals = ["missing_forecast_reference"]
             });
         }
@@ -1098,7 +1186,7 @@ public class NodeAnalyticsPreviewService
             return (null, baseDiagnostics with
             {
                 Status = CuratedSelectionForecastStatus.LimitedData,
-                Summary = "Actual a forecast Ĺ™ada nemajĂ­ ÄŤasovĂ˝ pĹ™ekryv po agregaci.",
+                Summary = "The actual and forecast series do not overlap in time after aggregation.",
                 ActualPointCount = actualPointCount,
                 ForecastPointCount = forecastPointCount,
                 AlignedPointCount = 0,
@@ -1155,11 +1243,11 @@ public class NodeAnalyticsPreviewService
 
         var summary = status switch
         {
-            CuratedSelectionForecastStatus.Stable => "Forecast sedĂ­ stabilnÄ›, rozdĂ­l actual vs forecast je nĂ­zkĂ˝.",
-            CuratedSelectionForecastStatus.Watch => "Forecast je pouĹľitelnĂ˝, ale odchylka actual vs forecast vyĹľaduje pozornost.",
-            CuratedSelectionForecastStatus.PoorFit => "Forecast mĂˇ slabou shodu s actual Ĺ™adou v aktuĂˇlnĂ­m intervalu.",
-            CuratedSelectionForecastStatus.LimitedData => "Forecast je jen orientaÄŤnĂ­: nĂ­zkĂ˝ pĹ™ekryv nebo mĂˇlo aligned bodĹŻ.",
-            _ => "Forecast nenĂ­ dostupnĂ˝."
+            CuratedSelectionForecastStatus.Stable => "Forecast is tracking stably, with a low actual-vs-forecast gap.",
+            CuratedSelectionForecastStatus.Watch => "Forecast is usable, but the actual-vs-forecast gap needs attention.",
+            CuratedSelectionForecastStatus.PoorFit => "Forecast has a weak fit against the actual series in the current interval.",
+            CuratedSelectionForecastStatus.LimitedData => "Forecast is only indicative because aligned coverage is low or too few aligned points are available.",
+            _ => "Forecast is unavailable."
         };
 
         var signals = new List<string>();
@@ -1201,7 +1289,7 @@ public class NodeAnalyticsPreviewService
         var compareExcludedMessages = new List<string>();
         if (baseDiagnostics.ForecastMissingNodeCount > 0)
         {
-            compareExcludedMessages.Add($"Forecast reference nebyla dostupnĂˇ pro {baseDiagnostics.ForecastMissingNodeCount}/{Math.Max(1, baseDiagnostics.IncludedNodeCount)} analyticky zahrnutĂ˝ch uzlĹŻ.");
+            compareExcludedMessages.Add($"Forecast reference was unavailable for {baseDiagnostics.ForecastMissingNodeCount}/{Math.Max(1, baseDiagnostics.IncludedNodeCount)} analytically included nodes.");
         }
 
         var compareData = new CuratedNodeCompareTimeSeriesResult
@@ -1212,8 +1300,8 @@ public class NodeAnalyticsPreviewService
             YAxisLabel = aggregateActualTimeSeries.YAxisLabel,
             Granularity = aggregateActualTimeSeries.Granularity,
             GranularityLabel = aggregateActualTimeSeries.GranularityLabel,
-            AggregationMethod = "Forecast v1: transparent comparable windows (historickĂˇ okna pĹ™ed target intervalem). Actual i forecast jsou agregovanĂ© pĹ™es Selection Set bez unsupported uzlĹŻ.",
-            InterpretationNote = "Forecast je predikce oÄŤekĂˇvanĂ©ho prĹŻbÄ›hu, zatĂ­mco baseline/deviation vrstva zĹŻstĂˇvĂˇ samostatnĂ˝ referenÄŤnĂ­ mechanismus pro alerting.",
+            AggregationMethod = "Forecast v1 uses transparent comparable windows from historical periods before the target interval. Actual and forecast are aggregated across the selection set without unsupported nodes.",
+            InterpretationNote = "Forecast predicts expected behavior, while the baseline and deviation layer remains a separate reference mechanism for alerting.",
             RequestedMode = aggregateActualTimeSeries.RequestedMode,
             RequestedModeLabel = aggregateActualTimeSeries.RequestedModeLabel,
             Series =
@@ -1304,17 +1392,17 @@ public class NodeAnalyticsPreviewService
 
         var summary = status switch
         {
-            CuratedSelectionAnomalyStatus.DataIssue when hasNoSupportedNodes => "Selection je mimo podporovanĂ© analytickĂ© uzly.",
-            CuratedSelectionAnomalyStatus.DataIssue when hasNoIncludedNodes => "PodporovanĂ© uzly nemajĂ­ v intervalu pouĹľitelnĂˇ data.",
-            CuratedSelectionAnomalyStatus.DataIssue => "DatovĂˇ kvalita je nĂ­zkĂˇ, analytickĂ˝ vĂ˝stup mĂˇ omezenou dĹŻvÄ›ryhodnost.",
-            CuratedSelectionAnomalyStatus.Suspicious when highDeviationCount > 0 => "DetekovĂˇna silnĂˇ deviation v ÄŤĂˇsti selection setu.",
-            CuratedSelectionAnomalyStatus.Suspicious when hasAbruptShift => "AgregovanĂˇ Ĺ™ada obsahuje nĂˇhlĂ˝ skok oproti bÄ›ĹľnĂ© Ăşrovni.",
-            CuratedSelectionAnomalyStatus.Suspicious => "Kombinace signĂˇlĹŻ indikuje podezĹ™elĂ© chovĂˇnĂ­.",
-            CuratedSelectionAnomalyStatus.Attention when elevatedDeviationCount > 0 => "VĂ˝bÄ›r vykazuje zvĂ˝ĹˇenĂ© deviation signĂˇly.",
-            CuratedSelectionAnomalyStatus.Attention when hasWeakCoverage => "Coverage je oslabenĂ©, interpretujte vĂ˝sledek opatrnÄ›.",
-            CuratedSelectionAnomalyStatus.Attention when hasMixedSignedSelection => "Selection kombinuje spotĹ™ebu i vĂ˝robu, netto vyĹľaduje opatrnou interpretaci.",
-            CuratedSelectionAnomalyStatus.Attention => "VĂ˝bÄ›r vyĹľaduje zvĂ˝Ĺˇenou pozornost.",
-            _ => "Bez zjevnĂ© anomĂˇlie, deviation i coverage jsou stabilnĂ­."
+            CuratedSelectionAnomalyStatus.DataIssue when hasNoSupportedNodes => "The selection is outside the supported analytics set.",
+            CuratedSelectionAnomalyStatus.DataIssue when hasNoIncludedNodes => "Supported nodes do not have usable data in the interval.",
+            CuratedSelectionAnomalyStatus.DataIssue => "Data quality is low, so the analytics output has limited trustworthiness.",
+            CuratedSelectionAnomalyStatus.Suspicious when highDeviationCount > 0 => "A strong deviation has been detected in part of the selection set.",
+            CuratedSelectionAnomalyStatus.Suspicious when hasAbruptShift => "The aggregate series contains an abrupt shift relative to its normal level.",
+            CuratedSelectionAnomalyStatus.Suspicious => "The combination of signals suggests suspicious behavior.",
+            CuratedSelectionAnomalyStatus.Attention when elevatedDeviationCount > 0 => "The selection shows elevated deviation signals.",
+            CuratedSelectionAnomalyStatus.Attention when hasWeakCoverage => "Coverage is weakened, so interpret the result cautiously.",
+            CuratedSelectionAnomalyStatus.Attention when hasMixedSignedSelection => "The selection combines load and generation, so net interpretation requires extra care.",
+            CuratedSelectionAnomalyStatus.Attention => "The selection needs additional attention.",
+            _ => "No obvious anomaly is present; both deviation and coverage are stable."
         };
 
         var signals = new List<string>();
@@ -1392,10 +1480,10 @@ public class NodeAnalyticsPreviewService
             return new CuratedSelectionLoadProfileSummary
             {
                 IsAvailable = false,
-                Summary = "Load profile nenĂ­ dostupnĂ˝: aggregate ÄŤasovĂˇ Ĺ™ada nemĂˇ dost bodĹŻ.",
-                Methodology = "Daily profile v1 pouĹľĂ­vĂˇ average by hour-of-day nad aggregate vĂ˝konovou Ĺ™adou Selection Setu; pĹ™i krĂˇtkĂ©m intervalu pĹ™echĂˇzĂ­ na transparentnĂ­ interval snapshot.",
-                DifferenceFromForecast = "Forecast je predikce oÄŤekĂˇvanĂ©ho budoucĂ­ho prĹŻbÄ›hu, load profile popisuje typickĂ˝ historickĂ˝ pattern.",
-                DifferenceFromMainChart = "HlavnĂ­ chart ukazuje konkrĂ©tnĂ­ prĹŻbÄ›h v ÄŤase, load profile ukazuje opakujĂ­cĂ­ se tvar dne v agregovanĂ©m pohledu."
+                Summary = "Load profile is unavailable because the aggregate time series does not contain enough points.",
+                Methodology = "Daily profile v1 uses an hour-of-day average over the aggregate power series, with a transparent interval-snapshot fallback for short ranges.",
+                DifferenceFromForecast = "Forecast estimates expected future behavior, while the load profile describes a typical historical pattern.",
+                DifferenceFromMainChart = "The main chart keeps the exact time sequence, while the load profile highlights the repeated daily shape in an aggregated view."
             };
         }
 
@@ -1448,10 +1536,10 @@ public class NodeAnalyticsPreviewService
                 return new CuratedSelectionLoadProfileSummary
                 {
                     IsAvailable = false,
-                    Summary = "Load profile nenĂ­ dostupnĂ˝: po hourly bucketizaci nezbyly ĹľĂˇdnĂ© validnĂ­ body.",
-                    Methodology = "Daily profile v1 pouĹľĂ­vĂˇ average by hour-of-day nad aggregate vĂ˝konovou Ĺ™adou Selection Setu; pĹ™i krĂˇtkĂ©m intervalu pĹ™echĂˇzĂ­ na transparentnĂ­ interval snapshot.",
-                    DifferenceFromForecast = "Forecast je predikce oÄŤekĂˇvanĂ©ho budoucĂ­ho prĹŻbÄ›hu, load profile popisuje typickĂ˝ historickĂ˝ pattern.",
-                    DifferenceFromMainChart = "HlavnĂ­ chart ukazuje konkrĂ©tnĂ­ prĹŻbÄ›h v ÄŤase, load profile ukazuje opakujĂ­cĂ­ se tvar dne v agregovanĂ©m pohledu."
+                    Summary = "Load profile is unavailable because no valid points remain after hourly bucketing.",
+                    Methodology = "Daily profile v1 uses an hour-of-day average over the aggregate power series, with a transparent interval-snapshot fallback for short ranges.",
+                    DifferenceFromForecast = "Forecast estimates expected future behavior, while the load profile describes a typical historical pattern.",
+                    DifferenceFromMainChart = "The main chart keeps the exact time sequence, while the load profile highlights the repeated daily shape in an aggregated view."
                 };
             }
 
@@ -1460,8 +1548,8 @@ public class NodeAnalyticsPreviewService
                 .First();
 
             var summary = hasMixedSigns
-                ? $"Daily profile (hour-of-day) z {distinctDayCount} dnĂ­ a {orderedPoints.Count} bodĹŻ ({selectionScope}). Mixed-sign semantika je zachovĂˇna (+ load, - generation/export)."
-                : $"Daily profile (hour-of-day) z {distinctDayCount} dnĂ­ a {orderedPoints.Count} bodĹŻ ({selectionScope}). NejvĂ˝raznÄ›jĹˇĂ­ hodinovĂ˝ bucket: {peakBucket.Label}.";
+                ? $"Daily profile (hour-of-day) built from {distinctDayCount} days and {orderedPoints.Count} points ({selectionScope}). Mixed-sign semantics are preserved (+ load, - generation/export)."
+                : $"Daily profile (hour-of-day) built from {distinctDayCount} days and {orderedPoints.Count} points ({selectionScope}). Most pronounced hourly bucket: {peakBucket.Label}.";
 
             return new CuratedSelectionLoadProfileSummary
             {
@@ -1473,9 +1561,9 @@ public class NodeAnalyticsPreviewService
                 DistinctDayCount = distinctDayCount,
                 HasMixedSigns = hasMixedSigns,
                 Summary = summary,
-                Methodology = "Profil je transparentnĂ­ prĹŻmÄ›r aggregate vĂ˝konu (kW) podle hodiny dne nad zvolenĂ˝m intervalem. Bez black-box modelu.",
-                DifferenceFromForecast = "Forecast vrstva odhaduje budoucĂ­ prĹŻbÄ›h; load profile vrstva shrnuje typickĂ© opakujĂ­cĂ­ se chovĂˇnĂ­ v rĂˇmci dne.",
-                DifferenceFromMainChart = "HlavnĂ­ chart drĹľĂ­ chronologii konkrĂ©tnĂ­ch bodĹŻ intervalu; profile ztrĂˇcĂ­ konkrĂ©tnĂ­ datum a zachovĂˇvĂˇ jen typickĂ˝ intradennĂ­ pattern.",
+                Methodology = "The profile is a transparent average of aggregate power (kW) by hour of day over the selected interval, with no black-box model.",
+                DifferenceFromForecast = "The forecast layer estimates future behavior, while the load profile summarizes the typical repeating behavior within a day.",
+                DifferenceFromMainChart = "The main chart preserves interval chronology, while the profile drops the specific date and keeps only the typical intraday pattern.",
                 Buckets = hourlyBuckets
             };
         }
@@ -1527,10 +1615,10 @@ public class NodeAnalyticsPreviewService
             PointCount = orderedPoints.Count,
             DistinctDayCount = distinctDayCount,
             HasMixedSigns = hasMixedSigns,
-            Summary = $"Interval je krĂˇtkĂ˝ ({distinctDayCount} den/dny), proto je pouĹľit snapshot po {fallbackBucketCount} segmentech mĂ­sto typickĂ©ho dennĂ­ho profilu.",
-            Methodology = "Fallback profil pouĹľĂ­vĂˇ prĹŻmÄ›r aggregate vĂ˝konu (kW) v rovnomÄ›rnĂ˝ch segmentech aktuĂˇlnĂ­ho intervalu; nevydĂˇvĂˇ se za typickĂ˝ dennĂ­ profil.",
-            DifferenceFromForecast = "Forecast vrstva predikuje dalĹˇĂ­ vĂ˝voj, fallback profile je pouze transparentnĂ­ strukturace aktuĂˇlnĂ­ho krĂˇtkĂ©ho intervalu.",
-            DifferenceFromMainChart = "HlavnĂ­ chart ukazuje kaĹľdĂ˝ bod; fallback profile zhuĹˇĹĄuje interval do nÄ›kolika segmentĹŻ pro rychlĂ© ÄŤtenĂ­ provoznĂ­ho tvaru.",
+            Summary = $"The interval is short ({distinctDayCount} day(s)), so a {fallbackBucketCount}-segment snapshot is used instead of a typical daily profile.",
+            Methodology = "The fallback profile uses the average aggregate power (kW) across evenly spaced segments of the current interval and does not claim to be a typical daily profile.",
+            DifferenceFromForecast = "The forecast layer predicts what comes next, while the fallback profile is only a transparent structuring of the current short interval.",
+            DifferenceFromMainChart = "The main chart shows every point, while the fallback profile compresses the interval into a few segments for faster reading of the operating shape.",
             Buckets = snapshotBuckets
         };
     }
@@ -1565,8 +1653,8 @@ public class NodeAnalyticsPreviewService
             return new CuratedSelectionPeakAnalysisSummary
             {
                 IsAvailable = false,
-                Summary = "Peak analysis nenĂ­ dostupnĂˇ bez aggregate ÄŤasovĂ© Ĺ™ady.",
-                Methodology = "Peak analysis v1 vyhodnocuje peak demand, peak generation/export a peak net absolute event z aggregate vĂ˝konovĂ© Ĺ™ady Selection Setu."
+                Summary = "Peak analysis is unavailable without an aggregate time series.",
+                Methodology = "Peak analysis v1 evaluates peak demand, peak generation/export, and the peak net absolute event from the selection-set aggregate power series."
             };
         }
 
@@ -1622,10 +1710,10 @@ public class NodeAnalyticsPreviewService
 
         var summary = energyProfile switch
         {
-            CuratedAggregateEnergyProfile.ConsumptionOnly => "Selection je consumption-only: hlavnĂ­ event je demand peak a jeho vĂ˝znamnost vĹŻÄŤi typickĂ©mu loadu.",
-            CuratedAggregateEnergyProfile.GenerationOnly => "Selection je generation-only: hlavnĂ­ event je generation/export peak a jeho vĂ˝znamnost.",
-            CuratedAggregateEnergyProfile.MixedSigned => "Selection je mixed-sign: sledujĂ­ se oddÄ›lenÄ› demand peak, generation peak i net absolute peak event.",
-            _ => "Peak analysis je pouze orientaÄŤnĂ­, protoĹľe selection nemĂˇ vĂ˝raznĂ© energetickĂ© body."
+            CuratedAggregateEnergyProfile.ConsumptionOnly => "The selection is consumption-only, so the main event is the demand peak and its significance relative to typical load.",
+            CuratedAggregateEnergyProfile.GenerationOnly => "The selection is generation-only, so the main event is the generation or export peak and its significance.",
+            CuratedAggregateEnergyProfile.MixedSigned => "The selection is mixed-sign, so demand peak, generation peak, and net absolute peak are tracked separately.",
+            _ => "Peak analysis is only indicative because the selection does not contain pronounced energy events."
         };
 
         return new CuratedSelectionPeakAnalysisSummary
@@ -1639,7 +1727,7 @@ public class NodeAnalyticsPreviewService
             SignificanceRatio = significanceRatio,
             SignificanceLevel = significanceLevel,
             Summary = summary,
-            Methodology = "Peak analysis nenĂ­ jen KPI min/max: explicitnÄ› mapuje peak eventy na konkrĂ©tnĂ­ timestampy a porovnĂˇvĂˇ jejich magnitudu s typickou |kW| ĂşrovnĂ­ aggregate Ĺ™ady (mediĂˇn |kW|)."
+            Methodology = "Peak analysis is more than a min/max KPI: it maps peak events to exact timestamps and compares their magnitude with the typical |kW| level of the aggregate series using the median |kW|."
         };
     }
 
@@ -1652,8 +1740,8 @@ public class NodeAnalyticsPreviewService
             return new CuratedSelectionOperatingRegimeSummary
             {
                 IsAvailable = false,
-                Summary = "Operating regime summary nenĂ­ dostupnĂˇ: aggregate Ĺ™ada je pĹ™Ă­liĹˇ krĂˇtkĂˇ.",
-                Methodology = "Operating regime v1 pouĹľĂ­vĂˇ transparentnĂ­ heuristiky nad aggregate vĂ˝konem: baseload proxy, peak-to-average, variabilitu a weekday/weekend signal."
+                Summary = "Operating regime summary is unavailable because the aggregate series is too short.",
+                Methodology = "Operating regime v1 uses transparent heuristics over aggregate power: baseload proxy, peak-to-average, variability, and a weekday/weekend signal."
             };
         }
 
@@ -1719,22 +1807,22 @@ public class NodeAnalyticsPreviewService
         }
 
         var summary = peakToAverage >= 2.4 || variability >= 0.90
-            ? "VĂ˝bÄ›r mĂˇ vĂ˝raznÄ› ĹˇpiÄŤkovĂ˝ profil."
+            ? "The selection has a strongly peak-driven profile."
             : (baseload / Math.Max(0.25, averageAbs)) >= 0.75 && variability < 0.45
-                ? "VĂ˝bÄ›r mĂˇ stabilnĂ­ baseload charakter."
+                ? "The selection has a stable baseload character."
                 : variability >= 0.60
-                    ? "VĂ˝bÄ›r mĂˇ vĂ˝raznou dennĂ­ variabilitu."
-                    : "VĂ˝bÄ›r mĂˇ vyvĂˇĹľenĂ˝ provoznĂ­ reĹľim bez extrĂ©mnĂ­ ĹˇpiÄŤkovosti.";
+                    ? "The selection has pronounced daily variability."
+                    : "The selection has a balanced operating regime without extreme peakiness.";
 
         if (weekdayWeekendDeltaPercent.HasValue && Math.Abs(weekdayWeekendDeltaPercent.Value) >= 20.0)
         {
             var direction = weekdayWeekendDeltaPercent.Value > 0 ? "weekday" : "weekend";
-            summary += $" VĂ˝raznĂ˝ weekday/weekend rozdĂ­l ({direction} dominantnĂ­).";
+            summary += $" Strong weekday/weekend difference detected ({direction} dominant).";
         }
 
         if (energyProfile == CuratedAggregateEnergyProfile.MixedSigned)
         {
-            summary += " Selection je mixed-sign, metriky jsou proto poÄŤĂ­tĂˇny nad |kW|.";
+            summary += " The selection is mixed-sign, so the metrics are computed over |kW|.";
         }
 
         return new CuratedSelectionOperatingRegimeSummary
@@ -1750,7 +1838,7 @@ public class NodeAnalyticsPreviewService
             WeekdaySampleCount = weekdayAbs.Count,
             WeekendSampleCount = weekendAbs.Count,
             Summary = summary,
-            Methodology = "Regime heuristika v1: baseload proxy = 20. percentil |kW|, peak-to-average = max(|kW|)/avg(|kW|), variability = std(|kW|)/avg(|kW|), weekday/weekend signal = rozdĂ­l prĹŻmÄ›rĹŻ normalizovanĂ˝ avg(|kW|).",
+            Methodology = "Regime heuristic v1: baseload proxy = 20th percentile of |kW|, peak-to-average = max(|kW|)/avg(|kW|), variability = std(|kW|)/avg(|kW|), and the weekday/weekend signal = difference of averages normalized by avg(|kW|).",
             Signals = signals
         };
     }
@@ -1777,9 +1865,9 @@ public class NodeAnalyticsPreviewService
                 HasMixedSigns = hasMixedSigns,
                 HasConsumption = hasConsumption,
                 HasGeneration = hasGeneration,
-                Summary = "EMS evaluation v1 nenĂ­ dostupnĂˇ: aggregate Ĺ™ada je pĹ™Ă­liĹˇ krĂˇtkĂˇ nebo chybĂ­ operating regime metriky.",
-                Methodology = "EMS evaluation v1 pouĹľĂ­vĂˇ transparentnĂ­ pravidla nad load profile, peak analysis a operating regime vrstvou.",
-                DistinctionNote = "Issue = datovĂ˝/coverage problĂ©m, anomaly = odchylka proti baseline, inefficiency = provoznĂ­ neefektivita reĹľimu."
+                Summary = "EMS evaluation v1 is unavailable because the aggregate series is too short or operating-regime metrics are missing.",
+                Methodology = "EMS evaluation v1 uses transparent rules over the load-profile, peak-analysis, and operating-regime layers.",
+                DistinctionNote = "Issue = data or coverage problem, anomaly = deviation from baseline, inefficiency = persistent operational inefficiency."
             };
         }
 
@@ -1892,11 +1980,11 @@ public class NodeAnalyticsPreviewService
                     Thresholds = "Watch >= 45 %, Issue >= 70 %",
                     Summary = status switch
                     {
-                        CuratedOperationalScorecardStatus.Issue => "Mimo aktivnĂ­ hodiny pĹ™etrvĂˇvĂˇ vysokĂ˝ load.",
-                        CuratedOperationalScorecardStatus.Watch => "Mimo aktivnĂ­ hodiny je load zvĂ˝ĹˇenĂ˝.",
-                        _ => "Mimo aktivnĂ­ hodiny load vĂ˝raznÄ› klesĂˇ."
+                        CuratedOperationalScorecardStatus.Issue => "High load persists outside active hours.",
+                        CuratedOperationalScorecardStatus.Watch => "Load is elevated outside active hours.",
+                        _ => "Load drops clearly outside active hours."
                     },
-                    Methodology = $"PrĹŻmÄ›r aggregate loadu mimo 07:00-19:00 vĹŻÄŤi prĹŻmÄ›ru v aktivnĂ­ch hodinĂˇch. Sample count active/off: {activeCount}/{offCount}."
+                    Methodology = $"Average aggregate load outside 07:00-19:00 versus the average during active hours. Sample count active/off-hours: {activeCount}/{offCount}."
                 });
             }
             else
@@ -1906,8 +1994,8 @@ public class NodeAnalyticsPreviewService
                     Key = "off_hours_load",
                     Label = "Off-hours load indicator",
                     Status = CuratedOperationalScorecardStatus.Unavailable,
-                    Summary = "Nedostatek bodĹŻ pro spolehlivĂ© vyhodnocenĂ­ off-hours loadu.",
-                    Methodology = "VyĹľadovĂˇno alespoĹ 4 body v aktivnĂ­ch i mimoaktivnĂ­ch hodinĂˇch."
+                    Summary = "There are not enough points for a reliable off-hours load evaluation.",
+                    Methodology = "At least 4 points are required in both active and off-hours windows."
                 });
             }
 
@@ -1927,11 +2015,11 @@ public class NodeAnalyticsPreviewService
                     Thresholds = "Watch >= 55 %, Issue >= 80 %",
                     Summary = status switch
                     {
-                        CuratedOperationalScorecardStatus.Issue => "VĂ­kendovĂ˝ load se blĂ­ĹľĂ­ pracovnĂ­mu reĹľimu.",
-                        CuratedOperationalScorecardStatus.Watch => "VĂ­kendovĂ˝ load je zvĂ˝ĹˇenĂ˝ oproti oÄŤekĂˇvĂˇnĂ­.",
-                        _ => "VĂ­kendovĂ˝ load je jasnÄ› oddÄ›len od pracovnĂ­ch dnĂ­."
+                        CuratedOperationalScorecardStatus.Issue => "Weekend load is approaching the weekday operating pattern.",
+                        CuratedOperationalScorecardStatus.Watch => "Weekend load is elevated versus expectation.",
+                        _ => "Weekend load is clearly separated from weekdays."
                     },
-                    Methodology = $"PomÄ›r prĹŻmÄ›rnĂ©ho weekend loadu ku prĹŻmÄ›rnĂ©mu weekday loadu. Sample count weekday/weekend: {weekdayCount}/{weekendCount}."
+                    Methodology = $"Ratio of average weekend load to average weekday load. Sample count weekday/weekend: {weekdayCount}/{weekendCount}."
                 });
             }
             else
@@ -1941,8 +2029,8 @@ public class NodeAnalyticsPreviewService
                     Key = "weekend_load",
                     Label = "Weekend load indicator",
                     Status = CuratedOperationalScorecardStatus.Unavailable,
-                    Summary = "Nedostatek weekday/weekend dat pro stabilnĂ­ weekend indikĂˇtor.",
-                    Methodology = "VyĹľadovĂˇno alespoĹ 4 body ve weekday i weekend vzorku."
+                    Summary = "There is not enough weekday/weekend data for a stable weekend indicator.",
+                    Methodology = "At least 4 points are required in both weekday and weekend samples."
                 });
             }
 
@@ -1964,11 +2052,11 @@ public class NodeAnalyticsPreviewService
                     Thresholds = "Watch >= 50 %, Issue >= 72 %",
                     Summary = status switch
                     {
-                        CuratedOperationalScorecardStatus.Issue => "Baseload tvoĹ™Ă­ dominantnĂ­ ÄŤĂˇst prĹŻmÄ›rnĂ©ho loadu.",
-                        CuratedOperationalScorecardStatus.Watch => "Baseload je zvĂ˝ĹˇenĂ˝ a omezuje dennĂ­ flexibilitu.",
-                        _ => "Baseload intenzita je pĹ™imÄ›Ĺ™enĂˇ vĹŻÄŤi prĹŻmÄ›rnĂ©mu loadu."
+                        CuratedOperationalScorecardStatus.Issue => "Baseload forms a dominant share of the average load.",
+                        CuratedOperationalScorecardStatus.Watch => "Baseload is elevated and limits daily flexibility.",
+                        _ => "Baseload intensity is proportionate to the average load."
                     },
-                    Methodology = "PomÄ›r baseload proxy (20. percentil |kW|) ku avg(|kW|) z operating regime vrstvy."
+                    Methodology = "Ratio of the baseload proxy (20th percentile of |kW|) to avg(|kW|) from the operating-regime layer."
                 });
             }
             else
@@ -1978,8 +2066,8 @@ public class NodeAnalyticsPreviewService
                     Key = "baseload_intensity",
                     Label = "Baseload intensity indicator",
                     Status = CuratedOperationalScorecardStatus.Unavailable,
-                    Summary = "Baseload intensity nelze vyhodnotit bez operating regime metrik.",
-                    Methodology = "VyuĹľĂ­vĂˇ metriky baseload proxy a avg(|kW|)."
+                    Summary = "Baseload intensity cannot be evaluated without operating-regime metrics.",
+                    Methodology = "It relies on the baseload proxy and avg(|kW|) metrics."
                 });
             }
         }
@@ -1990,24 +2078,24 @@ public class NodeAnalyticsPreviewService
                 Key = "off_hours_load",
                 Label = "Off-hours load indicator",
                 Status = CuratedOperationalScorecardStatus.Unavailable,
-                Summary = "Selection je generation-only, load indikĂˇtor se nepouĹľije.",
-                Methodology = "V1 load indikĂˇtory jsou urÄŤeny pro selection s nenulovou spotĹ™ebou."
+                Summary = "The selection is generation-only, so the load indicator is not used.",
+                Methodology = "V1 load indicators are intended for selections with non-zero consumption."
             });
             scorecards.Add(new CuratedSelectionOperationalScorecard
             {
                 Key = "weekend_load",
                 Label = "Weekend load indicator",
                 Status = CuratedOperationalScorecardStatus.Unavailable,
-                Summary = "Selection je generation-only, weekend load indikĂˇtor se nepouĹľije.",
-                Methodology = "V1 load indikĂˇtory jsou urÄŤeny pro selection s nenulovou spotĹ™ebou."
+                Summary = "The selection is generation-only, so the weekend load indicator is not used.",
+                Methodology = "V1 load indicators are intended for selections with non-zero consumption."
             });
             scorecards.Add(new CuratedSelectionOperationalScorecard
             {
                 Key = "baseload_intensity",
                 Label = "Baseload intensity indicator",
                 Status = CuratedOperationalScorecardStatus.Unavailable,
-                Summary = "Selection je generation-only, baseload intensity se nepouĹľije.",
-                Methodology = "V1 baseload intensity je urÄŤena primĂˇrnÄ› pro load reĹľim."
+                Summary = "The selection is generation-only, so baseload intensity is not used.",
+                Methodology = "V1 baseload intensity is intended primarily for load-dominant operation."
             });
         }
 
@@ -2031,11 +2119,11 @@ public class NodeAnalyticsPreviewService
                 Thresholds = "Watch >= 1.9x, Issue >= 2.7x",
                 Summary = peakStatus switch
                 {
-                    CuratedOperationalScorecardStatus.Issue => "ReĹľim je vĂ˝raznÄ› ĹˇpiÄŤkovĂ˝ a zatÄ›ĹľujĂ­cĂ­.",
-                    CuratedOperationalScorecardStatus.Watch => "Peak stress je zvĂ˝ĹˇenĂ˝ a mĹŻĹľe zvyĹˇovat provoznĂ­ nĂˇklady.",
-                    _ => "Peak stress zĹŻstĂˇvĂˇ v bÄ›ĹľnĂ©m provoznĂ­m pĂˇsmu."
+                    CuratedOperationalScorecardStatus.Issue => "The regime is strongly peak-driven and demanding.",
+                    CuratedOperationalScorecardStatus.Watch => "Peak stress is elevated and may increase operating costs.",
+                    _ => "Peak stress remains within a normal operating band."
                 },
-                Methodology = "TransparentnÄ› kombinuje peak significance ratio (peak analysis) a peak-to-average ratio (operating regime)."
+                Methodology = "It transparently combines the peak-significance ratio (peak analysis) and the peak-to-average ratio (operating regime)."
             });
         }
         else
@@ -2045,8 +2133,8 @@ public class NodeAnalyticsPreviewService
                 Key = "peak_stress",
                 Label = "Peak stress indicator",
                 Status = CuratedOperationalScorecardStatus.Unavailable,
-                Summary = "Peak stress nelze vyhodnotit bez peak/regime metrik.",
-                Methodology = "VyĹľaduje dostupnĂ˝ peak significance nebo peak-to-average ratio."
+                Summary = "Peak stress cannot be evaluated without peak or regime metrics.",
+                Methodology = "It requires either peak significance or the peak-to-average ratio."
             });
         }
 
@@ -2068,11 +2156,11 @@ public class NodeAnalyticsPreviewService
                 Thresholds = "Watch <= 65 %, Issue <= 40 %",
                 Summary = generationStatus switch
                 {
-                    CuratedOperationalScorecardStatus.Issue => "Selection mĂˇ vĂ˝raznou exportnĂ­ tendenci a nĂ­zkou lokĂˇlnĂ­ vyuĹľitelnost vĂ˝roby.",
-                    CuratedOperationalScorecardStatus.Watch => "LokĂˇlnĂ­ vyuĹľitĂ­ vĂ˝roby je omezenĂ©, export se objevuje ÄŤastÄ›ji.",
-                    _ => "VĂ˝roba je pĹ™evĂˇĹľnÄ› vyuĹľita lokĂˇlnÄ› v rĂˇmci selection setu."
+                    CuratedOperationalScorecardStatus.Issue => "The selection shows a strong export tendency and low local generation utilization.",
+                    CuratedOperationalScorecardStatus.Watch => "Local generation utilization is limited and export appears more often.",
+                    _ => "Generation is used mostly locally within the selection set."
                 },
-                Methodology = "Local utilization = 1 - export share, kde export share je odhadnut z netto zĂˇpornĂ© bilance vĹŻÄŤi celkovĂ© vĂ˝robÄ› v intervalu."
+                Methodology = "Local utilization = 1 - export share, where export share is estimated from the net negative balance relative to total generation in the interval."
             });
         }
         else
@@ -2082,8 +2170,8 @@ public class NodeAnalyticsPreviewService
                 Key = "local_generation_utilization",
                 Label = "Local generation utilization indicator",
                 Status = CuratedOperationalScorecardStatus.Unavailable,
-                Summary = "Selection nemĂˇ vĂ˝znamnou vĂ˝robu, generation utilization indikĂˇtor se nepouĹľije.",
-                Methodology = "AktivnĂ­ pouze pro selection s nenulovou generation sloĹľkou."
+                Summary = "The selection has no meaningful generation, so the generation-utilization indicator is not used.",
+                Methodology = "It is active only for selections with a non-zero generation share."
             });
         }
 
@@ -2100,9 +2188,9 @@ public class NodeAnalyticsPreviewService
                     ? CuratedSelectionInefficiencySeverity.Issue
                     : CuratedSelectionInefficiencySeverity.Watch,
                 IsTriggered = true,
-                Summary = "Mimo aktivnĂ­ hodiny zĹŻstĂˇvĂˇ load vyĹˇĹˇĂ­, neĹľ je ĹľĂˇdoucĂ­ pro efektivnĂ­ schedule.",
+                Summary = "Load remains higher outside active hours than is desirable for an efficient schedule.",
                 Evidence = offHoursCard.MetricDisplay,
-                Methodology = "Odvozeno pĹ™Ă­mo z Off-hours load indicatoru."
+                Methodology = "Derived directly from the off-hours load indicator."
             });
         }
 
@@ -2117,9 +2205,9 @@ public class NodeAnalyticsPreviewService
                     ? CuratedSelectionInefficiencySeverity.Issue
                     : CuratedSelectionInefficiencySeverity.Watch,
                 IsTriggered = true,
-                Summary = "VĂ­kendovĂ˝ reĹľim se pĹ™Ă­liĹˇ podobĂˇ pracovnĂ­mu provozu.",
+                Summary = "The weekend regime is too similar to weekday operation.",
                 Evidence = weekendCard.MetricDisplay,
-                Methodology = "Odvozeno pĹ™Ă­mo z Weekend load indicatoru."
+                Methodology = "Derived directly from the weekend load indicator."
             });
         }
 
@@ -2134,9 +2222,9 @@ public class NodeAnalyticsPreviewService
                     ? CuratedSelectionInefficiencySeverity.Issue
                     : CuratedSelectionInefficiencySeverity.Watch,
                 IsTriggered = true,
-                Summary = "Profil mĂˇ zvĂ˝Ĺˇenou ĹˇpiÄŤkovost vĹŻÄŤi typickĂ©mu loadu.",
+                Summary = "The profile shows elevated peakiness relative to typical load.",
                 Evidence = peakCard.MetricDisplay,
-                Methodology = "Odvozeno z peak significance a peak-to-average metriky."
+                Methodology = "Derived from the peak-significance and peak-to-average metrics."
             });
         }
 
@@ -2152,9 +2240,9 @@ public class NodeAnalyticsPreviewService
                 Label = "Weak active/inactive separation",
                 Severity = severity,
                 IsTriggered = true,
-                Summary = "RozdĂ­l mezi aktivnĂ­mi a neaktivnĂ­mi hodinami je slabĂ˝.",
+                Summary = "The separation between active and inactive hours is weak.",
                 Evidence = (activeInactiveSeparation.Value * 100.0).ToString("N0") + " % separation",
-                Methodology = "Separation = 1 - min(1, off-hours/active ratio) z aggregate loadu."
+                Methodology = "Separation = 1 - min(1, off-hours/active ratio) from aggregate load."
             });
         }
 
@@ -2169,9 +2257,9 @@ public class NodeAnalyticsPreviewService
                     ? CuratedSelectionInefficiencySeverity.Issue
                     : CuratedSelectionInefficiencySeverity.Watch,
                 IsTriggered = true,
-                Summary = "VĂ˝roba nenĂ­ dost vyuĹľita lokĂˇlnÄ› a selection mĂˇ exportnĂ­ charakter.",
+                Summary = "Generation is not used locally enough and the selection has an export-oriented profile.",
                 Evidence = generationCard.MetricDisplay,
-                Methodology = "Odvozeno z local generation utilization indikĂˇtoru a signed energy bilance."
+                Methodology = "Derived from the local-generation-utilization indicator and the signed energy balance."
             });
         }
 
@@ -2185,11 +2273,11 @@ public class NodeAnalyticsPreviewService
         {
             var opportunity = inefficiency.Key switch
             {
-                "elevated_off_hours_load" => "VĂ˝bÄ›r vykazuje zvĂ˝ĹˇenĂ˝ load mimo pracovnĂ­ hodiny.",
-                "elevated_weekend_load" => "VĂ­kendovĂ˝ reĹľim se blĂ­ĹľĂ­ pracovnĂ­mu provozu.",
-                "excessive_peak_stress" => "VĂ˝bÄ›r mĂˇ vĂ˝raznÄ› ĹˇpiÄŤkovĂ˝ profil.",
-                "weak_active_inactive_separation" => "OddÄ›lenĂ­ aktivnĂ­ch a neaktivnĂ­ch hodin je slabĂ©.",
-                "export_tendency" => "Selection mĂˇ vĂ˝raznĂ˝ exportnĂ­ charakter.",
+                "elevated_off_hours_load" => "The selection shows elevated load outside working hours.",
+                "elevated_weekend_load" => "The weekend regime is approaching weekday operation.",
+                "excessive_peak_stress" => "The selection has a strongly peak-driven profile.",
+                "weak_active_inactive_separation" => "The separation between active and inactive hours is weak.",
+                "export_tendency" => "The selection has a strong export tendency.",
                 _ => string.Empty
             };
 
@@ -2211,23 +2299,23 @@ public class NodeAnalyticsPreviewService
 
         if (opportunities.Count == 0)
         {
-            opportunities.Add("V aktuĂˇlnĂ­m intervalu se neukazuje vĂ˝raznĂ˝ schedule inefficiency kandidĂˇt.");
+            opportunities.Add("No strong schedule-inefficiency candidate is visible in the current interval.");
         }
 
         var issueCount = orderedInefficiencies.Count(item => item.Severity == CuratedSelectionInefficiencySeverity.Issue);
         var watchCount = orderedInefficiencies.Count(item => item.Severity == CuratedSelectionInefficiencySeverity.Watch);
 
         var summary = issueCount > 0
-            ? $"EMS evaluation detekuje {issueCount} schedule inefficiency issue a {watchCount} watch signĂˇlĹŻ."
+            ? $"EMS evaluation detects {issueCount} schedule-inefficiency issue(s) and {watchCount} watch signal(s)."
             : watchCount > 0
-                ? $"EMS evaluation eviduje {watchCount} schedule inefficiency watch signĂˇlĹŻ bez tvrdĂ©ho issue."
-                : "EMS evaluation neukazuje vĂ˝raznou schedule inefficiency v aktuĂˇlnĂ­m intervalu.";
+                ? $"EMS evaluation shows {watchCount} schedule-inefficiency watch signal(s) with no hard issue."
+                : "EMS evaluation does not show strong schedule inefficiency in the current interval.";
 
-        var methodology = "EMS evaluation v1 kombinuje transparentnĂ­ scorecards nad existujĂ­cĂ­mi metrikami: off-hours/active ratio, weekend/weekday ratio, baseload/avg ratio, peak stress ratio a local generation utilization. Bez black-box skĂłre a bez optimalizaÄŤnĂ­ho enginu.";
+        var methodology = "EMS evaluation v1 combines transparent scorecards over existing metrics: off-hours/active ratio, weekend/weekday ratio, baseload/avg ratio, peak-stress ratio, and local generation utilization. No black-box score and no optimization engine.";
 
         if (loadProfile.IsFallback)
         {
-            methodology += " Pro krĂˇtkĂ© intervaly pouĹľĂ­vĂˇ load profile fallback snapshot, takĹľe weekend/off-hours signĂˇly majĂ­ niĹľĹˇĂ­ robustnost.";
+            methodology += " For short intervals it uses the load-profile fallback snapshot, so weekend and off-hours signals have lower robustness.";
         }
 
         return new CuratedSelectionEmsEvaluationSummary
@@ -2238,7 +2326,7 @@ public class NodeAnalyticsPreviewService
             HasGeneration = hasGeneration,
             Summary = summary,
             Methodology = methodology,
-            DistinctionNote = "Issue = datovĂ˝/coverage problĂ©m, anomaly = deviation proti baseline, inefficiency = stabilnĂ­ provoznĂ­ neefektivita reĹľimu.",
+            DistinctionNote = "Issue = data or coverage problem, anomaly = deviation from baseline, inefficiency = persistent operational inefficiency.",
             Scorecards = scorecards,
             Inefficiencies = orderedInefficiencies,
             Opportunities = opportunities
@@ -2319,8 +2407,7 @@ public class NodeAnalyticsPreviewService
         CuratedNodeTimeSeriesMode mode = CuratedNodeTimeSeriesMode.Auto,
         CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(primaryNodeKey)
-            || (!ComparePreviewSupportedNodeKeys.Contains(primaryNodeKey) && !_bindingRegistry.IsSupported(primaryNodeKey)))
+        if (!SupportsComparePreview(primaryNodeKey))
         {
             return null;
         }
@@ -2352,9 +2439,9 @@ public class NodeAnalyticsPreviewService
                 continue;
             }
 
-            if (!ComparePreviewSupportedNodeKeys.Contains(rawNodeKey) && !_bindingRegistry.IsSupported(rawNodeKey))
+            if (!SupportsComparePreview(rawNodeKey))
             {
-                excludedNodeMessages.Add($"{rawNodeKey}: compare preview pro tento uzel nenĂ­ v tĂ©to verzi podporovĂˇn.");
+                excludedNodeMessages.Add($"{rawNodeKey}: compare preview is unavailable because this node has no dataset-backed time-series binding.");
                 continue;
             }
 
@@ -2375,7 +2462,7 @@ public class NodeAnalyticsPreviewService
         }
         else
         {
-            excludedNodeMessages.Add($"{primaryNodeKey}: {primaryTimeSeries.NoDataMessage ?? "v analysis window nejsou dostupnĂˇ data"}.");
+            excludedNodeMessages.Add($"{primaryNodeKey}: {primaryTimeSeries.NoDataMessage ?? "no data is available in the analysis window"}.");
         }
 
         if (orderedCompareNodeKeys.Count > 0)
@@ -2397,13 +2484,13 @@ public class NodeAnalyticsPreviewService
 
                 if (result is null)
                 {
-                    excludedNodeMessages.Add($"{nodeKey}: nepodaĹ™ilo se pĹ™ipravit ÄŤasovou Ĺ™adu.");
+                    excludedNodeMessages.Add($"{nodeKey}: failed to prepare a time series.");
                     continue;
                 }
 
                 if (result.Points.Count == 0)
                 {
-                    excludedNodeMessages.Add($"{nodeKey}: {result.NoDataMessage ?? "v analysis window nejsou dostupnĂˇ data"}.");
+                    excludedNodeMessages.Add($"{nodeKey}: {result.NoDataMessage ?? "no data is available in the analysis window"}.");
                     continue;
                 }
 
@@ -2418,7 +2505,7 @@ public class NodeAnalyticsPreviewService
         }
 
         var noDataMessage = series.Count == 0
-            ? "Compare preview nemĂˇ ĹľĂˇdnou dostupnou vĂ˝konovou Ĺ™adu pro vybranĂ© uzly a interval."
+            ? "Compare preview has no available time series for the selected nodes and interval."
             : null;
 
         return new CuratedNodeCompareTimeSeriesResult
@@ -2474,8 +2561,8 @@ public class NodeAnalyticsPreviewService
             return new CuratedNodeDeviationSummary
             {
                 IsAvailable = false,
-                Methodology = "Uzel poÄŤasĂ­ je v tomto sprintu jen vysvÄ›tlujĂ­cĂ­ faktor, deviation baseline se zde zatĂ­m nevyhodnocuje.",
-                Message = "Baseline nenĂ­ pro tento uzel / interval zatĂ­m k dispozici.",
+                Methodology = "The weather node is only an explanatory factor in this sprint, so baseline deviation is not evaluated here yet.",
+                Message = "Baseline is not available for this node or interval yet.",
                 Unit = "Â°C"
             };
         }
@@ -2487,7 +2574,7 @@ public class NodeAnalyticsPreviewService
             {
                 IsAvailable = false,
                 Methodology = BaselineMethodology,
-                Message = "Baseline nenĂ­ pro tento uzel / interval zatĂ­m k dispozici."
+                Message = "Baseline is not available for this node or interval yet."
             };
         }
 
@@ -2498,7 +2585,7 @@ public class NodeAnalyticsPreviewService
             {
                 IsAvailable = false,
                 Methodology = BaselineMethodology,
-                Message = "ChybĂ­ lokĂˇlnĂ­ reduced source."
+                Message = "The local reduced source is missing."
             };
         }
 
@@ -2586,23 +2673,23 @@ public class NodeAnalyticsPreviewService
             if (isPowerSignal)
             {
                 unit = "kWh";
-                summaryLabel = "IntervalovĂˇ energie";
+                summaryLabel = "Interval energy";
                 statsUnit = "kW";
-                statsLabel = "VĂ˝kon";
+                statsLabel = "Power";
             }
             else if (isTempSignal)
             {
                 unit = "Â°C";
-                summaryLabel = "PrĹŻmÄ›rnĂˇ teplota";
+                summaryLabel = "Average temperature";
                 statsUnit = "Â°C";
-                statsLabel = "Teplota";
+                statsLabel = "Temperature";
             }
             else if (isFlowSignal)
             {
                 unit = "mÂł";
-                summaryLabel = "Objem";
+                summaryLabel = "Volume";
                 statsUnit = "mÂł";
-                statsLabel = "PrĹŻtok";
+                statsLabel = "Flow";
             }
             else
             {
@@ -2641,12 +2728,12 @@ public class NodeAnalyticsPreviewService
             {
                 FileName = "electricity_P.csv",
                 ColumnName = "PV",
-                Title = "SolĂˇrnĂ­ vĂ˝roba (PV)",
+                Title = "Solar generation (PV)",
                 NodeTypeHint = "generator_pv",
                 Unit = "kWh",
-                SummaryLabel = "IntervalovĂˇ energie",
+                SummaryLabel = "Interval energy",
                 StatsUnit = "kW",
-                StatsLabel = "VĂ˝kon",
+                StatsLabel = "Power",
                 IsPowerSignal = true,
                 PowerToKilowattFactor = 0.001,
                 SupportsDeviation = true
@@ -2655,12 +2742,12 @@ public class NodeAnalyticsPreviewService
             {
                 FileName = "electricity_P.csv",
                 ColumnName = "CHP",
-                Title = "VĂ˝roba kogenerace (CHP)",
+                Title = "Cogeneration output (CHP)",
                 NodeTypeHint = "generator_chp",
                 Unit = "kWh",
-                SummaryLabel = "IntervalovĂˇ energie",
+                SummaryLabel = "Interval energy",
                 StatsUnit = "kW",
-                StatsLabel = "VĂ˝kon",
+                StatsLabel = "Power",
                 IsPowerSignal = true,
                 PowerToKilowattFactor = 0.001,
                 SupportsDeviation = true
@@ -2669,12 +2756,12 @@ public class NodeAnalyticsPreviewService
             {
                 FileName = "cooling_P.csv",
                 ColumnName = "total",
-                Title = "CelkovĂ© chlazenĂ­",
+                Title = "Total cooling",
                 NodeTypeHint = "utility_cooling",
                 Unit = "kWh",
-                SummaryLabel = "IntervalovĂˇ energie",
+                SummaryLabel = "Interval energy",
                 StatsUnit = "kW",
-                StatsLabel = "VĂ˝kon",
+                StatsLabel = "Power",
                 IsPowerSignal = true,
                 PowerToKilowattFactor = 0.001,
                 SupportsDeviation = true
@@ -2683,12 +2770,12 @@ public class NodeAnalyticsPreviewService
             {
                 FileName = "heating_P.csv",
                 ColumnName = "total",
-                Title = "CelkovĂ© vytĂˇpÄ›nĂ­",
+                Title = "Total heating",
                 NodeTypeHint = "utility_heating",
                 Unit = "kWh",
-                SummaryLabel = "IntervalovĂˇ energie",
+                SummaryLabel = "Interval energy",
                 StatsUnit = "kW",
-                StatsLabel = "VĂ˝kon",
+                StatsLabel = "Power",
                 IsPowerSignal = true,
                 PowerToKilowattFactor = 0.001,
                 SupportsDeviation = true
@@ -2697,12 +2784,12 @@ public class NodeAnalyticsPreviewService
             {
                 FileName = "weather.csv",
                 ColumnName = "WeatherStation.Weather.Ta",
-                Title = "OkamĹľitĂˇ prĹŻmÄ›rnĂˇ teplota",
+                Title = "Instant average temperature",
                 NodeTypeHint = "weather",
                 Unit = "Â°C",
-                SummaryLabel = "PrĹŻmÄ›rnĂˇ teplota",
+                SummaryLabel = "Average temperature",
                 StatsUnit = "Â°C",
-                StatsLabel = "Teplota",
+                StatsLabel = "Temperature",
                 SupportsDeviation = false
             },
             _ => null
@@ -2768,7 +2855,7 @@ public class NodeAnalyticsPreviewService
                 IsAvailable = false,
                 Unit = source.Unit,
                 Methodology = BaselineMethodology,
-                Message = "NeplatnĂ˝ ÄŤasovĂ˝ rozsah pro vĂ˝poÄŤet baseline."
+                Message = "The selected time range is invalid for baseline calculation."
             };
         }
 
@@ -2780,7 +2867,7 @@ public class NodeAnalyticsPreviewService
                 IsAvailable = false,
                 Unit = source.Unit,
                 Methodology = BaselineMethodology,
-                Message = "Baseline nelze pĹ™ipravit: chybĂ­ referenÄŤnĂ­ baseline okna."
+                Message = "Baseline cannot be prepared because no reference baseline windows are available."
             };
         }
 
@@ -2795,7 +2882,7 @@ public class NodeAnalyticsPreviewService
                     IsAvailable = false,
                     Unit = source.Unit,
                     Methodology = BaselineMethodology,
-                    Message = "Reduced source je prĂˇzdnĂ˝."
+                    Message = "The reduced source is empty."
                 };
             }
 
@@ -2813,7 +2900,7 @@ public class NodeAnalyticsPreviewService
                     IsAvailable = false,
                     Unit = source.Unit,
                     Methodology = BaselineMethodology,
-                    Message = "Reduced source neobsahuje oÄŤekĂˇvanĂ˝ sloupec pro vybranĂ˝ uzel."
+                    Message = "The reduced source does not contain the expected column for the selected node."
                 };
             }
 
@@ -2894,7 +2981,7 @@ public class NodeAnalyticsPreviewService
                     IsAvailable = false,
                     Unit = source.Unit,
                     Methodology = BaselineMethodology,
-                    Message = "Pro vybranĂ˝ interval nejsou k dispozici ĹľĂˇdnĂˇ data."
+                    Message = "No data is available for the selected interval."
                 };
             }
 
@@ -2920,7 +3007,7 @@ public class NodeAnalyticsPreviewService
                     IsAvailable = false,
                     Unit = source.Unit,
                     Methodology = BaselineMethodology,
-                    Message = "Baseline nelze spoÄŤĂ­tat: nejsou dostupnĂˇ referenÄŤnĂ­ baseline okna s dostateÄŤnĂ˝m pokrytĂ­m dat."
+                    Message = "Baseline cannot be calculated because no reference baseline windows have sufficient data coverage."
                 };
             }
 
@@ -2933,7 +3020,7 @@ public class NodeAnalyticsPreviewService
                     IsAvailable = false,
                     Unit = source.Unit,
                     Methodology = BuildMethodologyText(selectedBaseline.StrategyDescription, from, to, minimumReferenceSamples),
-                    Message = "Baseline je pro tento interval pĹ™Ă­liĹˇ nĂ­zkĂˇ pro stabilnĂ­ procentnĂ­ vyhodnocenĂ­ odchylky."
+                    Message = "Baseline is too low in this interval for stable percentage-based deviation evaluation."
                 };
             }
 
@@ -2963,7 +3050,7 @@ public class NodeAnalyticsPreviewService
                 IsAvailable = false,
                 Unit = source.Unit,
                 Methodology = BaselineMethodology,
-                Message = "NepodaĹ™ilo se naÄŤĂ­st reduced source pro baseline vĂ˝poÄŤet."
+                Message = "The reduced source for baseline calculation could not be loaded."
             };
         }
     }
@@ -2989,7 +3076,7 @@ public class NodeAnalyticsPreviewService
                 baselineFrom,
                 baselineTo,
                 BaselineReferenceKind.SamePeriodPreviousYear,
-                $"StejnĂ© obdobĂ­ minulĂ©ho roku (-{yearOffset}y)"));
+                $"Same period last year (-{yearOffset}y)"));
         }
 
         for (var offsetIndex = 1; offsetIndex <= RecentComparableWindowsForBaseline; offsetIndex++)
@@ -3018,7 +3105,7 @@ public class NodeAnalyticsPreviewService
                 baselineFrom,
                 baselineTo,
                 BaselineReferenceKind.RecentComparablePeriod,
-                $"PĹ™edchozĂ­ srovnatelnĂ© obdobĂ­ (-{offsetIndex}x interval)"));
+                $"Previous comparable period (-{offsetIndex}x interval)"));
         }
 
         return candidates;
@@ -3060,7 +3147,7 @@ public class NodeAnalyticsPreviewService
         {
             return new BaselineSelection(
                 Median(samePeriodReferenceAggregates.Select(x => x.Sum).ToList()),
-                "StejnĂ© obdobĂ­ v minulĂ˝ch letech (mediĂˇn)",
+                "Same period in previous years (median)",
                 samePeriodReferenceAggregates.Select(x => x.Candidate).ToList()
             );
         }
@@ -3074,7 +3161,7 @@ public class NodeAnalyticsPreviewService
                 .ToList();
             return new BaselineSelection(
                 (samePeriod * 0.70) + (recentMedian * 0.30),
-                "Hybrid: stejnĂ© obdobĂ­ minulĂ˝ rok + recent comparable obdobĂ­",
+                "Hybrid: same period last year + recent comparable periods",
                 referenceCandidates
             );
         }
@@ -3083,7 +3170,7 @@ public class NodeAnalyticsPreviewService
         {
             return new BaselineSelection(
                 samePeriodReferenceAggregates[0].Sum,
-                "StejnĂ© obdobĂ­ minulĂ˝ rok",
+                "Same period last year",
                 [samePeriodReferenceAggregates[0].Candidate]
             );
         }
@@ -3092,7 +3179,7 @@ public class NodeAnalyticsPreviewService
         {
             return new BaselineSelection(
                 Median(recentComparableReferenceAggregates.Select(x => x.Sum).ToList()),
-                "PĹ™edchozĂ­ srovnatelnĂˇ obdobĂ­ stejnĂ© dĂ©lky (mediĂˇn)",
+                "Previous comparable periods of the same length (median)",
                 recentComparableReferenceAggregates.Select(x => x.Candidate).ToList()
             );
         }
@@ -3101,7 +3188,7 @@ public class NodeAnalyticsPreviewService
         {
             return new BaselineSelection(
                 recentComparableReferenceAggregates[0].Sum,
-                "BezprostĹ™ednÄ› pĹ™edchozĂ­ srovnatelnĂ© obdobĂ­",
+                "Immediately previous comparable period",
                 [recentComparableReferenceAggregates[0].Candidate]
             );
         }
@@ -3178,7 +3265,7 @@ public class NodeAnalyticsPreviewService
 
     private static string BuildMethodologyText(string strategyDescription, DateTime from, DateTime to, int minimumReferenceSamples)
     {
-        return $"{BaselineMethodology} Strategy: {strategyDescription}. Analysis window: {from:u} - {to:u}. Minimum pokrytĂ­ referenÄŤnĂ­ho okna: {minimumReferenceSamples} vzorkĹŻ.";
+        return $"{BaselineMethodology} Strategy: {strategyDescription}. Analysis window: {from:u} - {to:u}. Minimum reference-window coverage: {minimumReferenceSamples} samples.";
     }
 
     private async Task<WeatherExplanationSummary?> BuildWeatherExplanationAsync(
@@ -3198,18 +3285,18 @@ public class NodeAnalyticsPreviewService
         var weatherFilePath = ResolveCuratedFilePath("weather.csv");
         if (weatherFilePath is null)
         {
-            return CreateUnavailableWeatherExplanation("VysvÄ›tlenĂ­ poÄŤasĂ­m nenĂ­ dostupnĂ©, protoĹľe chybĂ­ weather.csv source.");
+            return CreateUnavailableWeatherExplanation("Weather explanation is unavailable because the weather.csv source is missing.");
         }
 
         var weatherAverages = await GetWeatherAveragesAsync(weatherFilePath, analysisFrom, analysisTo, referenceCandidates, minimumReferenceSamples, ct);
         if (!weatherAverages.CurrentAverageTempC.HasValue)
         {
-            return CreateUnavailableWeatherExplanation("VysvÄ›tlenĂ­ poÄŤasĂ­m nenĂ­ dostupnĂ©: v aktuĂˇlnĂ­m intervalu chybĂ­ data venkovnĂ­ teploty.");
+            return CreateUnavailableWeatherExplanation("Weather explanation is unavailable because outdoor-temperature data is missing in the current interval.");
         }
 
         if (weatherAverages.ReferenceAverageTempC.Count == 0)
         {
-            return CreateUnavailableWeatherExplanation("VysvÄ›tlenĂ­ poÄŤasĂ­m nenĂ­ dostupnĂ©: v referenÄŤnĂ­m baseline obdobĂ­ chybĂ­ dostatek weather dat.");
+            return CreateUnavailableWeatherExplanation("Weather explanation is unavailable because the reference baseline period lacks sufficient weather data.");
         }
 
         var referenceAverage = weatherAverages.ReferenceAverageTempC.Count >= 2
@@ -3219,7 +3306,7 @@ public class NodeAnalyticsPreviewService
         var deltaTemp = currentAverage - referenceAverage;
 
         var status = WeatherExplanationStatus.NotSupportedByWeather;
-        var conclusion = "PoÄŤasĂ­ odchylku v tomto intervalu nepodporuje.";
+        var conclusion = "Weather does not support the deviation in this interval.";
 
         if (Math.Abs(deltaTemp) < WeatherExplanationDeltaThresholdC)
         {
@@ -3230,8 +3317,8 @@ public class NodeAnalyticsPreviewService
                 CurrentAverageOutdoorTempC = currentAverage,
                 ReferenceAverageOutdoorTempC = referenceAverage,
                 DeltaOutdoorTempC = deltaTemp,
-                Conclusion = "RozdĂ­l poÄŤasĂ­ vĹŻÄŤi referenci je malĂ˝.",
-                Methodology = "Explanatory heuristika v1: porovnĂˇnĂ­ prĹŻmÄ›rnĂ© venkovnĂ­ teploty v analysis window vĹŻÄŤi referenÄŤnĂ­m baseline oknĹŻm. PĹ™i |delta T| < 0.8 Â°C je zmÄ›na poÄŤasĂ­ povaĹľovĂˇna za malou."
+                Conclusion = "The weather difference versus the reference is small.",
+                Methodology = "Explanatory heuristic v1 compares the average outdoor temperature in the analysis window with the reference baseline windows. When |delta T| < 0.8 °C, the weather change is treated as small."
             };
         }
 
@@ -3243,7 +3330,7 @@ public class NodeAnalyticsPreviewService
             if ((deltaAbsolute > 0 && isColderThanReference) || (deltaAbsolute < 0 && isWarmerThanReference))
             {
                 status = WeatherExplanationStatus.SupportedByWeather;
-                conclusion = "Odchylka mĹŻĹľe bĂ˝t ÄŤĂˇsteÄŤnÄ› vysvÄ›tlena poÄŤasĂ­m.";
+                conclusion = "The deviation may be partially explained by weather.";
             }
         }
         else if (nodeKey == "cooling_main")
@@ -3254,7 +3341,7 @@ public class NodeAnalyticsPreviewService
             if ((deltaAbsolute > 0 && isWarmerThanReference) || (deltaAbsolute < 0 && isColderThanReference))
             {
                 status = WeatherExplanationStatus.SupportedByWeather;
-                conclusion = "Odchylka mĹŻĹľe bĂ˝t ÄŤĂˇsteÄŤnÄ› vysvÄ›tlena poÄŤasĂ­m.";
+                conclusion = "The deviation may be partially explained by weather.";
             }
         }
 
@@ -3266,7 +3353,7 @@ public class NodeAnalyticsPreviewService
             ReferenceAverageOutdoorTempC = referenceAverage,
             DeltaOutdoorTempC = deltaTemp,
             Conclusion = conclusion,
-            Methodology = "Explanatory heuristika v1: porovnĂˇnĂ­ prĹŻmÄ›rnĂ© venkovnĂ­ teploty v analysis window vĹŻÄŤi referenÄŤnĂ­m baseline oknĹŻm pouĹľitĂ˝m baseline strategiĂ­."
+            Methodology = "Explanatory heuristic v1 compares the average outdoor temperature in the analysis window with the baseline windows used by the selected baseline strategy."
         };
     }
 
@@ -3277,7 +3364,7 @@ public class NodeAnalyticsPreviewService
             IsAvailable = false,
             Status = WeatherExplanationStatus.Unavailable,
             Conclusion = message,
-            Methodology = "Explanatory heuristika vyĹľaduje dostupnĂˇ weather data pro aktuĂˇlnĂ­ i referenÄŤnĂ­ obdobĂ­."
+            Methodology = "The explanatory heuristic requires available weather data for both the current and reference periods."
         };
     }
 
@@ -3593,14 +3680,14 @@ public class NodeAnalyticsPreviewService
     private static TimeSeriesGranularityDecision ResolveTimeSeriesGranularity(DateTime from, DateTime to, CuratedNodeSource source, CuratedNodeTimeSeriesMode requestedMode)
     {
         var duration = to - from;
-        var valueKind = source.IsPowerSignal ? "vĂ˝konu" : "hodnoty";
+        var valueKind = source.IsPowerSignal ? "power" : "value";
 
         if (requestedMode == CuratedNodeTimeSeriesMode.Raw15Min)
         {
             return new TimeSeriesGranularityDecision(
                 CuratedNodeTimeSeriesGranularity.Raw15Min,
-                source.IsPowerSignal ? "Raw 15min vĂ˝kon" : "Raw detailnĂ­ Ĺ™ada",
-                "RuÄŤnĂ­ reĹľim 15min: bez agregace, zobrazeny jsou pĹŻvodnĂ­ vzorky ÄŤasovĂ© Ĺ™ady.",
+                source.IsPowerSignal ? "Raw 15 min power" : "Raw detailed series",
+                "Manual 15 min mode: no aggregation is applied and the original time-series samples are shown.",
                 CuratedNodeTimeSeriesMode.Raw15Min,
                 "15min"
             );
@@ -3610,8 +3697,8 @@ public class NodeAnalyticsPreviewService
         {
             return new TimeSeriesGranularityDecision(
                 CuratedNodeTimeSeriesGranularity.HourlyAverage,
-                source.IsPowerSignal ? "HodinovĂ˝ prĹŻmÄ›r vĂ˝konu" : "HodinovĂ˝ prĹŻmÄ›r hodnoty",
-                $"RuÄŤnĂ­ reĹľim Hourly: kaĹľdĂˇ hodnota je aritmetickĂ˝ prĹŻmÄ›r {valueKind} v danĂ©m hodinovĂ©m bucketu.",
+                source.IsPowerSignal ? "Hourly average power" : "Hourly average value",
+                $"Manual hourly mode: each point is the arithmetic average {valueKind} in its hourly bucket.",
                 CuratedNodeTimeSeriesMode.HourlyAverage,
                 "Hourly"
             );
@@ -3621,8 +3708,8 @@ public class NodeAnalyticsPreviewService
         {
             return new TimeSeriesGranularityDecision(
                 CuratedNodeTimeSeriesGranularity.DailyAverage,
-                source.IsPowerSignal ? "DennĂ­ prĹŻmÄ›r vĂ˝konu" : "DennĂ­ prĹŻmÄ›r hodnoty",
-                $"RuÄŤnĂ­ reĹľim Daily: kaĹľdĂˇ hodnota je aritmetickĂ˝ prĹŻmÄ›r {valueKind} v danĂ©m dennĂ­m bucketu.",
+                source.IsPowerSignal ? "Daily average power" : "Daily average value",
+                $"Manual daily mode: each point is the arithmetic average {valueKind} in its daily bucket.",
                 CuratedNodeTimeSeriesMode.DailyAverage,
                 "Daily"
             );
@@ -3632,8 +3719,8 @@ public class NodeAnalyticsPreviewService
         {
             return new TimeSeriesGranularityDecision(
                 CuratedNodeTimeSeriesGranularity.Raw15Min,
-                source.IsPowerSignal ? "Raw 15min vĂ˝kon" : "Raw detailnĂ­ Ĺ™ada",
-                "Auto reĹľim: bez agregace, zobrazeny jsou pĹŻvodnĂ­ vzorky ÄŤasovĂ© Ĺ™ady.",
+                source.IsPowerSignal ? "Raw 15 min power" : "Raw detailed series",
+                "Auto mode: no aggregation is applied and the original time-series samples are shown.",
                 CuratedNodeTimeSeriesMode.Auto,
                 "Auto"
             );
@@ -3643,8 +3730,8 @@ public class NodeAnalyticsPreviewService
         {
             return new TimeSeriesGranularityDecision(
                 CuratedNodeTimeSeriesGranularity.HourlyAverage,
-                source.IsPowerSignal ? "HodinovĂ˝ prĹŻmÄ›r vĂ˝konu" : "HodinovĂ˝ prĹŻmÄ›r hodnoty",
-                $"Auto reĹľim: agregace po hodinĂˇch, kaĹľdĂˇ hodnota je aritmetickĂ˝ prĹŻmÄ›r {valueKind} v danĂ©m hodinovĂ©m bucketu.",
+                source.IsPowerSignal ? "Hourly average power" : "Hourly average value",
+                $"Auto mode: hourly aggregation is applied and each point is the arithmetic average {valueKind} in its hourly bucket.",
                 CuratedNodeTimeSeriesMode.Auto,
                 "Auto"
             );
@@ -3652,8 +3739,8 @@ public class NodeAnalyticsPreviewService
 
         return new TimeSeriesGranularityDecision(
             CuratedNodeTimeSeriesGranularity.DailyAverage,
-            source.IsPowerSignal ? "DennĂ­ prĹŻmÄ›r vĂ˝konu" : "DennĂ­ prĹŻmÄ›r hodnoty",
-            $"Auto reĹľim: agregace po dnech, kaĹľdĂˇ hodnota je aritmetickĂ˝ prĹŻmÄ›r {valueKind} v danĂ©m dennĂ­m bucketu.",
+            source.IsPowerSignal ? "Daily average power" : "Daily average value",
+            $"Auto mode: daily aggregation is applied and each point is the arithmetic average {valueKind} in its daily bucket.",
             CuratedNodeTimeSeriesMode.Auto,
             "Auto"
         );
@@ -3675,17 +3762,17 @@ public class NodeAnalyticsPreviewService
         {
             return granularity.Granularity switch
             {
-                CuratedNodeTimeSeriesGranularity.HourlyAverage => "Graf zobrazuje hodinovÄ› agregovanĂ˝ prĹŻmÄ›r vĂ˝konu (kW). Souhrn nad grafem zĹŻstĂˇvĂˇ intervalovĂˇ energie (kWh).",
-                CuratedNodeTimeSeriesGranularity.DailyAverage => "Graf zobrazuje dennÄ› agregovanĂ˝ prĹŻmÄ›r vĂ˝konu (kW). Souhrn nad grafem zĹŻstĂˇvĂˇ intervalovĂˇ energie (kWh).",
-                _ => "Graf zobrazuje okamĹľitĂ˝ vĂ˝kon v ÄŤase (kW) v pĹŻvodnĂ­m kroku ÄŤasovĂ© Ĺ™ady (~15 min). Souhrn nad grafem zobrazuje intervalovou energii (kWh)."
+                CuratedNodeTimeSeriesGranularity.HourlyAverage => "The chart shows the hourly average power (kW). The summary above the chart remains interval energy (kWh).",
+                CuratedNodeTimeSeriesGranularity.DailyAverage => "The chart shows the daily average power (kW). The summary above the chart remains interval energy (kWh).",
+                _ => "The chart shows instantaneous power over time (kW) in the original time-series step (~15 min). The summary above the chart shows interval energy (kWh)."
             };
         }
 
         return granularity.Granularity switch
         {
-            CuratedNodeTimeSeriesGranularity.HourlyAverage => "Graf zobrazuje hodinovÄ› agregovanĂ˝ prĹŻmÄ›r hodnoty pro vybranĂ˝ uzel.",
-            CuratedNodeTimeSeriesGranularity.DailyAverage => "Graf zobrazuje dennÄ› agregovanĂ˝ prĹŻmÄ›r hodnoty pro vybranĂ˝ uzel.",
-            _ => "Graf zobrazuje okamĹľitou hodnotu v ÄŤase pro vybranĂ˝ uzel."
+            CuratedNodeTimeSeriesGranularity.HourlyAverage => "The chart shows the hourly average value for the selected node.",
+            CuratedNodeTimeSeriesGranularity.DailyAverage => "The chart shows the daily average value for the selected node.",
+            _ => "The chart shows the instantaneous value over time for the selected node."
         };
     }
 
@@ -3701,9 +3788,9 @@ public class NodeAnalyticsPreviewService
     {
         return granularity switch
         {
-            CuratedNodeTimeSeriesGranularity.HourlyAverage => "Compare preview zobrazuje vĂ˝konovĂ© Ĺ™ady v ÄŤase (kW) pro vĂ­ce uzlĹŻ. HodinovĂˇ agregace znamenĂˇ prĹŻmÄ›r vĂ˝konu za hodinovĂ˝ bucket.",
-            CuratedNodeTimeSeriesGranularity.DailyAverage => "Compare preview zobrazuje vĂ˝konovĂ© Ĺ™ady v ÄŤase (kW) pro vĂ­ce uzlĹŻ. DennĂ­ agregace znamenĂˇ prĹŻmÄ›r vĂ˝konu za dennĂ­ bucket.",
-            _ => "Compare preview zobrazuje vĂ˝konovĂ© Ĺ™ady v ÄŤase (kW) pro vĂ­ce uzlĹŻ v pĹŻvodnĂ­m detailnĂ­m kroku dat (~15 min)."
+            CuratedNodeTimeSeriesGranularity.HourlyAverage => "Compare preview shows power series over time (kW) for multiple nodes. Hourly aggregation means average power within each hourly bucket.",
+            CuratedNodeTimeSeriesGranularity.DailyAverage => "Compare preview shows power series over time (kW) for multiple nodes. Daily aggregation means average power within each daily bucket.",
+            _ => "Compare preview shows power series over time (kW) for multiple nodes in the original detailed data step (~15 min)."
         };
     }
 
@@ -3711,16 +3798,16 @@ public class NodeAnalyticsPreviewService
     {
         var signedSemanticsNote = energyProfile switch
         {
-            CuratedAggregateEnergyProfile.MixedSigned => " Selection kombinuje spotĹ™ebu i vĂ˝robu: kladnĂ© body reprezentujĂ­ ÄŤistou spotĹ™ebu, zĂˇpornĂ© body ÄŤistou vĂ˝robu/export.",
-            CuratedAggregateEnergyProfile.GenerationOnly => " Selection je vĂ˝robnĂ­/exportnĂ­: zĂˇpornĂ© body jsou oÄŤekĂˇvanĂ© a reprezentujĂ­ export nebo vĂ˝robu.",
+            CuratedAggregateEnergyProfile.MixedSigned => " The selection combines load and generation: positive points represent net load, negative points represent net generation or export.",
+            CuratedAggregateEnergyProfile.GenerationOnly => " The selection is generation or export oriented: negative points are expected and represent export or generation.",
             _ => string.Empty
         };
 
         return granularity switch
         {
-            CuratedNodeTimeSeriesGranularity.HourlyAverage => "AgregovanĂ˝ graf zobrazuje souÄŤet hodinovĂ˝ch prĹŻmÄ›rĹŻ vĂ˝konu (kW) pĹ™es podporovanĂ© uzly selection setu." + signedSemanticsNote,
-            CuratedNodeTimeSeriesGranularity.DailyAverage => "AgregovanĂ˝ graf zobrazuje souÄŤet dennĂ­ch prĹŻmÄ›rĹŻ vĂ˝konu (kW) pĹ™es podporovanĂ© uzly selection setu." + signedSemanticsNote,
-            _ => "AgregovanĂ˝ graf zobrazuje souÄŤet okamĹľitĂ˝ch vĂ˝konĹŻ (kW) pĹ™es podporovanĂ© uzly selection setu v pĹŻvodnĂ­m kroku dat (~15 min)." + signedSemanticsNote
+            CuratedNodeTimeSeriesGranularity.HourlyAverage => "The aggregate chart shows the sum of hourly average power values (kW) across supported selection-set nodes." + signedSemanticsNote,
+            CuratedNodeTimeSeriesGranularity.DailyAverage => "The aggregate chart shows the sum of daily average power values (kW) across supported selection-set nodes." + signedSemanticsNote,
+            _ => "The aggregate chart shows the sum of instantaneous power values (kW) across supported selection-set nodes in the original data step (~15 min)." + signedSemanticsNote
         };
     }
 
@@ -3739,11 +3826,11 @@ public class NodeAnalyticsPreviewService
 
         var compositionSummary = measuredContributors.Count switch
         {
-            0 => "Disaggregation foundation: v intervalu nejsou dostupnĂ­ measured contributoĹ™i.",
-            1 => $"Aggregate je sloĹľen z 1 measured contributoru: {measuredContributors[0].Label}.",
-            _ when hasMixedSigns => $"Aggregate je sloĹľen z {measuredContributors.Count} measured contributoru (load {consumptionContributorCount}, generation {generationContributorCount}).",
-            _ when energyProfile == CuratedAggregateEnergyProfile.GenerationOnly => $"Aggregate je sloĹľen z {measuredContributors.Count} measured contributoru, kteri snizuji netto bilanci (generation/export).",
-            _ => $"Aggregate je slozen z {measuredContributors.Count} measured contributoru, kteri zvysuji load (consumption)."
+            0 => "Disaggregation foundation: no measured contributors are available in the interval.",
+            1 => $"The aggregate is composed of 1 measured contributor: {measuredContributors[0].Label}.",
+            _ when hasMixedSigns => $"The aggregate is composed of {measuredContributors.Count} measured contributors (load {consumptionContributorCount}, generation {generationContributorCount}).",
+            _ when energyProfile == CuratedAggregateEnergyProfile.GenerationOnly => $"The aggregate is composed of {measuredContributors.Count} measured contributors that reduce the net balance (generation/export).",
+            _ => $"The aggregate is composed of {measuredContributors.Count} measured contributors that increase load (consumption)."
         };
 
         return new CuratedSelectionDisaggregationSummary
@@ -3800,7 +3887,7 @@ public class NodeAnalyticsPreviewService
     {
         if (topContributors.Count == 0)
         {
-            return "Dominantni source nelze urcit: selection nema measured contributory s daty.";
+            return "A dominant source cannot be determined because the selection has no measured contributors with data.";
         }
 
         var dominant = topContributors[0];
@@ -3817,15 +3904,15 @@ public class NodeAnalyticsPreviewService
 
             if (dominantLoad is not null && dominantGeneration is not null)
             {
-                return $"Dominantni load slozka: {dominantLoad.Label}. Netto bilanci nejvice snizuje: {dominantGeneration.Label}.";
+                return $"Dominant load component: {dominantLoad.Label}. Largest net-balance reduction: {dominantGeneration.Label}.";
             }
         }
 
         return dominant.Direction switch
         {
-            CuratedContributionDirection.IncreasesLoad => $"Dominantni slozkou vyberu je {dominant.Label}, ktera zvysuje load.",
-            CuratedContributionDirection.ReducesNetBalance => $"Netto bilanci nejvice snizuje contributor {dominant.Label} (generation/export).",
-            _ => $"Dominantni contributor je {dominant.Label}."
+            CuratedContributionDirection.IncreasesLoad => $"The dominant component in the selection is {dominant.Label}, which increases load.",
+            CuratedContributionDirection.ReducesNetBalance => $"The contributor that reduces the net balance the most is {dominant.Label} (generation/export).",
+            _ => $"The dominant contributor is {dominant.Label}."
         };
     }
 
@@ -3874,7 +3961,7 @@ public class NodeAnalyticsPreviewService
         AddItems(contextOnlyNodeKeys, CuratedSelectionSourceMapCategory.ContextOnlyExcluded);
 
         var summary = items.Count == 0
-            ? "Source map je prazdna: selection je prazdny nebo bez analytickych contributoru."
+            ? "Source map is empty because the selection is empty or has no analytical contributors."
             : $"Included measured: {includedNodeKeys.Count}. No-data: {noDataNodeKeys.Count}. Unsupported: {unsupportedNodeKeys.Count}. Context-only/excluded: {contextOnlyNodeKeys.Count}.";
 
         return new CuratedSelectionSourceMapSummary
@@ -3958,13 +4045,13 @@ public class NodeAnalyticsPreviewService
         return energyProfile switch
         {
             CuratedAggregateEnergyProfile.MixedSigned =>
-                (netEnergyKwh, "Netto bilance energie", "Selection kombinuje spotĹ™ebu i vĂ˝robu; hlavnĂ­ KPI proto reprezentuje netto vĂ˝sledek.", true),
+                (netEnergyKwh, "Net energy balance", "The selection combines consumption and generation, so the headline KPI represents the net result.", true),
             CuratedAggregateEnergyProfile.GenerationOnly =>
-                (totalGenerationKwh, "CelkovĂˇ vĂ˝roba energie", "Selection je ÄŤistÄ› vĂ˝robnĂ­/exportnĂ­; netto bilance je zĂˇpornĂˇ.", false),
+                (totalGenerationKwh, "Total generated energy", "The selection is generation-only/export-oriented, so the net balance is negative.", false),
             CuratedAggregateEnergyProfile.ConsumptionOnly =>
-                (totalConsumptionKwh, "CelkovĂˇ spotĹ™eba energie", "Selection je ÄŤistÄ› spotĹ™ebnĂ­; netto bilance odpovĂ­dĂˇ spotĹ™ebÄ›.", false),
+                (totalConsumptionKwh, "Total consumed energy", "The selection is consumption-only, so the net balance matches consumption.", false),
             _ =>
-                (netEnergyKwh, "Netto bilance energie", "Selection nemĂˇ v intervalu vĂ˝znamnĂ© energetickĂ© contribution.", true)
+                (netEnergyKwh, "Net energy balance", "The selection has no meaningful energy contribution in the interval.", true)
         };
     }
 
@@ -4065,9 +4152,9 @@ public class NodeAnalyticsPreviewService
             {
                 return CreateResult(
                     [],
-                    "Reduced source je prĂˇzdnĂ˝.",
+                    "The reduced source is empty.",
                     [],
-                    includeBaselineOverlay ? "Baseline overlay nenĂ­ dostupnĂ˝: reduced source je prĂˇzdnĂ˝." : null);
+                    includeBaselineOverlay ? "Baseline overlay is unavailable because the reduced source is empty." : null);
             }
 
             var headers = headerLine.Split(',');
@@ -4081,9 +4168,9 @@ public class NodeAnalyticsPreviewService
             {
                 return CreateResult(
                     [],
-                    "Reduced source neobsahuje oÄŤekĂˇvanĂ˝ sloupec pro vybranĂ˝ uzel.",
+                    "The reduced source does not contain the expected column for the selected node.",
                     [],
-                    includeBaselineOverlay ? "Baseline overlay nenĂ­ dostupnĂ˝: reduced source neobsahuje oÄŤekĂˇvanĂ˝ sloupec." : null);
+                    includeBaselineOverlay ? "Baseline overlay is unavailable because the reduced source does not contain the expected column." : null);
             }
 
             if (timeColIndex == -1)
@@ -4214,15 +4301,15 @@ public class NodeAnalyticsPreviewService
             {
                 if (!source.SupportsDeviation)
                 {
-                    baselineOverlayMessage = "Baseline overlay nenĂ­ pro tento uzel podporovĂˇn.";
+                    baselineOverlayMessage = "Baseline overlay is not supported for this node.";
                 }
                 else if (baselineCandidates.Count == 0)
                 {
-                    baselineOverlayMessage = "Baseline overlay nenĂ­ dostupnĂ˝: chybĂ­ referenÄŤnĂ­ baseline okna.";
+                    baselineOverlayMessage = "Baseline overlay is unavailable because reference baseline windows are missing.";
                 }
                 else if (currentIntervalSamples == 0)
                 {
-                    baselineOverlayMessage = "Baseline overlay nelze spoÄŤĂ­tat, protoĹľe v analysis window chybĂ­ aktuĂˇlnĂ­ vzorky.";
+                    baselineOverlayMessage = "Baseline overlay cannot be calculated because the analysis window has no current samples.";
                 }
                 else
                 {
@@ -4243,14 +4330,14 @@ public class NodeAnalyticsPreviewService
                     var selectedBaseline = SelectBaselineValue(samePeriodReferenceAggregates, recentComparableReferenceAggregates);
                     if (selectedBaseline is null)
                     {
-                        baselineOverlayMessage = "Baseline overlay nenĂ­ dostupnĂ˝: referenÄŤnĂ­ baseline okna nemajĂ­ dostateÄŤnĂ© pokrytĂ­ dat.";
+                        baselineOverlayMessage = "Baseline overlay is unavailable because the reference baseline windows do not have sufficient data coverage.";
                     }
                     else
                     {
                         baselinePoints = BuildBaselineOverlaySeries(selectedBaseline, baselineBucketStatsByCandidate);
                         if (baselinePoints.Count == 0)
                         {
-                            baselineOverlayMessage = "Baseline overlay nenĂ­ dostupnĂ˝: referenÄŤnĂ­ Ĺ™ada pro vybranou granularitu nemĂˇ ĹľĂˇdnĂ© body.";
+                            baselineOverlayMessage = "Baseline overlay is unavailable because the reference series has no points for the selected granularity.";
                         }
                     }
                 }
@@ -4258,7 +4345,7 @@ public class NodeAnalyticsPreviewService
 
             return CreateResult(
                 points,
-                points.Count == 0 ? "Pro vybranĂ˝ interval nejsou k dispozici ĹľĂˇdnĂ© body ÄŤasovĂ© Ĺ™ady." : null,
+                points.Count == 0 ? "No time-series points are available for the selected interval." : null,
                 baselinePoints,
                 baselineOverlayMessage);
         }
@@ -4266,9 +4353,9 @@ public class NodeAnalyticsPreviewService
         {
             return CreateResult(
                 [],
-                "NepodaĹ™ilo se naÄŤĂ­st reduced source pro ÄŤasovou Ĺ™adu.",
+                "The reduced source for the time series could not be loaded.",
                 [],
-                includeBaselineOverlay ? "Baseline overlay nenĂ­ dostupnĂ˝: nepodaĹ™ilo se naÄŤĂ­st reduced source." : null);
+                includeBaselineOverlay ? "Baseline overlay is unavailable because the reduced source could not be loaded." : null);
         }
     }
 

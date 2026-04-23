@@ -9,40 +9,40 @@
             <div class="text-muted text-uppercase fw-bold" style="font-size: 0.8rem;">@GetPanelTitle(Data)</div>
             @if (Data?.Series.Count > 0)
             {
-                <span class="badge bg-light text-dark border">@Data.Series.Count.ToString("N0") série</span>
+                <span class="badge bg-light text-dark border">@Data.Series.Count.ToString("N0") series</span>
             }
         </div>
 
         @if (Data is not null)
         {
             <div class="small text-muted mb-2">
-                Režim: <strong>@GetModeLabel(Data.RequestedMode)</strong> · Granularita: <strong>@Data.GranularityLabel</strong>
+                Mode: <strong>@GetModeLabel(Data.RequestedMode)</strong> · Granularity: <strong>@Data.GranularityLabel</strong>
             </div>
         }
 
         @if (_jsInteropUnavailable)
         {
             <div class="alert alert-secondary py-2 mb-0 border-0">
-                Compare chart není dostupný, protože se nepodařilo inicializovat chart runtime.
+                The compare chart is unavailable because the chart runtime could not be initialized.
             </div>
         }
         else if (Data is null)
         {
             <div class="alert alert-secondary py-2 mb-0 border-0">
-                Compare preview zatím není připraven.
+                Compare preview is not ready yet.
             </div>
         }
         else if (Data.Series.Count == 0)
         {
             <div class="alert alert-info py-2 mb-0 border-0 d-flex align-items-start">
                 <i class="bi bi-info-circle-fill text-info me-2"></i>
-                <div>@(Data.NoDataMessage ?? "Pro vybrané uzly nejsou v analysis window dostupná data časové řady.")</div>
+                <div>@(Data.NoDataMessage ?? "No time-series data is available for the selected nodes in the analysis window.")</div>
             </div>
         }
         else
         {
             <div id="@_chartElementId" style="height: 260px; width: 100%;"></div>
-            <div class="small text-muted mt-2">Status: Osa Y <strong>@Data.YAxisLabel</strong> · zobrazené série: <strong>@Data.Series.Count</strong>@(Data.ExcludedNodeMessages.Count > 0 ? $" · vyloučené uzly: {Data.ExcludedNodeMessages.Count}" : string.Empty)</div>
+            <div class="small text-muted mt-2">Status: Y axis <strong>@Data.YAxisLabel</strong> · visible series <strong>@Data.Series.Count</strong>@(Data.ExcludedNodeMessages.Count > 0 ? $" · excluded nodes: {Data.ExcludedNodeMessages.Count}" : string.Empty)</div>
         }
     </div>
 </div>
@@ -132,11 +132,11 @@
     {
         return mode switch
         {
-            CuratedNodeTimeSeriesMode.Auto => "Auto (adaptivní volba podle délky intervalu)",
-            CuratedNodeTimeSeriesMode.Raw15Min => "15min (ruční override)",
-            CuratedNodeTimeSeriesMode.HourlyAverage => "Hourly (ruční override)",
-            CuratedNodeTimeSeriesMode.DailyAverage => "Daily (ruční override)",
-            _ => "Auto (adaptivní volba podle délky intervalu)"
+            CuratedNodeTimeSeriesMode.Auto => "Auto (adaptive by interval length)",
+            CuratedNodeTimeSeriesMode.Raw15Min => "15 min (manual override)",
+            CuratedNodeTimeSeriesMode.HourlyAverage => "Hourly (manual override)",
+            CuratedNodeTimeSeriesMode.DailyAverage => "Daily (manual override)",
+            _ => "Auto (adaptive by interval length)"
         };
     }
 

@@ -118,6 +118,46 @@ Phase 1 relationship architecture: topology-preserving edges
 - Run manual UI verification that the current facility/editor views render expected layout and explicit links on the existing dataset.
 
 ### Date
+[2026-04-23 00:00]
+
+### Task
+Phase 1 FacilityWorkbench cleanup: tabbed analytics and alert removal
+
+### What changed
+- Added tab-based analytics sections in FacilityWorkbench for Overview, Breakdown, Performance, Compare, and Diagnostics.
+- Kept Overview as the eager default view and moved the remaining analytics sections behind tab activation with lazy service requests.
+- Removed the topbar alert dropdown and deleted the related global alert refresh path from the workbench.
+- Trimmed the default Overview focus area to the core baseline/detail slice and moved compare preview into the Compare tab.
+
+### What works now
+- The main workbench opens on a lighter Overview tab instead of rendering the full analytics stack immediately.
+- Breakdown, Performance, Compare, and Diagnostics sections only render after the corresponding tab is opened.
+- Compare preview data is fetched only after the Compare tab is activated.
+- The topbar no longer triggers phase-1 alert-summary UI or background refresh work.
+
+### Remaining issue / next step
+- Run focused manual UI checks for first-open tab loading, compare-tab activation, and diagnostics/performance visibility on the live facility dataset.
+
+### Date
+[2026-04-23 00:40]
+
+### Task
+FacilityWorkbench UX polish: analytics presentation and English copy
+
+### What changed
+- Polished the analytics tab navigation into a more intentional card-like navigation shell with tab metadata and an active-panel header.
+- Translated the active analytics strip in FacilityWorkbench to English, including interval/selection copy, analytics widget labels, helper bullet text, and compare/working-set status messages shown in the analytics surface.
+- Improved sparse tab presentation, especially Compare, with clearer setup guidance and calmer empty-state cards instead of abrupt blank space.
+
+### What works now
+- The analytics area reads as a more coherent product surface while keeping the existing tab logic and lazy loading strategy.
+- The active analytics UI is English-only in the touched FacilityWorkbench slice.
+- Compare feels intentional even before a chart can render.
+
+### Remaining issue / next step
+- Run manual UI checks for visual balance of the new tab shell, long English copy wrapping, and compare-tab behavior on the live dataset.
+
+### Date
 [2026-04-22 14:35]
 
 ### Task
@@ -318,3 +358,42 @@ Style tab follow-up: safe preset deletion
 
 ### Remaining issue / next step
 - Run manual UI checks for delete-disabled states, blocked-delete explanations, and successful preset removal in the live Style tab.
+
+### Date
+[2026-04-23 13:55]
+
+### Task
+Final FacilityWorkbench cleanup bundle
+
+### What changed
+- Removed the compare-set capacity limit and rebuilt the Compare tab around a sidebar plus chart layout with removable compare-set entries.
+- Compacted the analytics navigation shell into a smaller tab strip and removed the large analytics header panel.
+- Translated the remaining active-workbench UI copy in FacilityWorkbench to English, including editor actions, layout controls, discard guard text, status messages, and undo labels.
+- Translated the remaining active analytics strings in NodeAnalyticsPreviewService, including EMS evaluation text, baseline-reference labels, baseline overlay fallback messages, and aggregate headline copy.
+
+### What works now
+- Compare accepts any number of dataset-backed nodes and no longer blocks additions at four items.
+- The active workbench path is English-only in the touched page/service slices and no longer surfaces the previous mojibake in EMS or baseline overlay messages.
+- The compact analytics shell and dedicated compare layout compile successfully in the validated alternate build output.
+
+### Remaining issue / next step
+- Run focused manual UI checks for Compare tab density on desktop/mobile, remove-from-compare interactions, and the updated EMS/baseline English copy on live data.
+
+### Date
+[2026-04-23 01:15]
+
+### Task
+FacilityWorkbench follow-up: dataset-backed compare support and active-path language cleanup
+
+### What changed
+- Removed the remaining hardcoded compare-node support rule and delegated compare eligibility to current dataset capability through the analytics preview service.
+- Updated Compare empty states and selection-set status messaging so unsupported selections now explain the lack of dataset-backed compare capability in English.
+- Translated the active analytics-facing copy in FacilityWorkbench, FacilityTimeSeriesPanel, FacilityCompareTimeSeriesPanel, and the main visible NodeAnalyticsPreviewService paths, including baseline/deviation failures, weather explanation copy, focused-node summary labels, granularity interpretation notes, and reduced-source fallback messages.
+
+### What works now
+- Compare availability follows the current analytics dataset instead of the old fixed node list.
+- If no compare-compatible nodes exist, the workbench shows an English empty state instead of relying on legacy assumptions.
+- The touched active analytics/workbench presentation path now renders English copy in the main compare, overview, deviation, and time-series flows.
+
+### Remaining issue / next step
+- Run manual UI verification on the live workbench for Compare, Overview baseline/deviation details, and any still-untranslated editor-only surfaces outside the analytics-focused path.

@@ -1,79 +1,47 @@
 # Current Task
 
 ## Goal
-Implement phase 1 of the refined FacilityWorkbench data-presentation cleanup.
+Implement phase 1 of the new literature-backed Performance tab model in FacilityWorkbench.
 
 ## Problem
-The refined plan is approved.
-The current FacilityWorkbench is overloaded, renders too much at once, and some interactions are slow.
+The approved plan is:
+- keep Performance as a compact demand-performance workspace
+- replace overly heuristic-heavy content
+- introduce clearer and more defensible KPI presentation
 
-Before adding new literature-backed visualizations, I want to:
-- simplify the workbench
-- split analytics into tabs
-- reduce eager rendering
-- remove the current topbar alert dropdown
-- prepare a cleaner base for future KPI/visualization additions
+The first implementation slice should focus on:
+- peak demand
+- load factor
+- after-hours / night / weekend load
 
 ## Scope
-Implement only the first structural cleanup slice.
+Implement only the first Performance tab evolution slice.
 
-### Required in this phase
-1. Add a tab-based analytics structure inside FacilityWorkbench.
-2. Make only the Overview tab eager/default.
-3. Make other analytics tabs lazy/conditional.
-4. Remove the current topbar alert dropdown.
-5. Reassign current widgets into tabs.
+### Keep as base
+- Peak Analysis as the main starting point for peak-demand detail
 
-### Suggested tab structure for this phase
-- Overview
-- Breakdown
-- Performance
-- Compare
-- Diagnostics
+### Replace / simplify
+- replace Operating Regime with clearer KPI-based presentation
+- demote or simplify Load Profile instead of keeping it as a primary widget
 
-### Keep Overview focused on
-- Headline KPI
-- main time-series chart
-- baseline/deviation status
-- essential context only
-
-### Move into Breakdown
-- Disaggregation / Top Contributors
-- Role Breakdown
-- Source Map
-
-### Move into Performance
-- Load Profile
-- Peak Analysis
-- Operating Regime
-
-### Move into Compare
-- Compare Set manager
-- compare chart
-
-### Move into Diagnostics
-- Forecast vs Actual
-- Forecast diagnostics
-
-## Do NOT implement yet
-- load duration curve
-- scatter temperature vs load
-- benchmark / peer comparison
-- EUI / cost per m²
-- larger analytics-method redesign
-- topology/editor/layout redesign
+### New KPI focus
+- Peak Demand
+- Load Factor
+- After-hours / Night / Weekend Load
 
 ## Constraints
-- Work only on FacilityWorkbench as the primary target surface
-- Treat legacy pages as legacy/reference only
-- Keep the solution focused on data presentation and rendering behavior
-- Prefer removing clutter over preserving every current widget in the main default view
-- Topbar alerts should be removed in this phase, not redesigned yet
+- Work only on FacilityWorkbench Performance tab
+- Do not redesign topology/editor/layout
+- Do not add scatter, load duration curve, benchmark, EUI, or cost per m² yet
+- Keep the solution general
+- Prefer clear KPI presentation over heuristic summaries
 
 ## Acceptance criteria
-- FacilityWorkbench analytics are split into tabs
-- only Overview is eager/default
-- other tabs are lazy/conditional
-- topbar alert dropdown is removed
-- current widgets are redistributed into the new tabs
-- the default view is visibly simpler and lighter
+- Performance tab clearly presents:
+  - peak demand
+  - load factor
+  - after-hours / night / weekend load
+- Operating Regime is no longer the primary model
+- Load Profile is simplified or demoted
+- Peak Analysis remains as a supporting detail surface
+- result fits the current tabbed workbench structure
