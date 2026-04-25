@@ -1031,9 +1031,24 @@ public sealed class FacilityEditorStateService
             return [];
         }
 
-        return tags
-            .SelectMany(tag => FacilityNodeSemantics.ParseTagQuery(tag))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+        var normalized = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var rawTag in tags)
+        {
+            if (string.IsNullOrWhiteSpace(rawTag))
+            {
+                continue;
+            }
+
+            var trimmed = rawTag.Trim();
+            if (seen.Add(trimmed))
+            {
+                normalized.Add(trimmed);
+            }
+        }
+
+        return normalized
             .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }

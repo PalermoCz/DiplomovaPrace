@@ -103,6 +103,12 @@
             {
                 <span>Baseline: <strong>@(Data?.BaselineOverlayAvailable == true ? "available" : "unavailable")</strong></span>
             }
+            @if (IsLoading)
+            {
+                <span class="d-inline-flex align-items-center">
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>Updating chart...
+                </span>
+            }
         </div>
 
         @if (_jsInteropUnavailable)
@@ -141,6 +147,7 @@
     [Parameter] public EventCallback<CuratedNodeTimeSeriesMode> SelectedModeChanged { get; set; }
     [Parameter] public bool ShowBaselineOverlay { get; set; }
     [Parameter] public EventCallback<bool> ShowBaselineOverlayChanged { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
 
     private static readonly CuratedNodeTimeSeriesMode[] _availableModes =
     [
@@ -179,7 +186,7 @@
                 if (!string.Equals(signature, _lastRenderedSignature, StringComparison.Ordinal))
                 {
                     _lastRenderedSignature = signature;
-                    await JSRuntime.InvokeVoidAsync("facilityTimeSeriesChart.render", _chartElementId, BuildModel(Data));
+                    await JSRuntime.InvokeVoidAsync("facilityTimeSeriesChart.render", _chartElementId, BuildModel(Data, ShowBaselineOverlay));
                 }
                 else if (firstRender)
                 {
@@ -251,7 +258,7 @@
         };
     }
 
-    private static object BuildModel(CuratedNodeTimeSeriesResult data)
+    private static object BuildModel(CuratedNodeTimeSeriesResult data, bool showBaselineOverlay)
     {
         return new
         {
@@ -265,7 +272,7 @@
                 timestampUtc = p.TimestampUtc,
                 value = p.Value
             }).ToArray(),
-            baselinePoints = data.BaselinePoints.Select(p => new
+            baselinePoints = (showBaselineOverlay ? data.BaselinePoints : []).Select(p => new
             {
                 timestampUtc = p.TimestampUtc,
                 value = p.Value

@@ -1015,7 +1015,7 @@
                                     <RadzenDatePicker TValue="DateTime" Value="_customToUtcExclusive.AddMinutes(-1)" Change="OnCustomToPickerChanged" ShowTime="true" ShowSeconds="false" HoursStep="1" MinutesStep="1" DateFormat="dd/MM/yyyy HH:mm" Culture="@_pickerCulture" class="cp-radzen-picker" />
                                 </div>
                             </div>
-                        </div>    
+                            
                     }
                     @if (!string.IsNullOrWhiteSpace(_customIntervalValidationMessage))
                     {
@@ -1071,8 +1071,18 @@
                                             donutOffset += dashLength;
                                         }
                                         <circle cx="54" cy="54" r="24" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"></circle>
+                                        <text x="54" y="52" text-anchor="middle" class="cp-donut-center-count">@SelectionCount</text>
+                                        <text x="54" y="68" text-anchor="middle" class="cp-donut-center-label">nodes</text>
                                     </svg>
                                 </div>
+                                @if (SupportedSelectionSummaryCount > 0)
+                                {
+                                    <div class="cp-sel-donut-meta">Supported selected nodes</div>
+                                }
+                                else
+                                {
+                                    <div class="cp-sel-donut-meta">No supported nodes</div>
+                                }
                             </div>
                         </div>
                     </div>

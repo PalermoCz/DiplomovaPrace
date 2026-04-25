@@ -1,0 +1,111 @@
+@using DiplomovaPrace.Services
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+<style>
+    .ldc-chart-host {
+        height: 220px;
+        width: 100%;
+        min-width: 0;
+    }
+</style>
+
+@if (_jsInteropUnavailable)
+{
+    <div class="alert alert-secondary py-2 mb-2 border-0">
+        The load duration curve is unavailable because the chart runtime could not be initialized.
+    </div>
+}
+else if (Data is not null && Data.Points.Count > 0)
+{
+    <div id="@_chartElementId" class="ldc-chart-host"></div>
+    <div class="small text-muted mt-2">Status: duration axis <strong>0-100%</strong> · demand axis <strong>kW</strong> · points <strong>@Data.PointCount</strong></div>
+}
+
+@code {
+    [Parameter] public CuratedSelectionLoadDurationCurveSummary? Data { get; set; }
+
+    private readonly string _chartElementId = $"facility-load-duration-{Guid.NewGuid():N}";
+    private string? _lastRenderedSignature;
+    private bool _jsInteropUnavailable;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_jsInteropUnavailable)
+        {
+            return;
+        }
+
+        try
+        {
+            if (Data is not null && Data.Points.Count > 0)
+            {
+                var signature = BuildSignature(Data);
+
+                if (!string.Equals(signature, _lastRenderedSignature, StringComparison.Ordinal))
+                {
+                    _lastRenderedSignature = signature;
+                    await JSRuntime.InvokeVoidAsync("facilityTimeSeriesChart.renderLoadDuration", _chartElementId, BuildModel(Data));
+                }
+                else if (firstRender)
+                {
+                    await JSRuntime.InvokeVoidAsync("facilityTimeSeriesChart.resize", _chartElementId);
+                }
+            }
+            else
+            {
+                _lastRenderedSignature = null;
+                await JSRuntime.InvokeVoidAsync("facilityTimeSeriesChart.dispose", _chartElementId);
+            }
+        }
+        catch (JSException)
+        {
+            _jsInteropUnavailable = true;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private static string BuildSignature(CuratedSelectionLoadDurationCurveSummary data)
+    {
+        if (data.Points.Count == 0)
+        {
+            return "0";
+        }
+
+        var firstPoint = data.Points[0];
+        var lastPoint = data.Points[^1];
+        return $"{data.Points.Count}:{firstPoint.DurationPercent:F4}:{firstPoint.DemandKw:F4}:{lastPoint.DurationPercent:F4}:{lastPoint.DemandKw:F4}";
+    }
+
+    private static object BuildModel(CuratedSelectionLoadDurationCurveSummary data)
+    {
+        return new
+        {
+            title = "Load Duration Curve",
+            unit = "kW",
+            yAxisLabel = "Demand (kW)",
+            points = data.Points.Select(point => new
+            {
+                durationPercent = point.DurationPercent,
+                demandKw = point.DemandKw
+            }).ToArray()
+        };
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("facilityTimeSeriesChart.dispose", _chartElementId);
+        }
+        catch (JSDisconnectedException)
+        {
+            // No-op: circuit is already disconnected.
+        }
+        catch (JSException)
+        {
+            // No-op: chart runtime may not be available.
+        }
+    }
+}

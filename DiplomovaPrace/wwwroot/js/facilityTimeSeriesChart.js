@@ -445,6 +445,114 @@ window.facilityTimeSeriesChart = (function () {
         chart.resize();
     }
 
+    function renderLoadDuration(containerId, model) {
+        var chart = getInstance(containerId);
+        if (!chart || !model || !Array.isArray(model.points)) {
+            return;
+        }
+
+        var seriesData = model.points
+            .map(function (point) {
+                return [point.durationPercent, point.demandKw];
+            })
+            .filter(function (point) {
+                return Number.isFinite(point[0]) && Number.isFinite(point[1]);
+            })
+            .sort(function (a, b) {
+                return a[0] - b[0];
+            });
+
+        if (seriesData.length === 0) {
+            chart.clear();
+            return;
+        }
+
+        var denseSeries = seriesData.length >= 500;
+        var useSampling = seriesData.length >= 300;
+
+        chart.setOption({
+            animation: seriesData.length < 1200,
+            grid: {
+                left: 54,
+                right: 20,
+                top: 24,
+                bottom: 38,
+                containLabel: false
+            },
+            tooltip: {
+                trigger: 'axis',
+                confine: true,
+                axisPointer: { type: 'line' },
+                formatter: function (params) {
+                    if (!params || params.length === 0) {
+                        return '';
+                    }
+
+                    var point = params[0];
+                    var duration = Number(point.value[0]);
+                    var demand = Number(point.value[1]);
+                    var durationText = Number.isFinite(duration)
+                        ? duration.toLocaleString('cs-CZ', { maximumFractionDigits: 1 })
+                        : '-';
+                    var demandText = Number.isFinite(demand)
+                        ? demand.toLocaleString('cs-CZ', { maximumFractionDigits: 2 })
+                        : '-';
+
+                    return 'Duration: ' + durationText + '%<br/>' + (point.marker || '') + (point.seriesName || 'Demand') + ': ' + demandText + ' ' + (model.unit || 'kW');
+                }
+            },
+            xAxis: {
+                type: 'value',
+                min: 0,
+                max: 100,
+                name: 'Duration (%)',
+                nameGap: 24,
+                axisLabel: {
+                    margin: 10,
+                    formatter: function (value) {
+                        return value + '%';
+                    }
+                },
+                splitLine: {
+                    lineStyle: { color: '#e2e8f0' }
+                }
+            },
+            yAxis: {
+                type: 'value',
+                name: model.yAxisLabel || 'Demand (kW)',
+                nameGap: 28,
+                axisLabel: {
+                    margin: 10
+                },
+                splitLine: {
+                    lineStyle: { color: '#e2e8f0' }
+                }
+            },
+            series: [
+                {
+                    type: 'line',
+                    name: model.title || 'Load duration curve',
+                    data: seriesData,
+                    showSymbol: false,
+                    smooth: false,
+                    sampling: useSampling ? 'lttb' : undefined,
+                    progressive: 1000,
+                    progressiveThreshold: 2000,
+                    lineStyle: {
+                        width: denseSeries ? 1.8 : 2.2,
+                        color: '#0ea5e9'
+                    },
+                    areaStyle: {
+                        opacity: denseSeries ? 0.04 : 0.08,
+                        color: '#0ea5e9'
+                    }
+                }
+            ]
+        }, true);
+
+        chart.resize();
+    }
+
     function dispose(containerId) {
         var element = document.getElementById(containerId);
 
@@ -479,6 +587,7 @@ window.facilityTimeSeriesChart = (function () {
     return {
         render: render,
         renderCompare: renderCompare,
+        renderLoadDuration: renderLoadDuration,
         dispose: dispose,
         resize: resize
     };

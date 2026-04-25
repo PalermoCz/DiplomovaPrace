@@ -884,6 +884,59 @@ window.editorCanvas = (function () {
         },
 
         
+        setupHoverTooltip: function (svgId) {
+            var svg = document.getElementById(svgId);
+            if (!svg) return;
+            function escapeHtml(value) {
+                return String(value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/\"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+            var card = document.getElementById('schematic-hover-card');
+            if (!card) {
+                card = document.createElement('div');
+                card.id = 'schematic-hover-card';
+                card.className = 'schematic-hover-card';
+                document.body.appendChild(card);
+            }
+            svg.addEventListener('mousemove', function (e) {
+                var el = e.target;
+                while (el && el !== svg) {
+                    if (el.dataset && el.dataset.nodeKey) break;
+                    el = el.parentElement;
+                }
+                if (!el || !el.dataset || !el.dataset.nodeKey) {
+                    card.style.display = 'none';
+                    return;
+                }
+                var label = el.dataset.nodeLabel || el.dataset.nodeKey;
+                var type = el.dataset.nodeType;
+                var zone = el.dataset.nodeZone;
+                var meter = el.dataset.nodeMeter;
+                var preset = el.dataset.nodePresetLabel || el.dataset.nodePreset;
+                var note = el.dataset.nodeNote || '';
+                var html = '<div class="shc-label">' + escapeHtml(label) + '</div>';
+                if (type) html += '<div class="shc-row"><span class="shc-key">Type</span><span class="shc-val">' + escapeHtml(type) + '</span></div>';
+                if (zone) html += '<div class="shc-row"><span class="shc-key">Zone</span><span class="shc-val">' + escapeHtml(zone) + '</span></div>';
+                if (meter) html += '<div class="shc-row"><span class="shc-key">Meter</span><span class="shc-val">' + escapeHtml(meter) + '</span></div>';
+                if (preset) html += '<div class="shc-row"><span class="shc-key">Style</span><span class="shc-val">' + escapeHtml(preset) + '</span></div>';
+                if (note) {
+                    var notePreview = note.length > 96 ? note.substring(0, 96) + '…' : note;
+                    html += '<div class="shc-row shc-note-row"><span class="shc-key">Note</span><span class="shc-val shc-note-val">' + escapeHtml(notePreview) + '</span></div>';
+                }
+                card.innerHTML = html;
+                card.style.display = 'block';
+                card.style.left = (e.clientX + 14) + 'px';
+                card.style.top = (e.clientY - 8) + 'px';
+            });
+            svg.addEventListener('mouseleave', function () {
+                card.style.display = 'none';
+            });
+        },
+
         dispose: function () {
             var svg = getSvg();
 

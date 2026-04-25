@@ -77,7 +77,10 @@ public sealed class CuratedSelectionAggregateOverviewResult
     public CuratedNodeSummary? Summary { get; init; }
     public CuratedNodeTimeSeriesResult? TimeSeries { get; init; }
     public CuratedSelectionLoadProfileSummary LoadProfile { get; init; } = new();
+    public CuratedSelectionLoadDurationCurveSummary LoadDurationCurve { get; init; } = new();
     public CuratedSelectionPeakAnalysisSummary PeakAnalysis { get; init; } = new();
+    public CuratedSelectionLoadFactorSummary LoadFactor { get; init; } = new();
+    public CuratedSelectionAfterHoursLoadSummary AfterHoursLoad { get; init; } = new();
     public CuratedSelectionOperatingRegimeSummary OperatingRegime { get; init; } = new();
     public CuratedSelectionEmsEvaluationSummary EmsEvaluation { get; init; } = new();
     public IReadOnlyList<CuratedSelectionContributionItem> Breakdown { get; init; } = [];
@@ -310,6 +313,28 @@ public sealed class CuratedSelectionLoadProfileSummary
     public IReadOnlyList<CuratedSelectionLoadProfileBucket> Buckets { get; init; } = [];
 }
 
+public sealed class CuratedSelectionLoadDurationCurvePoint
+{
+    public double DurationPercent { get; init; }
+    public double DemandKw { get; init; }
+}
+
+public sealed class CuratedSelectionLoadDurationCurveSummary
+{
+    public bool IsAvailable { get; init; }
+    public bool HasMixedSigns { get; init; }
+    public CuratedPerformanceKpiState State { get; init; } = CuratedPerformanceKpiState.Unavailable;
+    public string StateReason { get; init; } = string.Empty;
+    public string EvaluationBasis { get; init; } = string.Empty;
+    public IReadOnlyList<string> Notes { get; init; } = [];
+    public int PointCount { get; init; }
+    public double? PeakDemandKw { get; init; }
+    public double? AverageDemandKw { get; init; }
+    public string Summary { get; init; } = string.Empty;
+    public string Methodology { get; init; } = string.Empty;
+    public IReadOnlyList<CuratedSelectionLoadDurationCurvePoint> Points { get; init; } = [];
+}
+
 public enum CuratedPeakSignificanceLevel
 {
     Low,
@@ -330,6 +355,11 @@ public sealed class CuratedSelectionPeakAnalysisSummary
 {
     public bool IsAvailable { get; init; }
     public bool HasMixedSigns { get; init; }
+    public CuratedAggregateEnergyProfile EnergyProfile { get; init; } = CuratedAggregateEnergyProfile.Neutral;
+    public CuratedPerformanceKpiState State { get; init; } = CuratedPerformanceKpiState.Unavailable;
+    public string StateReason { get; init; } = string.Empty;
+    public string EvaluationBasis { get; init; } = string.Empty;
+    public IReadOnlyList<string> Notes { get; init; } = [];
     public CuratedSelectionPeakEvent DemandPeak { get; init; } = new() { Label = "Peak demand" };
     public CuratedSelectionPeakEvent GenerationPeak { get; init; } = new() { Label = "Peak generation/export" };
     public CuratedSelectionPeakEvent NetAbsolutePeak { get; init; } = new() { Label = "Peak net absolute event" };
@@ -338,6 +368,53 @@ public sealed class CuratedSelectionPeakAnalysisSummary
     public CuratedPeakSignificanceLevel SignificanceLevel { get; init; } = CuratedPeakSignificanceLevel.Low;
     public string Summary { get; init; } = string.Empty;
     public string Methodology { get; init; } = string.Empty;
+}
+
+public sealed class CuratedSelectionLoadFactorSummary
+{
+    public bool IsAvailable { get; init; }
+    public bool HasMixedSigns { get; init; }
+    public CuratedPerformanceKpiState State { get; init; } = CuratedPerformanceKpiState.Unavailable;
+    public string StateReason { get; init; } = string.Empty;
+    public string EvaluationBasis { get; init; } = string.Empty;
+    public IReadOnlyList<string> Notes { get; init; } = [];
+    public double? AverageDemandKw { get; init; }
+    public double? PeakDemandKw { get; init; }
+    public double? LoadFactorRatio { get; init; }
+    public int PointCount { get; init; }
+    public string Summary { get; init; } = string.Empty;
+    public string Methodology { get; init; } = string.Empty;
+}
+
+public sealed class CuratedSelectionAfterHoursLoadSummary
+{
+    public bool IsAvailable { get; init; }
+    public bool HasMixedSigns { get; init; }
+    public CuratedPerformanceKpiState State { get; init; } = CuratedPerformanceKpiState.Unavailable;
+    public string StateReason { get; init; } = string.Empty;
+    public string EvaluationBasis { get; init; } = string.Empty;
+    public IReadOnlyList<string> Notes { get; init; } = [];
+    public double? AverageActiveWeekdayDemandKw { get; init; }
+    public double? AverageAfterHoursDemandKw { get; init; }
+    public double? AfterHoursRatio { get; init; }
+    public double? AverageNightDemandKw { get; init; }
+    public double? NightRatio { get; init; }
+    public double? AverageWeekendDemandKw { get; init; }
+    public double? WeekendRatio { get; init; }
+    public bool UsesReferenceFloor { get; init; }
+    public int ActiveWeekdaySampleCount { get; init; }
+    public int AfterHoursSampleCount { get; init; }
+    public int NightSampleCount { get; init; }
+    public int WeekendSampleCount { get; init; }
+    public string Summary { get; init; } = string.Empty;
+    public string Methodology { get; init; } = string.Empty;
+}
+
+public enum CuratedPerformanceKpiState
+{
+    Unavailable,
+    Indicative,
+    Available
 }
 
 public sealed class CuratedSelectionOperatingRegimeSummary
@@ -582,6 +659,85 @@ public class NodeAnalyticsPreviewService
         }
 
         return await ParseCuratedTimeSeriesAsync(nodeKey, filePath, source, from, to, mode, includeBaselineOverlay, ct);
+    }
+
+    public async Task<CuratedNodeTimeSeriesResult?> GetCuratedSelectionAggregateTimeSeriesAsync(
+        IEnumerable<string> selectedNodeKeys,
+        DateTime from,
+        DateTime to,
+        CuratedNodeTimeSeriesMode mode = CuratedNodeTimeSeriesMode.Auto,
+        bool includeBaselineOverlay = false,
+        CancellationToken ct = default)
+    {
+        selectedNodeKeys ??= [];
+
+        var supportedNodeKeys = selectedNodeKeys
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(nodeKey => ResolveCuratedNodeSource(nodeKey)?.IsPowerSignal == true)
+            .ToList();
+
+        if (supportedNodeKeys.Count == 0)
+        {
+            return null;
+        }
+
+        var nodeTasks = supportedNodeKeys
+            .Select(nodeKey => GetCuratedTimeSeriesAsync(nodeKey, from, to, mode, includeBaselineOverlay, ct))
+            .ToArray();
+
+        await Task.WhenAll(nodeTasks);
+
+        var timeSeries = nodeTasks
+            .Select(task => task.Result)
+            .Where(result => result is not null && result.Points.Count > 0)
+            .Cast<CuratedNodeTimeSeriesResult>()
+            .ToList();
+
+        if (timeSeries.Count == 0)
+        {
+            return null;
+        }
+
+        var template = timeSeries[0];
+        var points = SumTimeSeriesByTimestamp(timeSeries.Select(x => x.Points));
+        var baselineProviders = timeSeries.Count(x => x.BaselinePoints.Count > 0);
+        var baselinePoints = includeBaselineOverlay
+            ? SumTimeSeriesByTimestamp(timeSeries.Where(x => x.BaselinePoints.Count > 0).Select(x => x.BaselinePoints))
+            : [];
+
+        string? baselineOverlayMessage = null;
+        if (includeBaselineOverlay)
+        {
+            if (baselineProviders == 0)
+            {
+                baselineOverlayMessage = "Baseline overlay is unavailable in aggregate mode for all supported nodes.";
+            }
+            else if (baselineProviders < timeSeries.Count)
+            {
+                baselineOverlayMessage = $"Baseline overlay is aggregated from {baselineProviders}/{timeSeries.Count} supported nodes.";
+            }
+        }
+
+        return new CuratedNodeTimeSeriesResult
+        {
+            NodeKey = "selection_set",
+            Title = supportedNodeKeys.Count == 1 ? template.Title : "Selection set aggregate power",
+            Unit = template.Unit,
+            YAxisLabel = template.YAxisLabel,
+            Granularity = template.Granularity,
+            GranularityLabel = template.GranularityLabel,
+            AggregationMethod = $"{template.AggregationMethod} Selection aggregate: sum of supported-node power at each timestamp.",
+            InterpretationNote = ResolveSelectionAggregateInterpretationNote(template.Granularity, CuratedAggregateEnergyProfile.Neutral),
+            RequestedMode = template.RequestedMode,
+            RequestedModeLabel = template.RequestedModeLabel,
+            BaselineOverlayRequested = includeBaselineOverlay,
+            BaselineOverlayAvailable = baselinePoints.Count > 0,
+            BaselineOverlayMessage = baselineOverlayMessage,
+            BaselinePoints = baselinePoints,
+            NoDataMessage = points.Count == 0 ? "No time-series data is available for the selected interval." : null,
+            Points = points
+        };
     }
 
     public async Task<CuratedSelectionAggregateOverviewResult> GetCuratedSelectionAggregateOverviewAsync(
@@ -955,6 +1111,17 @@ public class NodeAnalyticsPreviewService
             };
         }
 
+        CuratedNodeTimeSeriesResult? performanceEvaluationTimeSeries = null;
+        if (options.IncludePerformance)
+        {
+            performanceEvaluationTimeSeries = await ResolvePerformanceEvaluationTimeSeriesAsync(
+                aggregateTimeSeries,
+                distinctNodeKeys,
+                from,
+                to,
+                ct);
+        }
+
         var forecastProviderNodeCount = timeSeries.Count(series => series.BaselinePoints.Count > 0);
         var aggregateForecastPoints = SumTimeSeriesByTimestamp(
             timeSeries
@@ -1021,11 +1188,29 @@ public class NodeAnalyticsPreviewService
             {
                 Summary = "Load Profile loads when the Performance tab is opened."
             };
+        var loadDurationCurve = options.IncludePerformance
+            ? BuildLoadDurationCurveSummary(performanceEvaluationTimeSeries, energyProfile, to - from)
+            : new CuratedSelectionLoadDurationCurveSummary
+            {
+                Summary = "Load Duration Curve loads when the Performance tab is opened."
+            };
         var peakAnalysis = options.IncludePerformance
-            ? BuildPeakAnalysisSummary(aggregateTimeSeries, energyProfile)
+            ? BuildPeakAnalysisSummary(performanceEvaluationTimeSeries, energyProfile, to - from)
             : new CuratedSelectionPeakAnalysisSummary
             {
                 Summary = "Peak Analysis loads when the Performance tab is opened."
+            };
+        var loadFactor = options.IncludePerformance
+            ? BuildLoadFactorSummary(performanceEvaluationTimeSeries, energyProfile, to - from)
+            : new CuratedSelectionLoadFactorSummary
+            {
+                Summary = "Load Factor loads when the Performance tab is opened."
+            };
+        var afterHoursLoad = options.IncludePerformance
+            ? BuildAfterHoursLoadSummary(performanceEvaluationTimeSeries, energyProfile, to - from)
+            : new CuratedSelectionAfterHoursLoadSummary
+            {
+                Summary = "After-hours Load loads when the Performance tab is opened."
             };
         var operatingRegime = options.IncludePerformance
             ? BuildOperatingRegimeSummary(aggregateTimeSeries, energyProfile)
@@ -1090,7 +1275,10 @@ public class NodeAnalyticsPreviewService
             Summary = aggregateSummary,
             TimeSeries = aggregateTimeSeries,
             LoadProfile = loadProfile,
+            LoadDurationCurve = loadDurationCurve,
             PeakAnalysis = peakAnalysis,
+            LoadFactor = loadFactor,
+            AfterHoursLoad = afterHoursLoad,
             OperatingRegime = operatingRegime,
             EmsEvaluation = emsEvaluation,
             Breakdown = effectiveBreakdown,
@@ -1118,6 +1306,22 @@ public class NodeAnalyticsPreviewService
             IncludedNodeKeys = includedNodeKeys,
             Message = message
         };
+    }
+
+    private async Task<CuratedNodeTimeSeriesResult?> ResolvePerformanceEvaluationTimeSeriesAsync(
+        CuratedNodeTimeSeriesResult? aggregateTimeSeries,
+        IReadOnlyList<string> selectedNodeKeys,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        var performanceMode = ResolvePerformanceEvaluationMode(from, to);
+        if (aggregateTimeSeries is not null && MatchesPerformanceEvaluationMode(aggregateTimeSeries, performanceMode))
+        {
+            return aggregateTimeSeries;
+        }
+
+        return await GetCuratedSelectionAggregateTimeSeriesAsync(selectedNodeKeys, from, to, performanceMode, includeBaselineOverlay: false, ct);
     }
 
     private static (CuratedNodeCompareTimeSeriesResult? CompareTimeSeries, CuratedSelectionForecastDiagnosticsSummary Diagnostics) BuildSelectionForecastOutputs(
@@ -1623,9 +1827,148 @@ public class NodeAnalyticsPreviewService
         };
     }
 
+    private static CuratedSelectionLoadDurationCurveSummary BuildLoadDurationCurveSummary(
+        CuratedNodeTimeSeriesResult? aggregateTimeSeries,
+        CuratedAggregateEnergyProfile energyProfile,
+        TimeSpan requestedDuration)
+    {
+        if (aggregateTimeSeries is null)
+        {
+            return new CuratedSelectionLoadDurationCurveSummary
+            {
+                IsAvailable = false,
+                State = CuratedPerformanceKpiState.Unavailable,
+                StateReason = "No aggregate demand series is available for load-duration-curve evaluation.",
+                EvaluationBasis = "Load duration curve requires an aggregate demand series.",
+                Summary = "Load duration curve is unavailable because the aggregate demand series is missing.",
+                Methodology = "Load duration curve sorts power demand values in descending order to show load persistence and distribution over the interval."
+            };
+        }
+
+        var minimumPointCount = GetMinimumLoadDurationCurvePointCount(aggregateTimeSeries.Granularity);
+        if (aggregateTimeSeries.Points.Count < minimumPointCount)
+        {
+            return new CuratedSelectionLoadDurationCurveSummary
+            {
+                IsAvailable = false,
+                State = CuratedPerformanceKpiState.Unavailable,
+                StateReason = "The interval is too short for a meaningful load-duration-curve.",
+                EvaluationBasis = DescribePerformanceEvaluationBasis(aggregateTimeSeries),
+                Summary = $"Load duration curve is unavailable because the aggregate demand series has only {aggregateTimeSeries.Points.Count} point(s); at least {minimumPointCount} are required for this evaluation.",
+                Methodology = "Load duration curve sorts power demand values in descending order to show load persistence and distribution over the interval."
+            };
+        }
+
+        if (requestedDuration < TimeSpan.FromHours(24))
+        {
+            return new CuratedSelectionLoadDurationCurveSummary
+            {
+                IsAvailable = false,
+                State = CuratedPerformanceKpiState.Unavailable,
+                StateReason = "The interval must be at least 24 hours for a meaningful load-duration-curve.",
+                EvaluationBasis = DescribePerformanceEvaluationBasis(aggregateTimeSeries),
+                Summary = "Load duration curve is unavailable because the interval is shorter than 24 hours.",
+                Methodology = "Load duration curve sorts power demand values in descending order to show load persistence and distribution over the interval."
+            };
+        }
+
+        if (!SupportsDemandPerformanceMetrics(energyProfile))
+        {
+            var unavailableSummary = energyProfile == CuratedAggregateEnergyProfile.GenerationOnly
+                ? "Load duration curve is intentionally unavailable because the current selection is generation-only and this metric is demand-focused."
+                : "Load duration curve is unavailable because the current selection does not expose a stable demand-positive aggregate.";
+
+            return new CuratedSelectionLoadDurationCurveSummary
+            {
+                IsAvailable = false,
+                State = CuratedPerformanceKpiState.Unavailable,
+                StateReason = "Demand metrics are intentionally hidden for generation-only or non-demand selections.",
+                EvaluationBasis = DescribePerformanceEvaluationBasis(aggregateTimeSeries),
+                Summary = unavailableSummary,
+                Methodology = "Load duration curve sorts power demand values in descending order. For mixed-sign selections, demand-positive projection is applied."
+            };
+        }
+
+        var demandPoints = ProjectDemandSeries(aggregateTimeSeries)
+            .OrderByDescending(point => point.Value)
+            .ToList();
+
+        if (demandPoints.Count == 0 || demandPoints.Max(p => p.Value) <= 0.0001d)
+        {
+            return new CuratedSelectionLoadDurationCurveSummary
+            {
+                IsAvailable = false,
+                State = CuratedPerformanceKpiState.Unavailable,
+                StateReason = "No measurable demand-positive periods remain after the demand-focused projection.",
+                EvaluationBasis = DescribePerformanceEvaluationBasis(aggregateTimeSeries),
+                HasMixedSigns = energyProfile == CuratedAggregateEnergyProfile.MixedSigned,
+                PointCount = demandPoints.Count,
+                Summary = "Load duration curve is unavailable because the interval does not contain measurable demand-positive periods.",
+                Methodology = "Load duration curve sorts power demand values in descending order. For mixed-sign selections, demand-positive projection is applied."
+            };
+        }
+
+        var peakDemand = demandPoints.First().Value;
+        var averageDemand = demandPoints.Average(p => p.Value);
+        var notes = new List<string>();
+        var state = CuratedPerformanceKpiState.Available;
+        var stateReason = "Load duration curve is computed directly from the aggregate demand series.";
+
+        if (aggregateTimeSeries.Granularity != CuratedNodeTimeSeriesGranularity.Raw15Min)
+        {
+            state = CuratedPerformanceKpiState.Indicative;
+            stateReason = "Load duration curve is evaluated on hourly-average demand for this interval.";
+            notes.Add("Hourly-average evaluation smooths short spikes, so short-term peak persistence may not be fully visible.");
+        }
+
+        if (requestedDuration > HourlyTimeSeriesThreshold)
+        {
+            state = CuratedPerformanceKpiState.Indicative;
+            notes.Add("This is a broad-interval duration summary; use it as directional context for load distribution rather than precision analysis.");
+        }
+
+        var curvePoints = new List<CuratedSelectionLoadDurationCurvePoint>();
+        for (int i = 0; i < demandPoints.Count; i++)
+        {
+            var durationPercent = (i / (double)demandPoints.Count) * 100.0;
+            curvePoints.Add(new CuratedSelectionLoadDurationCurvePoint
+            {
+                DurationPercent = durationPercent,
+                DemandKw = demandPoints[i].Value
+            });
+        }
+
+        var summary = energyProfile == CuratedAggregateEnergyProfile.MixedSigned
+            ? $"Load duration curve uses demand-positive projection. Peak demand is {peakDemand.ToString("N2", CultureInfo.InvariantCulture)} kW; average is {averageDemand.ToString("N2", CultureInfo.InvariantCulture)} kW."
+            : $"Peak demand is {peakDemand.ToString("N2", CultureInfo.InvariantCulture)} kW; average is {averageDemand.ToString("N2", CultureInfo.InvariantCulture)} kW.";
+
+        if (energyProfile == CuratedAggregateEnergyProfile.MixedSigned)
+        {
+            stateReason = "Demand-focused view of a mixed-sign aggregate.";
+            notes.Add("Negative net values are clipped to 0 kW before sorting, so export periods do not appear on this curve.");
+        }
+
+        return new CuratedSelectionLoadDurationCurveSummary
+        {
+            IsAvailable = true,
+            State = state,
+            StateReason = stateReason,
+            EvaluationBasis = DescribePerformanceEvaluationBasis(aggregateTimeSeries),
+            Notes = notes,
+            HasMixedSigns = energyProfile == CuratedAggregateEnergyProfile.MixedSigned,
+            PointCount = demandPoints.Count,
+            PeakDemandKw = peakDemand,
+            AverageDemandKw = averageDemand,
+            Summary = summary,
+            Methodology = $"Load duration curve sorts power demand values in descending order and normalizes across 0-100% duration. Each point represents a ranked period within the interval. For mixed-sign selections, negative values are clamped to 0 kW so the curve stays demand-focused. {DescribePerformanceEvaluationBasis(aggregateTimeSeries)}",
+            Points = curvePoints
+        };
+    }
+
     private static CuratedSelectionPeakAnalysisSummary BuildPeakAnalysisSummary(
         CuratedNodeTimeSeriesResult? aggregateTimeSeries,
-        CuratedAggregateEnergyProfile energyProfile)
+        CuratedAggregateEnergyProfile energyProfile,
+        TimeSpan requestedDuration)
     {
         static CuratedSelectionPeakEvent EmptyPeak(string label)
         {
@@ -1653,6 +1996,10 @@ public class NodeAnalyticsPreviewService
             return new CuratedSelectionPeakAnalysisSummary
             {
                 IsAvailable = false,
+                EnergyProfile = energyProfile,
+                State = CuratedPerformanceKpiState.Unavailable,
+                StateReason = "No aggregate power series is available for peak evaluation.",
+                EvaluationBasis = "Peak evaluation requires an aggregate power series.",
                 Summary = "Peak analysis is unavailable without an aggregate time series.",
                 Methodology = "Peak analysis v1 evaluates peak demand, peak generation/export, and the peak net absolute event from the selection-set aggregate power series."
             };
@@ -1700,6 +2047,29 @@ public class NodeAnalyticsPreviewService
         }
 
         var hasMixedSigns = energyProfile == CuratedAggregateEnergyProfile.MixedSigned;
+        var notes = new List<string>();
+        var state = CuratedPerformanceKpiState.Available;
+        var stateReason = "Peak events are evaluated directly from the aggregate demand/export series.";
+        var evaluationBasis = DescribePerformanceEvaluationBasis(aggregateTimeSeries);
+
+        if (aggregateTimeSeries.Granularity != CuratedNodeTimeSeriesGranularity.Raw15Min)
+        {
+            state = CuratedPerformanceKpiState.Indicative;
+            stateReason = "Peak events are evaluated on smoothed aggregate power for this interval.";
+            notes.Add("Hourly-average evaluation smooths short spikes, so the true 15-minute peak may be higher.");
+        }
+
+        if (requestedDuration > HourlyTimeSeriesThreshold)
+        {
+            state = CuratedPerformanceKpiState.Indicative;
+            notes.Add("This is a broad-interval peak summary; use it as directional context rather than a point-in-time operating verdict.");
+        }
+
+        if (hasMixedSigns)
+        {
+            notes.Add("Demand peak, generation/export peak, and the net absolute event are tracked separately because the aggregate includes both positive and negative power.");
+        }
+
         var demandPeak = demandCandidate is null
             ? EmptyPeak("Peak demand")
             : ToPeak("Peak demand", demandCandidate);
@@ -1720,6 +2090,11 @@ public class NodeAnalyticsPreviewService
         {
             IsAvailable = true,
             HasMixedSigns = hasMixedSigns,
+            EnergyProfile = energyProfile,
+            State = state,
+            StateReason = stateReason,
+            EvaluationBasis = evaluationBasis,
+            Notes = notes,
             DemandPeak = demandPeak,
             GenerationPeak = generationPeak,
             NetAbsolutePeak = netPeak,
@@ -1727,8 +2102,388 @@ public class NodeAnalyticsPreviewService
             SignificanceRatio = significanceRatio,
             SignificanceLevel = significanceLevel,
             Summary = summary,
-            Methodology = "Peak analysis is more than a min/max KPI: it maps peak events to exact timestamps and compares their magnitude with the typical |kW| level of the aggregate series using the median |kW|."
+            Methodology = $"Peak analysis is more than a min/max KPI: it maps peak events to exact timestamps and compares their magnitude with the typical |kW| level of the aggregate series using the median |kW|. {evaluationBasis}"
         };
+    }
+
+    private static CuratedSelectionLoadFactorSummary BuildLoadFactorSummary(
+        CuratedNodeTimeSeriesResult? aggregateTimeSeries,
+        CuratedAggregateEnergyProfile energyProfile,
+        TimeSpan requestedDuration)
+    {
+        if (aggregateTimeSeries is null)
+        {
+            return new CuratedSelectionLoadFactorSummary
+            {
+                IsAvailable = false,
+                State = CuratedPerformanceKpiState.Unavailable,
+                StateReason = "No aggregate demand series is available for load-factor evaluation.",
+                EvaluationBasis = "Load factor requires an aggregate demand series.",
+                Summary = "Load factor is unavailable because the aggregate demand series is missing.",
+                Methodology = "Load factor = average demand / peak demand over the selected interval."
+            };
+        }
+
+        var minimumPointCount = GetMinimumLoadFactorPointCount(aggregateTimeSeries.Granularity);
+        if (aggregateTimeSeries.Points.Count < minimumPointCount)
+        {
+            return new CuratedSelectionLoadFactorSummary
+            {
+                IsAvailable = false,
+                State = CuratedPerformanceKpiState.Unavailable,
+                StateReason = "The interval is too short for a stable load-factor estimate.",
+                EvaluationBasis = DescribePerformanceEvaluationBasis(aggregateTimeSeries),
+                Summary = $"Load factor is unavailable because the aggregate demand series has only {aggregateTimeSeries.Points.Count} point(s); at least {minimumPointCount} are required for this evaluation basis.",
+                Methodology = "Load factor = average demand / peak demand over the selected interval."
+            };
+        }
+
+        if (!SupportsDemandPerformanceMetrics(energyProfile))
+        {
+            var unavailableSummary = energyProfile == CuratedAggregateEnergyProfile.GenerationOnly
+                ? "Load factor is intentionally unavailable because the current selection is generation-only and this KPI is demand-focused."
+                : "Load factor is unavailable because the current selection does not expose a stable demand-positive aggregate.";
+
+            return new CuratedSelectionLoadFactorSummary
+            {
+                IsAvailable = false,
+                State = CuratedPerformanceKpiState.Unavailable,
+                StateReason = "Demand KPI are intentionally hidden for generation-only or non-demand selections.",
+                EvaluationBasis = DescribePerformanceEvaluationBasis(aggregateTimeSeries),
+                Summary = unavailableSummary,
+                Methodology = "For mixed-sign selections, negative net values are clamped to 0 kW before average demand and peak demand are calculated."
+            };
+        }
+
+        var demandPoints = ProjectDemandSeries(aggregateTimeSeries)
+            .OrderBy(point => point.TimestampUtc)
+            .ToList();
+
+        var peakDemand = demandPoints.Max(point => point.Value);
+        if (peakDemand <= 0.0001d)
+        {
+            return new CuratedSelectionLoadFactorSummary
+            {
+                IsAvailable = false,
+                State = CuratedPerformanceKpiState.Unavailable,
+                StateReason = "No measurable demand-positive periods remain after the demand-focused projection.",
+                EvaluationBasis = DescribePerformanceEvaluationBasis(aggregateTimeSeries),
+                HasMixedSigns = energyProfile == CuratedAggregateEnergyProfile.MixedSigned,
+                PointCount = demandPoints.Count,
+                Summary = "Load factor is unavailable because the interval does not contain measurable demand-positive periods.",
+                Methodology = "Load factor = average demand / peak demand over the selected interval."
+            };
+        }
+
+        var averageDemand = demandPoints.Average(point => point.Value);
+        var loadFactor = averageDemand / peakDemand;
+        var notes = new List<string>();
+        var state = CuratedPerformanceKpiState.Available;
+        var stateReason = "Demand utilization is computed directly from the aggregate demand series.";
+
+        if (aggregateTimeSeries.Granularity != CuratedNodeTimeSeriesGranularity.Raw15Min)
+        {
+            state = CuratedPerformanceKpiState.Indicative;
+            stateReason = "Load factor is evaluated on hourly-average demand for this interval.";
+            notes.Add("Hourly-average evaluation smooths short spikes, so the true short-interval peak may be higher than the evaluation peak.");
+        }
+
+        if (requestedDuration > HourlyTimeSeriesThreshold)
+        {
+            state = CuratedPerformanceKpiState.Indicative;
+            notes.Add("This is a broad-interval utilization summary; use it as directional context rather than a point-in-time efficiency claim.");
+        }
+
+        var summary = energyProfile == CuratedAggregateEnergyProfile.MixedSigned
+            ? $"Load factor uses a demand-positive projection of the mixed-sign aggregate. Average projected demand reaches {(loadFactor * 100.0).ToString("N1", CultureInfo.InvariantCulture)} % of the observed projected peak."
+            : $"Average demand reaches {(loadFactor * 100.0).ToString("N1", CultureInfo.InvariantCulture)} % of the observed peak over the selected interval.";
+
+        if (energyProfile == CuratedAggregateEnergyProfile.MixedSigned)
+        {
+            state = CuratedPerformanceKpiState.Indicative;
+            stateReason = "Demand-focused view of a mixed-sign aggregate.";
+            notes.Add("Negative net values are clipped to 0 kW before the average and peak are calculated, so export periods do not count toward this KPI.");
+        }
+
+        return new CuratedSelectionLoadFactorSummary
+        {
+            IsAvailable = true,
+            State = state,
+            StateReason = stateReason,
+            EvaluationBasis = DescribePerformanceEvaluationBasis(aggregateTimeSeries),
+            Notes = notes,
+            HasMixedSigns = energyProfile == CuratedAggregateEnergyProfile.MixedSigned,
+            AverageDemandKw = averageDemand,
+            PeakDemandKw = peakDemand,
+            LoadFactorRatio = loadFactor,
+            PointCount = demandPoints.Count,
+            Summary = summary,
+            Methodology = $"Load factor = average demand / peak demand across the selected interval. For mixed-sign selections, negative net values are clamped to 0 kW so the metric stays demand-focused. {DescribePerformanceEvaluationBasis(aggregateTimeSeries)}"
+        };
+    }
+
+    private static CuratedSelectionAfterHoursLoadSummary BuildAfterHoursLoadSummary(
+        CuratedNodeTimeSeriesResult? aggregateTimeSeries,
+        CuratedAggregateEnergyProfile energyProfile,
+        TimeSpan requestedDuration)
+    {
+        if (aggregateTimeSeries is null)
+        {
+            return new CuratedSelectionAfterHoursLoadSummary
+            {
+                IsAvailable = false,
+                State = CuratedPerformanceKpiState.Unavailable,
+                StateReason = "No aggregate demand series is available for schedule-based evaluation.",
+                EvaluationBasis = "After-hours evaluation requires an aggregate demand series.",
+                Summary = "After-hours load is unavailable because the aggregate demand series is missing.",
+                Methodology = "After-hours demand compares weekday active hours (07:00-19:00) with weekday night periods and weekends."
+            };
+        }
+
+        var minimumSeriesPointCount = GetMinimumAfterHoursSeriesPointCount(aggregateTimeSeries.Granularity);
+        if (aggregateTimeSeries.Points.Count < minimumSeriesPointCount)
+        {
+            return new CuratedSelectionAfterHoursLoadSummary
+            {
+                IsAvailable = false,
+                State = CuratedPerformanceKpiState.Unavailable,
+                StateReason = "The interval is too short for a stable schedule split.",
+                EvaluationBasis = DescribePerformanceEvaluationBasis(aggregateTimeSeries),
+                Summary = $"After-hours load is unavailable because the aggregate demand series has only {aggregateTimeSeries.Points.Count} point(s); at least {minimumSeriesPointCount} are required for this schedule split.",
+                Methodology = "After-hours demand compares weekday active hours (07:00-19:00) with weekday night periods and weekends."
+            };
+        }
+
+        if (!SupportsDemandPerformanceMetrics(energyProfile))
+        {
+            var unavailableSummary = energyProfile == CuratedAggregateEnergyProfile.GenerationOnly
+                ? "After-hours, night, and weekend demand are intentionally unavailable because the current selection is generation-only and this KPI is demand-focused."
+                : "After-hours, night, and weekend demand are unavailable because the current selection does not expose a stable demand-positive aggregate.";
+
+            return new CuratedSelectionAfterHoursLoadSummary
+            {
+                IsAvailable = false,
+                State = CuratedPerformanceKpiState.Unavailable,
+                StateReason = "Demand KPI are intentionally hidden for generation-only or non-demand selections.",
+                EvaluationBasis = DescribePerformanceEvaluationBasis(aggregateTimeSeries),
+                Summary = unavailableSummary,
+                Methodology = "For mixed-sign selections, negative net values are clamped to 0 kW before schedule-window averages are calculated."
+            };
+        }
+
+        var demandPoints = ProjectDemandSeries(aggregateTimeSeries)
+            .OrderBy(point => point.TimestampUtc)
+            .ToList();
+
+        static bool IsWeekend(DateTime timestampUtc) => timestampUtc.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+        static bool IsActiveWeekday(DateTime timestampUtc) => !IsWeekend(timestampUtc) && timestampUtc.Hour >= 7 && timestampUtc.Hour < 19;
+        static bool IsNightWeekday(DateTime timestampUtc) => !IsWeekend(timestampUtc) && !IsActiveWeekday(timestampUtc);
+
+        var activeWeekdayValues = demandPoints
+            .Where(point => IsActiveWeekday(point.TimestampUtc))
+            .Select(point => point.Value)
+            .ToList();
+        var afterHoursValues = demandPoints
+            .Where(point => !IsActiveWeekday(point.TimestampUtc))
+            .Select(point => point.Value)
+            .ToList();
+        var nightValues = demandPoints
+            .Where(point => IsNightWeekday(point.TimestampUtc))
+            .Select(point => point.Value)
+            .ToList();
+        var weekendValues = demandPoints
+            .Where(point => IsWeekend(point.TimestampUtc))
+            .Select(point => point.Value)
+            .ToList();
+
+        var minimumBucketSamples = GetMinimumAfterHoursBucketSampleCount(aggregateTimeSeries.Granularity);
+        if (activeWeekdayValues.Count < minimumBucketSamples || afterHoursValues.Count < minimumBucketSamples)
+        {
+            return new CuratedSelectionAfterHoursLoadSummary
+            {
+                IsAvailable = false,
+                State = CuratedPerformanceKpiState.Unavailable,
+                StateReason = "The fixed schedule windows do not contain enough demand samples.",
+                EvaluationBasis = DescribePerformanceEvaluationBasis(aggregateTimeSeries),
+                HasMixedSigns = energyProfile == CuratedAggregateEnergyProfile.MixedSigned,
+                ActiveWeekdaySampleCount = activeWeekdayValues.Count,
+                AfterHoursSampleCount = afterHoursValues.Count,
+                NightSampleCount = nightValues.Count,
+                WeekendSampleCount = weekendValues.Count,
+                Summary = $"After-hours load needs enough weekday active-hour and off-hour samples to compare fixed schedule windows. The current interval has {activeWeekdayValues.Count} active and {afterHoursValues.Count} after-hours point(s); at least {minimumBucketSamples} are required in each bucket.",
+                Methodology = "After-hours demand compares weekday active hours (07:00-19:00) with all other timestamps. Night load uses weekday points outside 07:00-19:00. Weekend load uses Saturday/Sunday points."
+            };
+        }
+
+        var activeWeekdayAverage = activeWeekdayValues.Average();
+        var afterHoursAverage = afterHoursValues.Average();
+        var referenceDemand = Math.Max(0.15d, activeWeekdayAverage);
+        var usesReferenceFloor = activeWeekdayAverage < 0.15d;
+        var afterHoursRatio = afterHoursAverage / referenceDemand;
+        var notes = new List<string>();
+        var state = CuratedPerformanceKpiState.Indicative;
+        var stateReason = "Schedule heuristic v1 with fixed weekday 07:00-19:00 active hours; do not read it as occupancy truth.";
+
+        if (aggregateTimeSeries.Granularity != CuratedNodeTimeSeriesGranularity.Raw15Min)
+        {
+            stateReason = "Schedule heuristic evaluated on hourly-average demand for this interval.";
+            notes.Add("Hourly-average evaluation smooths short schedule transitions and may understate sharp after-hours spikes.");
+        }
+
+        if (requestedDuration > HourlyTimeSeriesThreshold)
+        {
+            notes.Add("This is a broad-interval schedule summary; use it as directional context rather than a definitive operational verdict.");
+        }
+
+        if (usesReferenceFloor)
+        {
+            stateReason = "Schedule heuristic uses a minimum 0.15 kW active reference because active weekday demand is very low.";
+            notes.Add("Ratios use a 0.15 kW reference floor when active weekday demand is very small, which prevents extreme percentages on near-zero baselines.");
+        }
+
+        double? nightAverage = null;
+        double? nightRatio = null;
+        var minimumSubratioSamples = GetMinimumAfterHoursSubratioSampleCount(aggregateTimeSeries.Granularity);
+        if (nightValues.Count >= minimumSubratioSamples)
+        {
+            nightAverage = nightValues.Average();
+            nightRatio = nightAverage.Value / referenceDemand;
+        }
+        else if (nightValues.Count > 0)
+        {
+            notes.Add($"Night ratio is hidden because only {nightValues.Count} night sample(s) are available; at least {minimumSubratioSamples} are required.");
+        }
+
+        double? weekendAverage = null;
+        double? weekendRatio = null;
+        if (weekendValues.Count >= minimumSubratioSamples)
+        {
+            weekendAverage = weekendValues.Average();
+            weekendRatio = weekendAverage.Value / referenceDemand;
+        }
+        else if (weekendValues.Count > 0)
+        {
+            notes.Add($"Weekend ratio is hidden because only {weekendValues.Count} weekend sample(s) are available; at least {minimumSubratioSamples} are required.");
+        }
+
+        var summary = $"Schedule heuristic v1: average after-hours demand equals {(afterHoursRatio * 100.0).ToString("N0", CultureInfo.InvariantCulture)} % of the fixed active-weekday reference.";
+        if (nightRatio.HasValue)
+        {
+            summary += $" Night load is {(nightRatio.Value * 100.0).ToString("N0", CultureInfo.InvariantCulture)} %.";
+        }
+
+        if (weekendRatio.HasValue)
+        {
+            summary += $" Weekend load is {(weekendRatio.Value * 100.0).ToString("N0", CultureInfo.InvariantCulture)} %.";
+        }
+
+        if (energyProfile == CuratedAggregateEnergyProfile.MixedSigned)
+        {
+            stateReason = "Schedule heuristic over the demand-positive portion of a mixed-sign aggregate.";
+            summary += " Mixed-sign intervals are converted to demand-positive kW before averaging.";
+            notes.Add("Negative net values are clipped to 0 kW before schedule-window averages are calculated, so export periods do not count toward this KPI.");
+        }
+
+        return new CuratedSelectionAfterHoursLoadSummary
+        {
+            IsAvailable = true,
+            State = state,
+            StateReason = stateReason,
+            EvaluationBasis = DescribePerformanceEvaluationBasis(aggregateTimeSeries),
+            Notes = notes,
+            HasMixedSigns = energyProfile == CuratedAggregateEnergyProfile.MixedSigned,
+            AverageActiveWeekdayDemandKw = activeWeekdayAverage,
+            AverageAfterHoursDemandKw = afterHoursAverage,
+            AfterHoursRatio = afterHoursRatio,
+            AverageNightDemandKw = nightAverage,
+            NightRatio = nightRatio,
+            AverageWeekendDemandKw = weekendAverage,
+            WeekendRatio = weekendRatio,
+            UsesReferenceFloor = usesReferenceFloor,
+            ActiveWeekdaySampleCount = activeWeekdayValues.Count,
+            AfterHoursSampleCount = afterHoursValues.Count,
+            NightSampleCount = nightValues.Count,
+            WeekendSampleCount = weekendValues.Count,
+            Summary = summary,
+            Methodology = $"Schedule heuristic v1: active weekday demand = average demand-positive kW on weekdays between 07:00 and 19:00. After-hours demand = all remaining timestamps. Night load = weekday hours outside 07:00-19:00. Weekend load = Saturday/Sunday. {DescribePerformanceEvaluationBasis(aggregateTimeSeries)}"
+        };
+    }
+
+    private static bool SupportsDemandPerformanceMetrics(CuratedAggregateEnergyProfile energyProfile)
+    {
+        return energyProfile is CuratedAggregateEnergyProfile.ConsumptionOnly or CuratedAggregateEnergyProfile.MixedSigned;
+    }
+
+    private static int GetMinimumLoadFactorPointCount(CuratedNodeTimeSeriesGranularity granularity)
+    {
+        return granularity switch
+        {
+            CuratedNodeTimeSeriesGranularity.Raw15Min => 8,
+            CuratedNodeTimeSeriesGranularity.HourlyAverage => 4,
+            _ => 4
+        };
+    }
+
+    private static int GetMinimumAfterHoursSeriesPointCount(CuratedNodeTimeSeriesGranularity granularity)
+    {
+        return granularity switch
+        {
+            CuratedNodeTimeSeriesGranularity.Raw15Min => 16,
+            CuratedNodeTimeSeriesGranularity.HourlyAverage => 8,
+            _ => 8
+        };
+    }
+
+    private static int GetMinimumAfterHoursBucketSampleCount(CuratedNodeTimeSeriesGranularity granularity)
+    {
+        return granularity switch
+        {
+            CuratedNodeTimeSeriesGranularity.Raw15Min => 16,
+            CuratedNodeTimeSeriesGranularity.HourlyAverage => 8,
+            _ => int.MaxValue
+        };
+    }
+
+    private static int GetMinimumAfterHoursSubratioSampleCount(CuratedNodeTimeSeriesGranularity granularity)
+    {
+        return granularity switch
+        {
+            CuratedNodeTimeSeriesGranularity.Raw15Min => 8,
+            CuratedNodeTimeSeriesGranularity.HourlyAverage => 4,
+            _ => int.MaxValue
+        };
+    }
+
+    private static int GetMinimumLoadDurationCurvePointCount(CuratedNodeTimeSeriesGranularity granularity)
+    {
+        return granularity switch
+        {
+            CuratedNodeTimeSeriesGranularity.Raw15Min => 24,
+            CuratedNodeTimeSeriesGranularity.HourlyAverage => 8,
+            _ => 8
+        };
+    }
+
+    private static string DescribePerformanceEvaluationBasis(CuratedNodeTimeSeriesResult aggregateTimeSeries)
+    {
+        return aggregateTimeSeries.Granularity switch
+        {
+            CuratedNodeTimeSeriesGranularity.Raw15Min => "Evaluation basis: 15-minute aggregate power.",
+            CuratedNodeTimeSeriesGranularity.HourlyAverage => "Evaluation basis: hourly-average aggregate power for interval stability.",
+            CuratedNodeTimeSeriesGranularity.DailyAverage => "Evaluation basis: daily-average aggregate power. Use only as broad directional context.",
+            _ => "Evaluation basis: aggregate power series."
+        };
+    }
+
+    private static IReadOnlyList<CuratedNodeTimeSeriesPoint> ProjectDemandSeries(CuratedNodeTimeSeriesResult aggregateTimeSeries)
+    {
+        return aggregateTimeSeries.Points
+            .Select(point => new CuratedNodeTimeSeriesPoint
+            {
+                TimestampUtc = point.TimestampUtc,
+                Value = Math.Max(0d, point.Value)
+            })
+            .ToList();
     }
 
     private static CuratedSelectionOperatingRegimeSummary BuildOperatingRegimeSummary(
@@ -2397,6 +3152,76 @@ public class NodeAnalyticsPreviewService
         }
 
         return maxTimestamp;
+    }
+
+    public async Task<(DateTime? MinUtc, DateTime? MaxUtc)> GetCuratedSelectionTimeDomainUtcAsync(
+        IEnumerable<string> nodeKeys,
+        CancellationToken ct = default)
+    {
+        if (nodeKeys is null)
+        {
+            return (null, null);
+        }
+
+        var distinctNodeKeys = nodeKeys
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (distinctNodeKeys.Count == 0)
+        {
+            return (null, null);
+        }
+
+        DateTime? minUtc = null;
+        DateTime? maxUtc = null;
+        var visitedFilePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var nodeKey in distinctNodeKeys)
+        {
+            var source = ResolveCuratedNodeSource(nodeKey);
+            if (source is null || !source.IsPowerSignal)
+            {
+                continue;
+            }
+
+            var filePath = ResolveCuratedFilePath(source);
+            if (filePath is null || !visitedFilePaths.Add(filePath))
+            {
+                continue;
+            }
+
+            (DateTime? MinUtc, DateTime? MaxUtc) domain;
+            if (_timeDomainCache.TryGetValue(filePath, out var cachedDomain))
+            {
+                domain = (cachedDomain.MinUtc, cachedDomain.MaxUtc);
+            }
+            else
+            {
+                domain = await GetTimeDomainUtcAsync(filePath, ct);
+                if (domain.MinUtc.HasValue && domain.MaxUtc.HasValue)
+                {
+                    _timeDomainCache[filePath] = (domain.MinUtc.Value, domain.MaxUtc.Value);
+                }
+            }
+
+            if (!domain.MinUtc.HasValue || !domain.MaxUtc.HasValue)
+            {
+                continue;
+            }
+
+            if (!minUtc.HasValue || domain.MinUtc.Value < minUtc.Value)
+            {
+                minUtc = domain.MinUtc.Value;
+            }
+
+            if (!maxUtc.HasValue || domain.MaxUtc.Value > maxUtc.Value)
+            {
+                maxUtc = domain.MaxUtc.Value;
+            }
+        }
+
+        return (minUtc, maxUtc);
     }
 
     public async Task<CuratedNodeCompareTimeSeriesResult?> GetCuratedCompareTimeSeriesAsync(
@@ -3744,6 +4569,23 @@ public class NodeAnalyticsPreviewService
             CuratedNodeTimeSeriesMode.Auto,
             "Auto"
         );
+    }
+
+    private static CuratedNodeTimeSeriesMode ResolvePerformanceEvaluationMode(DateTime from, DateTime to)
+    {
+        return (to - from) <= RawTimeSeriesThreshold
+            ? CuratedNodeTimeSeriesMode.Raw15Min
+            : CuratedNodeTimeSeriesMode.HourlyAverage;
+    }
+
+    private static bool MatchesPerformanceEvaluationMode(CuratedNodeTimeSeriesResult aggregateTimeSeries, CuratedNodeTimeSeriesMode performanceMode)
+    {
+        return performanceMode switch
+        {
+            CuratedNodeTimeSeriesMode.Raw15Min => aggregateTimeSeries.Granularity == CuratedNodeTimeSeriesGranularity.Raw15Min,
+            CuratedNodeTimeSeriesMode.HourlyAverage => aggregateTimeSeries.Granularity == CuratedNodeTimeSeriesGranularity.HourlyAverage,
+            _ => false
+        };
     }
 
     private static DateTime GetBucketStartUtc(DateTime timestampUtc, CuratedNodeTimeSeriesGranularity granularity)

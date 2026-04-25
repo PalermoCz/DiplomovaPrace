@@ -150,10 +150,16 @@
                 <g data-node-key="@node.NodeKey"
                    data-node-x="@Fmt(cx)"
                    data-node-y="@Fmt(cy)"
+                   data-node-label="@(node.Label ?? node.NodeKey)"
+                   data-node-type="@(node.NodeType ?? "")"
+                   data-node-zone="@(node.Zone ?? "")"
+                   data-node-meter="@(node.MeterUrn ?? "")"
+                   data-node-preset="@(ResolveNodeStylePresetKey(node.NodeKey) ?? "")"
+                         data-node-preset-label="@(ResolveNodeStylePresetLabel(node.NodeKey) ?? "")"
+                         data-node-tags="@(ResolveNodeTags(node.NodeKey) ?? "")"
+                         data-node-note="@(ResolveNodeNote(node.NodeKey) ?? "")"
                    opacity="@Fmt(nodeOpacity)"
                    style="cursor: pointer;">
-
-                    <title>@($"{labelText} ({node.NodeType ?? "node"})")</title>
 
                     @* Halo *@
                     @if (showHalo)
@@ -212,6 +218,9 @@
     [Parameter] public IReadOnlySet<string> SelectedElementIds { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     [Parameter] public IReadOnlySet<string> SelectedSubtreeNodeKeys { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     [Parameter] public IReadOnlyDictionary<string, string> NodeStylePresetKeysByNodeKey { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    [Parameter] public IReadOnlyDictionary<string, string> NodeStylePresetLabelsByNodeKey { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    [Parameter] public IReadOnlyDictionary<string, string> NodeTagsByNodeKey { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    [Parameter] public IReadOnlyDictionary<string, string> NodeNotesByNodeKey { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     [Parameter] public IReadOnlyDictionary<string, FacilityNodeStylePreset> StylePresetsByKey { get; set; } = new Dictionary<string, FacilityNodeStylePreset>(StringComparer.OrdinalIgnoreCase);
     /// <summary>Controls the initial fit behavior: "home" (default, root-centric), "focus", "edit".</summary>
     [Parameter] public string InitialFitMode { get; set; } = "home";
@@ -248,6 +257,7 @@
                 await JSRuntime.InvokeVoidAsync("editorCanvas.setTool", "Select");
                 await JSRuntime.InvokeVoidAsync("editorCanvas.setFloorBounds",
                     Layout?.CanvasWidth ?? 400, Layout?.CanvasHeight ?? 300);
+                await JSRuntime.InvokeVoidAsync("editorCanvas.setupHoverTooltip", _svgId);
                 if (InitialFitMode == "home")
                     await JSRuntime.InvokeVoidAsync("editorCanvas.goHome");
                 else
@@ -344,6 +354,27 @@
     {
         return NodeStylePresetKeysByNodeKey.TryGetValue(nodeKey, out var presetKey)
             ? presetKey
+            : null;
+    }
+
+    private string? ResolveNodeStylePresetLabel(string nodeKey)
+    {
+        return NodeStylePresetLabelsByNodeKey.TryGetValue(nodeKey, out var presetLabel)
+            ? presetLabel
+            : null;
+    }
+
+    private string? ResolveNodeTags(string nodeKey)
+    {
+        return NodeTagsByNodeKey.TryGetValue(nodeKey, out var tags)
+            ? tags
+            : null;
+    }
+
+    private string? ResolveNodeNote(string nodeKey)
+    {
+        return NodeNotesByNodeKey.TryGetValue(nodeKey, out var note)
+            ? note
             : null;
     }
 

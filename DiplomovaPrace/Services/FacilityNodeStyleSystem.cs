@@ -43,6 +43,14 @@ public static class FacilityNodeStyleSystem
 {
     public const string DefaultPresetKey = "default-node";
 
+    /// <summary>
+    /// Built-in structural presets that are hidden from the user-facing preset picker
+    /// unless the node currently has one of them assigned.
+    /// </summary>
+    public static readonly IReadOnlySet<string> SystemPresetKeys =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        { "container-node", "connector-node", "endpoint-node" };
+
     private static readonly IReadOnlyDictionary<string, FacilityNodeStylePreset> DefaultPresets =
         new Dictionary<string, FacilityNodeStylePreset>(StringComparer.OrdinalIgnoreCase)
         {
