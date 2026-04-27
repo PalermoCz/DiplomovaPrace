@@ -32,6 +32,9 @@ public sealed class CuratedNodeTimeSeriesResult
     public string Title { get; init; } = string.Empty;
     public string Unit { get; init; } = string.Empty;
     public string YAxisLabel { get; init; } = string.Empty;
+    public FacilitySignalSeriesSemantics SeriesSemantics { get; init; } = FacilitySignalSeriesSemantics.SampleSeries;
+    public bool UsesDerivedIntervalSeries { get; init; }
+    public string? SeriesStatusMessage { get; init; }
     public CuratedNodeTimeSeriesGranularity Granularity { get; init; } = CuratedNodeTimeSeriesGranularity.Raw15Min;
     public string GranularityLabel { get; init; } = "15min detail";
     public string AggregationMethod { get; init; } = "No aggregation (raw series).";
@@ -884,6 +887,9 @@ public class NodeAnalyticsPreviewService
                 Title = source.Title,
                 Unit = ResolveTimeSeriesUnit(source),
                 YAxisLabel = ResolveTimeSeriesYAxisLabel(source),
+                SeriesSemantics = source.SeriesSemantics,
+                UsesDerivedIntervalSeries = source.SeriesSemantics == FacilitySignalSeriesSemantics.CumulativeCounter,
+                SeriesStatusMessage = ResolveSeriesStatusMessage(source, granularity.Granularity),
                 Granularity = granularity.Granularity,
                 GranularityLabel = granularity.Label,
                 AggregationMethod = granularity.AggregationMethod,
@@ -3726,6 +3732,7 @@ public class NodeAnalyticsPreviewService
         public string SummaryLabel { get; init; } = "Souhrn";
         public string StatsUnit { get; init; } = string.Empty;
         public string StatsLabel { get; init; } = "Hodnota";
+        public FacilitySignalSeriesSemantics SeriesSemantics { get; init; } = FacilitySignalSeriesSemantics.SampleSeries;
         public bool IsPowerSignal { get; init; }
         public double PowerToKilowattFactor { get; init; } = 1.0;
         public bool SupportsDeviation { get; init; } = true;
@@ -3883,6 +3890,7 @@ public class NodeAnalyticsPreviewService
     {
         var signalFamily = binding.SignalFamily;
         var exactSignalCode = binding.ExactSignalCode;
+        var seriesSemantics = FacilitySignalTaxonomy.ResolveSeriesSemantics(exactSignalCode);
         var isPowerSignal = signalFamily == FacilitySignalFamily.Power;
         var isFlowSignal = exactSignalCode.Value is "qv" or "V";
         var isFixedCsvSeries = binding.UsesFixedCsvSeriesFormat;
@@ -3906,7 +3914,9 @@ public class NodeAnalyticsPreviewService
             unit = string.IsNullOrWhiteSpace(binding.Unit) ? "kWh" : binding.Unit;
             summaryLabel = "Interval energy";
             statsUnit = unit;
-            statsLabel = "Energy";
+            statsLabel = seriesSemantics == FacilitySignalSeriesSemantics.CumulativeCounter
+                ? "Interval energy"
+                : "Energy";
         }
         else if (signalFamily == FacilitySignalFamily.WeatherTemperature)
         {
@@ -3979,6 +3989,7 @@ public class NodeAnalyticsPreviewService
             SummaryLabel = summaryLabel,
             StatsUnit = statsUnit,
             StatsLabel = statsLabel,
+            SeriesSemantics = seriesSemantics,
             IsPowerSignal = isPowerSignal,
             PowerToKilowattFactor = isPowerSignal ? powerToKilowattFactor : 1.0,
             SupportsDeviation = isPowerSignal,
@@ -4128,10 +4139,13 @@ public class NodeAnalyticsPreviewService
                 Title = $"{option.ExactSignalCode.Value} selection aggregate",
                 Unit = template.Unit,
                 YAxisLabel = template.YAxisLabel,
+                SeriesSemantics = template.SeriesSemantics,
+                UsesDerivedIntervalSeries = template.UsesDerivedIntervalSeries,
+                SeriesStatusMessage = template.SeriesStatusMessage,
                 Granularity = template.Granularity,
                 GranularityLabel = template.GranularityLabel,
                 AggregationMethod = $"{template.AggregationMethod} Selection aggregate: sum of matching {option.ExactSignalCode.Value} series at each timestamp.",
-                InterpretationNote = ResolveSelectionSignalAggregateInterpretationNote(option.SignalFamily, template.Granularity),
+                InterpretationNote = ResolveSelectionSignalAggregateInterpretationNote(option.SignalFamily, template.SeriesSemantics, template.Granularity),
                 RequestedMode = template.RequestedMode,
                 RequestedModeLabel = template.RequestedModeLabel,
                 BaselineOverlayRequested = false,
@@ -4146,10 +4160,13 @@ public class NodeAnalyticsPreviewService
             Title = $"{option.ExactSignalCode.Value} selection aggregate",
             Unit = template.Unit,
             YAxisLabel = template.YAxisLabel,
+            SeriesSemantics = template.SeriesSemantics,
+            UsesDerivedIntervalSeries = template.UsesDerivedIntervalSeries,
+            SeriesStatusMessage = template.SeriesStatusMessage,
             Granularity = template.Granularity,
             GranularityLabel = template.GranularityLabel,
             AggregationMethod = $"{template.AggregationMethod} Selection aggregate: sum of matching {option.ExactSignalCode.Value} series at each timestamp.",
-            InterpretationNote = ResolveSelectionSignalAggregateInterpretationNote(option.SignalFamily, template.Granularity),
+            InterpretationNote = ResolveSelectionSignalAggregateInterpretationNote(option.SignalFamily, template.SeriesSemantics, template.Granularity),
             RequestedMode = template.RequestedMode,
             RequestedModeLabel = template.RequestedModeLabel,
             BaselineOverlayRequested = false,
@@ -4229,8 +4246,19 @@ public class NodeAnalyticsPreviewService
 
     private static string ResolveSelectionSignalAggregateInterpretationNote(
         FacilitySignalFamily signalFamily,
+        FacilitySignalSeriesSemantics seriesSemantics,
         CuratedNodeTimeSeriesGranularity granularity)
     {
+        if (seriesSemantics == FacilitySignalSeriesSemantics.CumulativeCounter)
+        {
+            return granularity switch
+            {
+                CuratedNodeTimeSeriesGranularity.HourlyAverage => "The chart shows the sum of hourly interval-energy deltas derived from cumulative counters across matching scope nodes.",
+                CuratedNodeTimeSeriesGranularity.DailyAverage => "The chart shows the sum of daily interval-energy deltas derived from cumulative counters across matching scope nodes.",
+                _ => "The chart shows the sum of interval deltas derived from cumulative counters across matching scope nodes."
+            };
+        }
+
         return signalFamily switch
         {
             FacilitySignalFamily.Power => granularity switch
@@ -5133,6 +5161,69 @@ public class NodeAnalyticsPreviewService
         return powerKw * sampleStepHours;
     }
 
+    private static bool TryResolveSeriesSampleValues(
+        double rawValue,
+        CuratedNodeSource source,
+        double sampleStepHours,
+        ref double? previousCounterValue,
+        out double statsValue,
+        out double aggregationValue)
+    {
+        if (source.SeriesSemantics != FacilitySignalSeriesSemantics.CumulativeCounter)
+        {
+            statsValue = NormalizeValueForStats(rawValue, source);
+            aggregationValue = NormalizeValueForAggregation(rawValue, source, sampleStepHours);
+            return true;
+        }
+
+        if (!previousCounterValue.HasValue)
+        {
+            previousCounterValue = rawValue;
+            statsValue = 0;
+            aggregationValue = 0;
+            return false;
+        }
+
+        var delta = rawValue - previousCounterValue.Value;
+        previousCounterValue = rawValue;
+
+        if (!double.IsFinite(delta) || delta < 0)
+        {
+            statsValue = 0;
+            aggregationValue = 0;
+            return false;
+        }
+
+        statsValue = delta;
+        aggregationValue = delta;
+        return true;
+    }
+
+    private static double ResolveBucketValue(RunningStats stats, CuratedNodeSource source)
+    {
+        if (source.SeriesSemantics == FacilitySignalSeriesSemantics.CumulativeCounter)
+        {
+            return stats.Sum;
+        }
+
+        return stats.Sum / stats.Count;
+    }
+
+    private static string? ResolveSeriesStatusMessage(CuratedNodeSource source, CuratedNodeTimeSeriesGranularity granularity)
+    {
+        if (source.SeriesSemantics != FacilitySignalSeriesSemantics.CumulativeCounter)
+        {
+            return null;
+        }
+
+        return granularity switch
+        {
+            CuratedNodeTimeSeriesGranularity.HourlyAverage => "Derived interval view: the cumulative counter is converted to interval deltas and summed per hour.",
+            CuratedNodeTimeSeriesGranularity.DailyAverage => "Derived interval view: the cumulative counter is converted to interval deltas and summed per day.",
+            _ => "Derived interval view: the cumulative counter is converted to interval deltas between consecutive samples."
+        };
+    }
+
     private static string ResolveTimeSeriesUnit(CuratedNodeSource source)
     {
         return !string.IsNullOrWhiteSpace(source.StatsUnit)
@@ -5150,6 +5241,72 @@ public class NodeAnalyticsPreviewService
     {
         var duration = to - from;
         var valueKind = source.IsPowerSignal ? "power" : "value";
+
+        if (source.SeriesSemantics == FacilitySignalSeriesSemantics.CumulativeCounter)
+        {
+            if (requestedMode == CuratedNodeTimeSeriesMode.Raw15Min)
+            {
+                return new TimeSeriesGranularityDecision(
+                    CuratedNodeTimeSeriesGranularity.Raw15Min,
+                    "Derived interval delta",
+                    "Manual 15 min mode: the cumulative counter is converted to interval deltas between consecutive samples.",
+                    CuratedNodeTimeSeriesMode.Raw15Min,
+                    "15min"
+                );
+            }
+
+            if (requestedMode == CuratedNodeTimeSeriesMode.HourlyAverage)
+            {
+                return new TimeSeriesGranularityDecision(
+                    CuratedNodeTimeSeriesGranularity.HourlyAverage,
+                    "Hourly energy sum",
+                    "Manual hourly mode: interval deltas derived from the cumulative counter are summed within each hourly bucket.",
+                    CuratedNodeTimeSeriesMode.HourlyAverage,
+                    "Hourly"
+                );
+            }
+
+            if (requestedMode == CuratedNodeTimeSeriesMode.DailyAverage)
+            {
+                return new TimeSeriesGranularityDecision(
+                    CuratedNodeTimeSeriesGranularity.DailyAverage,
+                    "Daily energy sum",
+                    "Manual daily mode: interval deltas derived from the cumulative counter are summed within each daily bucket.",
+                    CuratedNodeTimeSeriesMode.DailyAverage,
+                    "Daily"
+                );
+            }
+
+            if (duration <= RawTimeSeriesThreshold)
+            {
+                return new TimeSeriesGranularityDecision(
+                    CuratedNodeTimeSeriesGranularity.Raw15Min,
+                    "Derived interval delta",
+                    "Auto mode: the cumulative counter is converted to interval deltas between consecutive samples.",
+                    CuratedNodeTimeSeriesMode.Auto,
+                    "Auto"
+                );
+            }
+
+            if (duration <= HourlyTimeSeriesThreshold)
+            {
+                return new TimeSeriesGranularityDecision(
+                    CuratedNodeTimeSeriesGranularity.HourlyAverage,
+                    "Hourly energy sum",
+                    "Auto mode: interval deltas derived from the cumulative counter are summed within each hourly bucket.",
+                    CuratedNodeTimeSeriesMode.Auto,
+                    "Auto"
+                );
+            }
+
+            return new TimeSeriesGranularityDecision(
+                CuratedNodeTimeSeriesGranularity.DailyAverage,
+                "Daily energy sum",
+                "Auto mode: interval deltas derived from the cumulative counter are summed within each daily bucket.",
+                CuratedNodeTimeSeriesMode.Auto,
+                "Auto"
+            );
+        }
 
         if (requestedMode == CuratedNodeTimeSeriesMode.Raw15Min)
         {
@@ -5244,6 +5401,16 @@ public class NodeAnalyticsPreviewService
 
     private static string ResolveTimeSeriesInterpretationNote(CuratedNodeSource source, TimeSeriesGranularityDecision granularity)
     {
+        if (source.SeriesSemantics == FacilitySignalSeriesSemantics.CumulativeCounter)
+        {
+            return granularity.Granularity switch
+            {
+                CuratedNodeTimeSeriesGranularity.HourlyAverage => "The chart shows hourly interval-energy sums derived from a cumulative counter.",
+                CuratedNodeTimeSeriesGranularity.DailyAverage => "The chart shows daily interval-energy sums derived from a cumulative counter.",
+                _ => "The chart shows interval deltas derived from a cumulative counter. Each point is the increment between consecutive samples."
+            };
+        }
+
         if (source.IsPowerSignal)
         {
             return granularity.Granularity switch
@@ -5615,6 +5782,9 @@ public class NodeAnalyticsPreviewService
                 Title = source.Title,
                 Unit = unit,
                 YAxisLabel = ResolveTimeSeriesYAxisLabel(source),
+                SeriesSemantics = source.SeriesSemantics,
+                UsesDerivedIntervalSeries = source.SeriesSemantics == FacilitySignalSeriesSemantics.CumulativeCounter,
+                SeriesStatusMessage = ResolveSeriesStatusMessage(source, granularity.Granularity),
                 Granularity = granularity.Granularity,
                 GranularityLabel = granularity.Label,
                 AggregationMethod = granularity.AggregationMethod,
@@ -5676,6 +5846,7 @@ public class NodeAnalyticsPreviewService
             var currentIntervalSamples = 0;
             var sampleStepHours = DefaultPowerSampleStepHours;
             DateTime? previousTimestamp = null;
+            double? previousCounterValue = null;
 
             string? line;
             while ((line = await reader.ReadLineAsync(ct)) != null)
@@ -5694,6 +5865,19 @@ public class NodeAnalyticsPreviewService
                 UpdateSampleStepHours(previousTimestamp, timestamp, ref sampleStepHours);
                 previousTimestamp = timestamp;
 
+                if (!double.TryParse(cols[colIndex], NumberStyles.Any, CultureInfo.InvariantCulture, out var rawValue))
+                {
+                    continue;
+                }
+
+                var hasSeriesValue = TryResolveSeriesSampleValues(
+                    rawValue,
+                    source,
+                    sampleStepHours,
+                    ref previousCounterValue,
+                    out var statsValue,
+                    out var aggregationValue);
+
                 if (timestamp < minRelevantFrom)
                 {
                     continue;
@@ -5704,13 +5888,10 @@ public class NodeAnalyticsPreviewService
                     break;
                 }
 
-                if (!double.TryParse(cols[colIndex], NumberStyles.Any, CultureInfo.InvariantCulture, out var rawValue))
+                if (!hasSeriesValue)
                 {
                     continue;
                 }
-
-                var statsValue = NormalizeValueForStats(rawValue, source);
-                var aggregationValue = NormalizeValueForAggregation(rawValue, source, sampleStepHours);
 
                 if (timestamp >= from && timestamp < to)
                 {
@@ -5776,7 +5957,7 @@ public class NodeAnalyticsPreviewService
                     .Select(x => new CuratedNodeTimeSeriesPoint
                     {
                         TimestampUtc = x.Key,
-                        Value = x.Value.Sum / x.Value.Count
+                        Value = ResolveBucketValue(x.Value, source)
                     })
                     .ToList();
 
@@ -5987,6 +6168,7 @@ public class NodeAnalyticsPreviewService
             double max = double.MinValue;
             var sampleStepHours = DefaultPowerSampleStepHours;
             DateTime? previousTimestamp = null;
+            double? previousCounterValue = null;
 
             string? line;
             while ((line = await reader.ReadLineAsync(ct)) != null)
@@ -5999,19 +6181,26 @@ public class NodeAnalyticsPreviewService
                         UpdateSampleStepHours(previousTimestamp, timestamp, ref sampleStepHours);
                         previousTimestamp = timestamp;
 
-                        if (timestamp >= from && timestamp < to)
+                        if (!double.TryParse(cols[colIndex], NumberStyles.Any, CultureInfo.InvariantCulture, out var val))
                         {
-                            if (double.TryParse(cols[colIndex], NumberStyles.Any, CultureInfo.InvariantCulture, out var val))
-                            {
-                                var statsValue = NormalizeValueForStats(val, source);
-                                var aggregateValue = NormalizeValueForAggregation(val, source, sampleStepHours);
+                            continue;
+                        }
 
-                                aggregateSum += aggregateValue;
-                                statsSum += statsValue;
-                                count++;
-                                if (statsValue < min) min = statsValue;
-                                if (statsValue > max) max = statsValue;
-                            }
+                        var hasSeriesValue = TryResolveSeriesSampleValues(
+                            val,
+                            source,
+                            sampleStepHours,
+                            ref previousCounterValue,
+                            out var statsValue,
+                            out var aggregateValue);
+
+                        if (timestamp >= from && timestamp < to && hasSeriesValue)
+                        {
+                            aggregateSum += aggregateValue;
+                            statsSum += statsValue;
+                            count++;
+                            if (statsValue < min) min = statsValue;
+                            if (statsValue > max) max = statsValue;
                         }
                         
                         // ZastavĂ­ ÄŤtenĂ­ pokud jsme chronologicky pĹ™esĂˇhli zkoumanĂ© obdobĂ­ (zlepĹˇuje vĂ˝kon pro starĹˇĂ­ data)

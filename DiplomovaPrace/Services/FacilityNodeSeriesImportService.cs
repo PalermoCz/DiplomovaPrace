@@ -26,6 +26,14 @@ public sealed record FacilityNodeBindingDeleteResult(
 
 public sealed class FacilityNodeSeriesImportService
 {
+    private static readonly string[] SupportedTimestampFormats =
+    [
+        "yyyy-MM-dd'T'HH:mm:ss.FFFFFFFK",
+        "yyyy-MM-dd'T'HH:mm:ssK",
+        "yyyy-MM-dd HH:mm:ss.FFFFFFFK",
+        "yyyy-MM-dd HH:mm:ssK"
+    ];
+
     private readonly IWebHostEnvironment _environment;
     private readonly FacilityEditorStateService _editorStateService;
     private readonly FacilityDataBindingRegistry _bindingRegistry;
@@ -209,6 +217,41 @@ public sealed class FacilityNodeSeriesImportService
             deletedBinding.ExactSignalCode);
     }
 
+    public async Task<FacilityNodeBindingDeleteResult> DeleteBindingAsync(
+        FacilityDataBindingRegistry.BindingRecord? binding,
+        CancellationToken ct = default)
+    {
+        if (binding is null)
+        {
+            return new FacilityNodeBindingDeleteResult(false, "Delete failed: binding was not found.", null, null);
+        }
+
+        if (string.Equals(binding.DataStage, "imported", StringComparison.OrdinalIgnoreCase))
+        {
+            return await DeleteImportedBindingAsync(binding.BindingId, ct);
+        }
+
+        var deletedBinding = await _editorStateService.SaveDeletedBindingAsync(binding.BindingId, ct);
+        if (deletedBinding is null)
+        {
+            return new FacilityNodeBindingDeleteResult(false, "Delete failed: binding id is missing.", null, null);
+        }
+
+        _bindingRegistry.SuppressSeedBinding(binding.BindingId);
+
+        _logger.LogInformation(
+            "FacilityNodeSeriesImportService: suppressed seeded binding '{BindingId}' for node '{NodeKey}' and exact signal '{ExactSignalCode}'.",
+            binding.BindingId,
+            binding.NodeId,
+            binding.ExactSignalCode.Value);
+
+        return new FacilityNodeBindingDeleteResult(
+            true,
+            $"Binding '{binding.ExactSignalCode.Value}' was deleted from node {binding.NodeId}. You can import this exact signal code again.",
+            binding.BindingId,
+            binding.ExactSignalCode.Value);
+    }
+
     private static FacilityNodeSeriesImportRequest NormalizeRequest(FacilityNodeSeriesImportRequest request)
     {
         var nodeKey = request.NodeKey?.Trim() ?? string.Empty;
@@ -318,15 +361,24 @@ public sealed class FacilityNodeSeriesImportService
         var first = columns[0].Trim();
         var second = columns[1].Trim();
 
-        return (first.Equals("timestamp", StringComparison.OrdinalIgnoreCase)
-                || first.Equals("datetime_utc", StringComparison.OrdinalIgnoreCase)
-                || first.Equals("time", StringComparison.OrdinalIgnoreCase))
-            && second.Equals("value", StringComparison.OrdinalIgnoreCase);
+        return IsTimestampHeader(first)
+            && !string.IsNullOrWhiteSpace(second);
     }
 
     private static bool TryParseTimestamp(string raw, out DateTime timestampUtc)
     {
         var value = raw.Trim();
+        if (DateTimeOffset.TryParseExact(
+            value,
+            SupportedTimestampFormats,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+            out var exactDto))
+        {
+            timestampUtc = exactDto.UtcDateTime;
+            return true;
+        }
+
         if (DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var dto))
         {
             timestampUtc = dto.UtcDateTime;
@@ -341,6 +393,13 @@ public sealed class FacilityNodeSeriesImportService
 
         timestampUtc = default;
         return false;
+    }
+
+    private static bool IsTimestampHeader(string raw)
+    {
+        return raw.Equals("timestamp", StringComparison.OrdinalIgnoreCase)
+            || raw.Equals("datetime_utc", StringComparison.OrdinalIgnoreCase)
+            || raw.Equals("time", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool TryParseValue(string raw, out double value)

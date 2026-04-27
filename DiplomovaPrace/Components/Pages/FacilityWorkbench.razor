@@ -330,7 +330,13 @@
                             <div class="ep-field-row">
                                 <div class="ep-field">
                                     <label>NodeType</label>
-                                    <input class="form-control form-control-sm" @bind="_editorNodeTypeInput" maxlength="100" placeholder="subzone, meter" />
+                                        <input class="form-control form-control-sm" list="facility-node-type-suggestions-edit" autocomplete="off" @bind="_editorNodeTypeInput" maxlength="100" placeholder="area, bus, weather, or custom" />
+                                    <datalist id="facility-node-type-suggestions-edit">
+                                        @foreach (var suggestion in BuiltInNodeTypeSuggestions)
+                                        {
+                                            <option value="@suggestion"></option>
+                                        }
+                                    </datalist>
                                 </div>
                                 <div class="ep-field">
                                     <label>Zone</label>
@@ -556,7 +562,13 @@
                             <div class="ep-field-row">
                                 <div class="ep-field">
                                     <label>NodeType</label>
-                                    <input class="form-control form-control-sm" @bind="_newNodeTypeInput" maxlength="100" placeholder="subzone" />
+                                    <input class="form-control form-control-sm" list="facility-node-type-suggestions-add" autocomplete="off" @bind="_newNodeTypeInput" maxlength="100" placeholder="area, bus, weather, or custom" />
+                                    <datalist id="facility-node-type-suggestions-add">
+                                        @foreach (var suggestion in BuiltInNodeTypeSuggestions)
+                                        {
+                                            <option value="@suggestion"></option>
+                                        }
+                                    </datalist>
                                 </div>
                                 <div class="ep-field">
                                     <label>Zone</label>
@@ -745,15 +757,15 @@
                                 <div class="ep-placeholder">
                                     <svg width="24" height="24" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" class="ep-placeholder-icon"><path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h.5A1.5 1.5 0 0 1 15 2.5v11A1.5 1.5 0 0 1 13.5 15h-11A1.5 1.5 0 0 1 1 13.5v-11A1.5 1.5 0 0 1 2.5 1H3V.5a.5.5 0 0 1 .5-.5M2 4v9.5a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5V4z"/></svg>
                                     <div class="ep-placeholder-text">No bindings are attached to this node yet.</div>
-                                    <div class="ep-placeholder-sub">Imported and seeded bindings will appear here with exact signal code and unit.</div>
+                                    <div class="ep-placeholder-sub">Bindings will appear here with exact signal code, unit, and source metadata.</div>
                                 </div>
                             }
                             else
                             {
                                 @foreach (var binding in selectedBindings)
                                 {
-                                    <div class="wb-link-item wb-link-item-compact">
-                                        <div>
+                                    <div class="wb-link-item wb-link-item-compact wb-link-item-binding">
+                                        <div class="wb-link-item-content">
                                             <div class="wb-link-item-title">
                                                 @binding.ExactSignalCode.Value
                                                 @if (!string.IsNullOrWhiteSpace(binding.Unit))
@@ -764,16 +776,19 @@
                                             <div class="wb-link-item-note">@BuildBindingPreviewText(binding)</div>
                                         </div>
 
-                                        @if (IsImportedBinding(binding))
-                                        {
+                                        <div class="wb-link-item-action">
                                             <button type="button"
-                                                    class="btn btn-sm btn-outline-danger py-0 px-2"
-                                                    title="Delete imported binding"
-                                                    aria-label="Delete imported binding"
+                                                    class="btn btn-sm btn-danger d-inline-flex align-items-center gap-1 py-1 px-2 wb-binding-delete-btn"
+                                                    title="Delete binding"
+                                                    aria-label="Delete binding"
                                                     @onclick="() => DeleteSelectedNodeBindingAsync(binding.BindingId)">
-                                                <i class="bi bi-x-lg" aria-hidden="true"></i>
+                                                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                                    <path d="M1 1L9 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                                                    <path d="M9 1L1 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                                                </svg>
+                                                <span>Delete binding</span>
                                             </button>
-                                        }
+                                        </div>
                                     </div>
                                 }
                             }
@@ -1652,6 +1667,10 @@
                                 <span class="badge bg-light text-secondary border">Family: @ActiveSelectionSignalAvailability.SignalFamily</span>
                                 <span class="badge bg-light text-secondary border">Mode: @ActiveSelectionSignalAvailability.AvailabilityLabel</span>
                                 <span class="badge bg-light text-secondary border">Matching nodes: @ActiveSelectionSignalAvailability.MatchingNodeCount</span>
+                                @if (ActiveSelectionSignalUsesDerivedIntervalView)
+                                {
+                                    <span class="badge bg-light text-secondary border">View: derived interval delta</span>
+                                }
                             </div>
                         }
                     </div>
@@ -1706,6 +1725,11 @@
                         else
                         {
                             <div class="small text-muted mb-3">@(_selectionSignalAnalyticsResult?.Message ?? ActiveSelectionSignalAvailability.AvailabilityMessage)</div>
+
+                            @if (!string.IsNullOrWhiteSpace(ActiveSelectionSignalSeriesStatusMessage))
+                            {
+                                <div class="small text-muted mb-3">@ActiveSelectionSignalSeriesStatusMessage</div>
+                            }
 
                             @if (_selectionSignalAnalyticsResult?.BasicStats is not null)
                             {
@@ -2445,6 +2469,7 @@
     ];
     private static readonly SemanticSelectionMutationMode[] SemanticSelectionMutationModeOptions = Enum.GetValues<SemanticSelectionMutationMode>();
     private static readonly IReadOnlyList<FacilitySignalCode> ImportExactSignalCodeOptions = FacilitySignalTaxonomy.GetKnownCodes().ToList();
+    private static readonly IReadOnlyList<string> BuiltInNodeTypeSuggestions = FacilityBuiltInNodeTypes.GetKnownNodeTypes();
 
     private FacilitySchematicV2? _canvasV2;
     private DiplomovaPrace.Persistence.Schematic.FacilityEntity? _facility;
@@ -2673,6 +2698,11 @@
 
     private SelectionSignalAvailabilityItem? ActiveSelectionSignalAvailability => _selectionSignalAvailability.Options
         .FirstOrDefault(option => string.Equals(option.ExactSignalCode.Value, _activeAnalyticsSignalCodeValue, StringComparison.OrdinalIgnoreCase));
+
+    private bool ActiveSelectionSignalUsesDerivedIntervalView => ActiveSelectionSignalAvailability is not null
+        && FacilitySignalTaxonomy.ResolveSeriesSemantics(ActiveSelectionSignalAvailability.ExactSignalCode) == FacilitySignalSeriesSemantics.CumulativeCounter;
+
+    private string? ActiveSelectionSignalSeriesStatusMessage => _selectionSignalAnalyticsResult?.TimeSeries?.SeriesStatusMessage;
 
     private string SelectionSignalScopeDescription
     {
@@ -3495,6 +3525,11 @@
             "document.getElementById('editor-metadata-section')?.scrollIntoView({behavior:'smooth', block:'start'})");
     }
 
+    private void ApplyNewNodeTypeSuggestion(string suggestion)
+    {
+        _newNodeTypeInput = suggestion;
+    }
+
     private async Task RemoveFocusedLeafNodeAsync()
     {
         if (!_isSchematicEditorEnabled)
@@ -3859,8 +3894,7 @@
         }
 
         return BindingRegistry.GetBindings(_selectedFacilityNode.NodeKey)
-            .OrderByDescending(binding => string.Equals(binding.DataStage, "imported", StringComparison.OrdinalIgnoreCase))
-            .ThenByDescending(binding => binding.ImportedUtc ?? DateTime.MinValue)
+            .OrderByDescending(binding => binding.ImportedUtc ?? DateTime.MinValue)
             .ThenBy(binding => binding.ExactSignalCode.Value, StringComparer.OrdinalIgnoreCase)
             .ThenBy(binding => binding.Unit, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -3879,15 +3913,15 @@
         var binding = GetSelectedNodeBindingsForPreview()
             .FirstOrDefault(existing => existing.BindingId.Equals(bindingId, StringComparison.OrdinalIgnoreCase));
 
-        if (binding is null || !IsImportedBinding(binding))
+        if (binding is null)
         {
-            _importStatusMessage = "Only imported bindings can be deleted from this panel.";
+            _importStatusMessage = "Delete failed: binding was not found in the current node preview.";
             _importErrors = [];
             await InvokeAsync(StateHasChanged);
             return;
         }
 
-        var result = await NodeSeriesImportService.DeleteImportedBindingAsync(binding.BindingId);
+        var result = await NodeSeriesImportService.DeleteBindingAsync(binding);
         _importStatusMessage = result.Message;
         _importErrors = [];
 
@@ -3901,8 +3935,10 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private static bool IsImportedBinding(FacilityDataBindingRegistry.BindingRecord binding)
-        => string.Equals(binding.DataStage, "imported", StringComparison.OrdinalIgnoreCase);
+    private void ApplyEditorNodeTypeSuggestion(string suggestion)
+    {
+        _editorNodeTypeInput = suggestion;
+    }
 
     private static string BuildBindingPreviewText(FacilityDataBindingRegistry.BindingRecord binding)
     {
@@ -3928,15 +3964,10 @@
 
         if (binding.ImportedUtc.HasValue)
         {
-            parts.Add($"Imported: {binding.ImportedUtc.Value.ToLocalTime():dd/MM/yyyy HH:mm}");
+            parts.Add($"Added: {binding.ImportedUtc.Value.ToLocalTime():dd/MM/yyyy HH:mm}");
         }
 
-        if (!string.IsNullOrWhiteSpace(binding.DataStage))
-        {
-            parts.Add($"Stage: {binding.DataStage}");
-        }
-
-        return parts.Count == 0 ? "No additional metadata." : string.Join(" · ", parts);
+        return parts.Count == 0 ? "No additional metadata." : string.Join(Environment.NewLine, parts);
     }
 
     private bool IsCuratedNode(DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity? node)

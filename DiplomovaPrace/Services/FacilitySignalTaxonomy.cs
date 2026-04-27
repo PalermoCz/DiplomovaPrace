@@ -12,6 +12,12 @@ public enum FacilitySignalFamily
     Custom
 }
 
+public enum FacilitySignalSeriesSemantics
+{
+    SampleSeries,
+    CumulativeCounter
+}
+
 public readonly record struct FacilitySignalCode
 {
     public static readonly FacilitySignalCode P = new("P");
@@ -99,6 +105,14 @@ public static class FacilitySignalTaxonomy
             [FacilitySignalCode.Custom.Value] = FacilitySignalFamily.Custom,
         };
 
+    private static readonly IReadOnlyDictionary<string, FacilitySignalSeriesSemantics> SeriesSemanticsByCode =
+        new Dictionary<string, FacilitySignalSeriesSemantics>(StringComparer.OrdinalIgnoreCase)
+        {
+            [FacilitySignalCode.W.Value] = FacilitySignalSeriesSemantics.CumulativeCounter,
+            [FacilitySignalCode.WIn.Value] = FacilitySignalSeriesSemantics.CumulativeCounter,
+            [FacilitySignalCode.WOut.Value] = FacilitySignalSeriesSemantics.CumulativeCounter,
+        };
+
     public static IReadOnlyCollection<FacilitySignalCode> GetKnownCodes()
         => KnownCodes.Values.ToList();
 
@@ -163,4 +177,22 @@ public static class FacilitySignalTaxonomy
 
     public static bool IsInFamily(FacilitySignalCode exactSignalCode, FacilitySignalFamily family)
         => ResolveFamily(exactSignalCode) == family;
+
+    public static FacilitySignalSeriesSemantics ResolveSeriesSemantics(string? rawSignalCode)
+        => ResolveSeriesSemantics(NormalizeExactCode(rawSignalCode));
+
+    public static FacilitySignalSeriesSemantics ResolveSeriesSemantics(FacilitySignalCode exactSignalCode)
+    {
+        if (exactSignalCode.IsEmpty)
+        {
+            return FacilitySignalSeriesSemantics.SampleSeries;
+        }
+
+        return SeriesSemanticsByCode.TryGetValue(exactSignalCode.Value, out var semantics)
+            ? semantics
+            : FacilitySignalSeriesSemantics.SampleSeries;
+    }
+
+    public static bool IsCumulativeCounter(FacilitySignalCode exactSignalCode)
+        => ResolveSeriesSemantics(exactSignalCode) == FacilitySignalSeriesSemantics.CumulativeCounter;
 }

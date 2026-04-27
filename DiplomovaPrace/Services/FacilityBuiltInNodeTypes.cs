@@ -14,6 +14,10 @@ public static class FacilityBuiltInNodeTypes
     public const string BusNodeType = "bus";
     public const string WeatherNodeType = "weather";
     public const string LegacyWeatherNodeKey = "weather_main";
+    private static readonly IReadOnlyList<string> KnownNodeTypes = [AreaNodeType, BusNodeType, WeatherNodeType];
+
+    public static IReadOnlyList<string> GetKnownNodeTypes()
+        => KnownNodeTypes;
 
     public static FacilityBuiltInNodeKind ResolveKind(string? nodeType)
     {

@@ -4,6 +4,100 @@
 [2026-04-27]
 
 ### Task
+Sjednocení binding workflow do jednoho produktového modelu + NodeType UX cleanup
+
+### What changed
+
+**`DiplomovaPrace/Services/FacilityEditorStateService.cs`:**
+- Added persistent deleted-binding tombstones so bindings that originated from the seeded registry can be removed from the user-facing binding view and stay removed across reloads.
+- Bumped the editor-state schema and kept the new tombstone list normalized by binding id.
+
+**`DiplomovaPrace/Services/FacilityDataBindingRegistry.cs`:**
+- Registry now loads deleted-binding tombstones, filters suppressed seeded bindings out of the unified binding view, and excludes fully suppressed seeded nodes from supported-node discovery.
+- Seeded bindings now receive a runtime `ImportedUtc`/created timestamp when exposed through the unified binding model so preview metadata can treat them like regular user-added bindings.
+
+**`DiplomovaPrace/Services/FacilityNodeSeriesImportService.cs`:**
+- Replaced the imported-only delete workflow with a unified `DeleteBindingAsync` path.
+- Imported bindings still remove persisted files/state, while seeded bindings now create a persistent tombstone and are immediately removed from the active registry view.
+- Duplicate import blocking continues to run against the unified registry view, so deleting either kind of binding re-allows the same exact signal code import.
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- `Node bindings` preview now renders the same visible `Delete binding` action for every binding instead of special-casing imported ones.
+- Removed user-visible origin/stage distinctions from binding preview metadata and switched the metadata block to a more readable multi-line layout.
+- `NodeType` edit/add inputs now use datalist/autocomplete-like built-in suggestions for `area`, `bus`, and `weather` without the permanent suggestion buttons or helper-text-first UX.
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor.css`:**
+- Hardened binding-card wrapping so long file names break inside the card instead of overflowing the panel and the delete action stays visible.
+- Removed obsolete chip styling that was only used by the old `NodeType` suggestion buttons.
+
+### Build
+- `dotnet build` successful via the workspace build task.
+
+### Validation scope
+- Completed only the requested binding unification, delete/import behavior alignment, `NodeType` UX cleanup, and binding-card layout fix.
+- No additional analytics, KPI, LDC, baseline, near-base, or near-peak work was implemented.
+
+### Date
+[2026-04-27]
+
+### Task
+Opravný krok: viditelný delete button v Node bindings + skutečné built-in NodeType suggestions
+
+### What changed
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- Strengthened the `Node bindings` imported-binding action so each imported binding card now shows a visible red `Delete binding` button instead of a shorter, easier-to-miss affordance.
+- Kept the existing delete path unchanged, so removal still goes through the already wired imported-binding delete workflow and refreshes the preview/analytics state through the current reload path.
+- Replaced the static `NodeType` help-only UX with real built-in suggestions sourced from `FacilityBuiltInNodeTypes.GetKnownNodeTypes()`.
+- Added clickable built-in suggestion chips for `area`, `bus`, and `weather` to both edit-node and add-node flows while preserving the existing free-text input and `datalist` suggestions for custom values.
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor.css`:**
+- Added small layout helpers so binding cards keep the delete action visible on narrow widths and the new built-in `NodeType` suggestion chips render clearly.
+
+### Build
+- `dotnet build` successful.
+
+### Validation scope
+- Only the requested UX repair was implemented.
+- No additional analytics, KPI, LDC, baseline, near-base, or near-peak work was added.
+
+### Date
+[2026-04-27]
+
+### Task
+Implementační krok 3c: import/editor UX completion + series semantics for cumulative energy counters
+
+### What changed
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- Made the imported-binding delete action visibly actionable in `Node bindings` by replacing the icon-only affordance with a visible red delete button.
+- Kept the existing delete workflow intact so preview reload and Signal Analytics refresh still happen through the already wired end-to-end delete path.
+- Added built-in `NodeType` suggestions for `area`, `bus`, and `weather` to both edit and add-node inputs while preserving free-text entry.
+- Signal Analytics now shows a small derived-view status for cumulative counters so `W`, `W_in`, and `W_out` are explicitly presented as interval-delta views instead of raw counter trajectories.
+
+**`DiplomovaPrace/Services/FacilityNodeSeriesImportService.cs`:**
+- Fixed fixed-CSV header handling so a first row shaped like `datetime_utc,<valueColumn>` is auto-detected and skipped instead of being counted as an invalid row.
+- Hardened timestamp parsing for both confirmed formats:
+  - `2018-01-02T19:15:00.000000+00:00`
+  - `2017-12-30 23:00:00+00:00`
+
+**`DiplomovaPrace/Services/FacilitySignalTaxonomy.cs` and `DiplomovaPrace/Services/NodeAnalyticsPreviewService.cs`:**
+- Added an internal series-semantics layer with `sample_series` and `cumulative_counter`.
+- Mapped `W`, `W_in`, and `W_out` to `cumulative_counter`; all other currently supported signals remain `sample_series`.
+- Updated signal time-series parsing so cumulative counters are converted to derived interval deltas before trend rendering and basic-stat computation.
+- Updated hourly/daily behavior for cumulative counters to sum derived interval deltas per bucket, producing a more user-meaningful Signal Analytics view.
+
+### Build
+- `dotnet build` successful.
+
+### Validation scope
+- Build validation performed after the UI, parser, and cumulative-counter analytics changes.
+- No near-base, LDC, baseline, or additional KPI work was implemented in this step.
+
+### Date
+[2026-04-27]
+
+### Task
 Diagnostika a oprava hanging rout `/` a `/facility`
 
 ### What changed

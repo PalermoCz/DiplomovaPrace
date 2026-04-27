@@ -215,6 +215,32 @@
     color: #475569;
     font-size: 0.8rem;
     white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.wb-link-item-binding {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    row-gap: 0.5rem;
+}
+
+.wb-link-item-content {
+    flex: 1 1 14rem;
+    min-width: 0;
+}
+
+.wb-link-item-action {
+    display: flex;
+    justify-content: flex-end;
+    flex: 0 0 auto;
+    align-self: flex-start;
+    margin-left: auto;
+}
+
+.wb-binding-delete-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .wb-inline-action {

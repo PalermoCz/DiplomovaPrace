@@ -40,9 +40,11 @@ public sealed class FacilityDataBindingRegistry
 
     private readonly IReadOnlyDictionary<string, IReadOnlyList<BindingRecord>> _seedByNodeId;
     private readonly Dictionary<string, BindingRecord> _importedBindingsById = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _deletedBindingIds = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _syncRoot = new();
     private readonly string _contentRootPath;
     private readonly string _dataRootPath;
+    private readonly DateTime _seedBindingsExposedUtc = DateTime.UtcNow;
 
     public FacilityDataBindingRegistry(
         IConfiguration config,
@@ -53,7 +55,12 @@ public sealed class FacilityDataBindingRegistry
         _contentRootPath = environment.ContentRootPath;
         _dataRootPath = config["Facility:DataRootPath"] ?? string.Empty;
         var bindingsCsvPath = config["Facility:BindingsCsvPath"];
-        _seedByNodeId = LoadBindings(bindingsCsvPath, logger);
+        _seedByNodeId = LoadBindings(bindingsCsvPath, _seedBindingsExposedUtc, logger);
+
+        foreach (var bindingId in editorStateService.GetDeletedBindingIdsSnapshot())
+        {
+            _deletedBindingIds.Add(bindingId);
+        }
 
         foreach (var binding in LoadImportedBindings(editorStateService, _contentRootPath, logger))
         {
@@ -61,9 +68,10 @@ public sealed class FacilityDataBindingRegistry
         }
 
         logger.LogInformation(
-            "FacilityDataBindingRegistry: loaded {SeedCount} seeded nodes and {ImportedCount} imported bindings from '{Path}', DataRootPath='{DataRoot}'",
+            "FacilityDataBindingRegistry: loaded {SeedCount} seeded nodes, {ImportedCount} imported bindings, and {DeletedCount} deleted binding tombstones from '{Path}', DataRootPath='{DataRoot}'",
             _seedByNodeId.Count,
             _importedBindingsById.Count,
+            _deletedBindingIds.Count,
             bindingsCsvPath ?? "(not configured)",
             _dataRootPath);
     }
@@ -104,7 +112,15 @@ public sealed class FacilityDataBindingRegistry
     /// <summary>Množina všech podporovaných node_id.</summary>
     public IReadOnlyCollection<string> GetSupportedNodeIds()
     {
-        var supported = new HashSet<string>(_seedByNodeId.Keys, StringComparer.OrdinalIgnoreCase);
+        var supported = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var seededNode in _seedByNodeId)
+        {
+            if (seededNode.Value.Any(binding => !_deletedBindingIds.Contains(binding.BindingId)))
+            {
+                supported.Add(seededNode.Key);
+            }
+        }
 
         lock (_syncRoot)
         {
@@ -118,6 +134,20 @@ public sealed class FacilityDataBindingRegistry
         }
 
         return supported.ToList();
+    }
+
+    public bool SuppressSeedBinding(string? bindingId)
+    {
+        var normalizedBindingId = bindingId?.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedBindingId))
+        {
+            return false;
+        }
+
+        lock (_syncRoot)
+        {
+            return _deletedBindingIds.Add(normalizedBindingId);
+        }
     }
 
     public void UpsertImportedBinding(FacilityImportedBindingState state, string absoluteFilePath)
@@ -203,7 +233,7 @@ public sealed class FacilityDataBindingRegistry
 
         if (_seedByNodeId.TryGetValue(normalizedNodeId, out var seededBindings) && seededBindings.Count > 0)
         {
-            result.AddRange(seededBindings);
+            result.AddRange(seededBindings.Where(binding => !_deletedBindingIds.Contains(binding.BindingId)));
         }
 
         return result;
@@ -267,7 +297,7 @@ public sealed class FacilityDataBindingRegistry
     // ── Načítání CSV ──────────────────────────────────────────────────────────
 
     private static IReadOnlyDictionary<string, IReadOnlyList<BindingRecord>> LoadBindings(
-        string? csvPath, ILogger logger)
+        string? csvPath, DateTime seededBindingsExposedUtc, ILogger logger)
     {
         if (string.IsNullOrEmpty(csvPath) || !File.Exists(csvPath))
         {
@@ -304,6 +334,7 @@ public sealed class FacilityDataBindingRegistry
                             Resolution     = r.Resolution,
                             Category       = r.Category,
                             Unit           = string.Empty,
+                            ImportedUtc    = seededBindingsExposedUtc,
                         })
                         .ToList(),
                     StringComparer.OrdinalIgnoreCase);

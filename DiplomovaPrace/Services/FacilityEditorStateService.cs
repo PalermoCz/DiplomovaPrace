@@ -48,6 +48,12 @@ public sealed class FacilityImportedBindingState
     public DateTime ImportedUtc { get; init; } = DateTime.UtcNow;
 }
 
+public sealed class FacilityDeletedBindingState
+{
+    public required string BindingId { get; init; }
+    public DateTime DeletedUtc { get; init; } = DateTime.UtcNow;
+}
+
 public sealed class FacilityStructureNode
 {
     public required string NodeKey { get; init; }
@@ -105,7 +111,7 @@ public sealed class FacilityStructureEditResult
 
 public sealed class FacilityEditorStateService
 {
-    private const int CurrentSchemaVersion = 5;
+    private const int CurrentSchemaVersion = 6;
 
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly string _stateFilePath;
@@ -271,6 +277,25 @@ public sealed class FacilityEditorStateService
         }
     }
 
+    public IReadOnlySet<string> GetDeletedBindingIdsSnapshot()
+    {
+        _gate.Wait();
+
+        try
+        {
+            var state = LoadStateUnsafe();
+            return state.DeletedBindings
+                .Select(NormalizeDeletedBinding)
+                .GroupBy(binding => binding.BindingId, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.Last().BindingId)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     public async Task<IReadOnlyList<FacilityImportedBindingState>> GetImportedBindingsByNodeKeyAsync(
         string? nodeKey,
         CancellationToken ct = default)
@@ -375,6 +400,43 @@ public sealed class FacilityEditorStateService
 
             await PersistStateUnsafeAsync(state, ct);
             return removedBinding;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<FacilityDeletedBindingState?> SaveDeletedBindingAsync(string? bindingId, CancellationToken ct = default)
+    {
+        var normalizedBindingId = NormalizeOptionalText(bindingId);
+        if (string.IsNullOrWhiteSpace(normalizedBindingId))
+        {
+            return null;
+        }
+
+        await _gate.WaitAsync(ct);
+
+        try
+        {
+            var state = await LoadStateUnsafeAsync(ct);
+            var deletedBinding = new FacilityDeletedBindingState
+            {
+                BindingId = normalizedBindingId,
+                DeletedUtc = DateTime.UtcNow,
+            };
+
+            state.DeletedBindings.Add(deletedBinding);
+            state.DeletedBindings = state.DeletedBindings
+                .Select(NormalizeDeletedBinding)
+                .GroupBy(existing => existing.BindingId, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.OrderBy(existing => existing.DeletedUtc).Last())
+                .OrderBy(existing => existing.BindingId, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            state.SchemaVersion = CurrentSchemaVersion;
+
+            await PersistStateUnsafeAsync(state, ct);
+            return deletedBinding;
         }
         finally
         {
@@ -1204,6 +1266,21 @@ public sealed class FacilityEditorStateService
         };
     }
 
+    private static FacilityDeletedBindingState NormalizeDeletedBinding(FacilityDeletedBindingState binding)
+    {
+        var bindingId = binding.BindingId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(bindingId))
+        {
+            throw new InvalidOperationException("BindingId smazaného bindingu musí být vyplněný.");
+        }
+
+        return new FacilityDeletedBindingState
+        {
+            BindingId = bindingId,
+            DeletedUtc = binding.DeletedUtc == default ? DateTime.UtcNow : binding.DeletedUtc,
+        };
+    }
+
     private static FacilityNodeEditorState NormalizeNodeState(FacilityNodeEditorState nodeState)
     {
         var nodeKey = nodeState.NodeKey?.Trim() ?? string.Empty;
@@ -1347,6 +1424,7 @@ public sealed class FacilityEditorStateService
         public int SchemaVersion { get; set; } = CurrentSchemaVersion;
         public List<FacilityNodeEditorState> NodeEdits { get; set; } = [];
         public List<FacilityImportedBindingState> ImportedBindings { get; set; } = [];
+        public List<FacilityDeletedBindingState> DeletedBindings { get; set; } = [];
         public List<FacilityNodeStylePreset> StylePresets { get; set; } = [];
         public List<FacilitySavedWorkingSet> WorkingSets { get; set; } = [];
         public FacilityStructureStateDocument Structure { get; set; } = new();
