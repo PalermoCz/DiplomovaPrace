@@ -4,6 +4,44 @@
 [2026-04-27]
 
 ### Task
+Implementační krok 2: import write path, binding persistence a minimální import UI pro jednu časovou řadu
+
+### What changed
+
+**Persistent binding model and registry overlay:**
+- Added persistent imported-binding state to `FacilityEditorStateService`, including exact signal code, unit, source metadata, storage-relative file path, fixed CSV format marker, and internal resolution metadata.
+- Extended `FacilitySignalTaxonomy` with the requested `custom` exact signal code.
+- Updated `FacilityDataBindingRegistry` to overlay persisted imported bindings on top of seeded CSV bindings, keep multi-binding reads intact, and expose imported file metadata needed by the read path.
+
+**Import write path:**
+- Added `FacilityNodeSeriesImportService` as a dedicated node-centric import path for the FacilityWorkbench import tab.
+- The new import path validates the fixed CSV shape (`timestamp,value`), skips invalid rows with explicit per-line errors, normalizes valid rows into a canonical 2-column CSV, writes the normalized file into app-local storage, persists the new binding, and updates the live binding registry immediately.
+- Internal resolution metadata is derived automatically from timestamps when spacing is regular; otherwise the binding is marked as `irregular`.
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- Replaced the import placeholder with a minimal selected-node import form:
+  - CSV file picker
+  - exact signal code dropdown
+  - unit input
+  - optional Meter URN
+  - optional source label
+- Added minimal import validation feedback and a selected-node binding preview that lists exact signal code, unit, Meter URN/source label, file name, and stage.
+- Updated focus-node curated detection so registry-backed imported bindings participate in the existing binding-based read path.
+
+**Read path for imported files:**
+- Updated `NodeAnalyticsPreviewService` to resolve imported binding files through the new binding metadata, support normalized fixed-series CSV files via the standard binding-based source path, and respect imported unit metadata for non-legacy sources without introducing new analytics features.
+
+### Build
+- `dotnet build` successful.
+
+### Validation scope
+- Build validation performed after wiring the import UI, binding persistence, and read-path support.
+- No new analytics features were implemented in this step.
+
+### Date
+[2026-04-27]
+
+### Task
 Implementační krok 1: built-in typy, signal taxonomy, multi-binding foundation, weather resolver a první legacy cleanup
 
 ### What changed

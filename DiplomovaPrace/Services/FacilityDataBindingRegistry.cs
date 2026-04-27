@@ -19,6 +19,7 @@ public sealed class FacilityDataBindingRegistry
     /// <summary>Jeden řádek z dataset_bindings_fixed.csv.</summary>
     public sealed class BindingRecord
     {
+        public string BindingId { get; init; } = string.Empty;
         public string NodeId { get; init; } = string.Empty;
         public string MeterUrn { get; init; } = string.Empty;
         public string MeterFolder { get; init; } = string.Empty;
@@ -27,27 +28,48 @@ public sealed class FacilityDataBindingRegistry
         public string DataStage { get; init; } = string.Empty;
         public string Resolution { get; init; } = string.Empty;
         public string Category { get; init; } = string.Empty;
+        public string Unit { get; init; } = string.Empty;
+        public string? SourceLabel { get; init; }
+        public string? OriginalFileName { get; init; }
+        public string? SourceFilePath { get; init; }
+        public bool UsesFixedCsvSeriesFormat { get; init; }
         public FacilitySignalCode ExactSignalCode => FacilitySignalTaxonomy.NormalizeExactCode(MeasurementKey);
         public FacilitySignalFamily SignalFamily => FacilitySignalTaxonomy.ResolveFamily(ExactSignalCode);
     }
 
-    private readonly IReadOnlyDictionary<string, IReadOnlyList<BindingRecord>> _byNodeId;
+    private readonly IReadOnlyDictionary<string, IReadOnlyList<BindingRecord>> _seedByNodeId;
+    private readonly Dictionary<string, BindingRecord> _importedBindingsById = new(StringComparer.OrdinalIgnoreCase);
+    private readonly object _syncRoot = new();
+    private readonly string _contentRootPath;
     private readonly string _dataRootPath;
 
-    public FacilityDataBindingRegistry(IConfiguration config, ILogger<FacilityDataBindingRegistry> logger)
+    public FacilityDataBindingRegistry(
+        IConfiguration config,
+        IWebHostEnvironment environment,
+        FacilityEditorStateService editorStateService,
+        ILogger<FacilityDataBindingRegistry> logger)
     {
+        _contentRootPath = environment.ContentRootPath;
         _dataRootPath = config["Facility:DataRootPath"] ?? string.Empty;
         var bindingsCsvPath = config["Facility:BindingsCsvPath"];
-        _byNodeId = LoadBindings(bindingsCsvPath, logger);
+        _seedByNodeId = LoadBindings(bindingsCsvPath, logger);
+
+        foreach (var binding in LoadImportedBindings(editorStateService, _contentRootPath, logger))
+        {
+            _importedBindingsById[binding.BindingId] = binding;
+        }
 
         logger.LogInformation(
-            "FacilityDataBindingRegistry: loaded {Count} node binding entries from '{Path}', DataRootPath='{DataRoot}'",
-            _byNodeId.Count, bindingsCsvPath ?? "(not configured)", _dataRootPath);
+            "FacilityDataBindingRegistry: loaded {SeedCount} seeded nodes and {ImportedCount} imported bindings from '{Path}', DataRootPath='{DataRoot}'",
+            _seedByNodeId.Count,
+            _importedBindingsById.Count,
+            bindingsCsvPath ?? "(not configured)",
+            _dataRootPath);
     }
 
     /// <summary>Vrátí všechny binding záznamy pro daný node_id.</summary>
     public IReadOnlyList<BindingRecord> GetBindings(string nodeId)
-        => _byNodeId.TryGetValue(nodeId, out var list) ? list : [];
+        => GetBindingsCore(nodeId);
 
     public IReadOnlyList<BindingRecord> GetBindings(string nodeId, FacilitySignalCode exactSignalCode)
         => FilterBindings(nodeId, binding => FacilitySignalTaxonomy.MatchesExactCode(binding.ExactSignalCode, exactSignalCode));
@@ -61,7 +83,8 @@ public sealed class FacilityDataBindingRegistry
     /// </summary>
     public BindingRecord? GetPrimaryBinding(string nodeId)
     {
-        if (!_byNodeId.TryGetValue(nodeId, out var bindings) || bindings.Count == 0)
+        var bindings = GetBindingsCore(nodeId);
+        if (bindings.Count == 0)
             return null;
 
         return SelectPreferredBinding(bindings);
@@ -75,11 +98,36 @@ public sealed class FacilityDataBindingRegistry
 
     /// <summary>Vrátí true pokud pro node existuje alespoň jedna vazba.</summary>
     public bool IsSupported(string nodeId)
-        => _byNodeId.ContainsKey(nodeId);
+        => GetBindingsCore(nodeId).Count > 0;
 
     /// <summary>Množina všech podporovaných node_id.</summary>
     public IReadOnlyCollection<string> GetSupportedNodeIds()
-        => _byNodeId.Keys.ToList();
+    {
+        var supported = new HashSet<string>(_seedByNodeId.Keys, StringComparer.OrdinalIgnoreCase);
+
+        lock (_syncRoot)
+        {
+            foreach (var binding in _importedBindingsById.Values)
+            {
+                if (!string.IsNullOrWhiteSpace(binding.NodeId))
+                {
+                    supported.Add(binding.NodeId);
+                }
+            }
+        }
+
+        return supported.ToList();
+    }
+
+    public void UpsertImportedBinding(FacilityImportedBindingState state, string absoluteFilePath)
+    {
+        var binding = CreateImportedBindingRecord(state, absoluteFilePath, _contentRootPath);
+
+        lock (_syncRoot)
+        {
+            _importedBindingsById[binding.BindingId] = binding;
+        }
+    }
 
     /// <summary>
     /// Sestaví absolutní cestu DataRootPath/meterFolder/fileName.
@@ -94,7 +142,8 @@ public sealed class FacilityDataBindingRegistry
 
     private IReadOnlyList<BindingRecord> FilterBindings(string nodeId, Func<BindingRecord, bool> predicate)
     {
-        if (!_byNodeId.TryGetValue(nodeId, out var bindings) || bindings.Count == 0)
+        var bindings = GetBindingsCore(nodeId);
+        if (bindings.Count == 0)
         {
             return [];
         }
@@ -120,6 +169,87 @@ public sealed class FacilityDataBindingRegistry
 
     private static bool IsPreferredResolution(BindingRecord binding)
         => string.Equals(binding.Resolution, "15min", StringComparison.OrdinalIgnoreCase);
+
+    private IReadOnlyList<BindingRecord> GetBindingsCore(string? nodeId)
+    {
+        var normalizedNodeId = nodeId?.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedNodeId))
+        {
+            return [];
+        }
+
+        var result = new List<BindingRecord>();
+
+        lock (_syncRoot)
+        {
+            result.AddRange(_importedBindingsById.Values.Where(binding =>
+                binding.NodeId.Equals(normalizedNodeId, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        if (_seedByNodeId.TryGetValue(normalizedNodeId, out var seededBindings) && seededBindings.Count > 0)
+        {
+            result.AddRange(seededBindings);
+        }
+
+        return result;
+    }
+
+    private static IReadOnlyList<BindingRecord> LoadImportedBindings(
+        FacilityEditorStateService editorStateService,
+        string contentRootPath,
+        ILogger logger)
+    {
+        try
+        {
+            var importedBindings = editorStateService
+                .GetImportedBindingsAsync()
+                .GetAwaiter()
+                .GetResult();
+
+            return importedBindings
+                .Select(binding => CreateImportedBindingRecord(binding, null, contentRootPath))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "FacilityDataBindingRegistry: imported bindings overlay could not be loaded from editor state.");
+            return [];
+        }
+    }
+
+    private static BindingRecord CreateImportedBindingRecord(
+        FacilityImportedBindingState state,
+        string? absoluteFilePath,
+        string contentRootPath)
+    {
+        var storageRelativePath = state.StorageRelativePath.Replace('/', Path.DirectorySeparatorChar);
+        var relativeFolder = Path.GetDirectoryName(storageRelativePath)?.Replace('\\', '/') ?? string.Empty;
+        var resolvedAbsolutePath = absoluteFilePath;
+
+        if (string.IsNullOrWhiteSpace(resolvedAbsolutePath) && !string.IsNullOrWhiteSpace(state.StorageRelativePath))
+        {
+            resolvedAbsolutePath = Path.GetFullPath(Path.Combine(contentRootPath, state.StorageRelativePath.Replace('/', Path.DirectorySeparatorChar)));
+        }
+
+        return new BindingRecord
+        {
+            BindingId = state.BindingId,
+            NodeId = state.NodeKey,
+            MeterUrn = state.MeterUrn ?? string.Empty,
+            MeterFolder = relativeFolder,
+            FileName = Path.GetFileName(storageRelativePath),
+            MeasurementKey = state.ExactSignalCode,
+            DataStage = "imported",
+            Resolution = state.Resolution,
+            Category = FacilitySignalTaxonomy.ResolveFamily(state.ExactSignalCode).ToString(),
+            Unit = state.Unit,
+            SourceLabel = state.SourceLabel,
+            OriginalFileName = state.OriginalFileName,
+            SourceFilePath = resolvedAbsolutePath,
+            UsesFixedCsvSeriesFormat = state.FileFormat == FacilityImportedBindingFileFormat.FixedCsvSeries,
+        };
+    }
+
 
     // ── Načítání CSV ──────────────────────────────────────────────────────────
 
@@ -151,6 +281,7 @@ public sealed class FacilityDataBindingRegistry
                     g => (IReadOnlyList<BindingRecord>)g
                         .Select(r => new BindingRecord
                         {
+                            BindingId      = $"seed::{r.NodeId}::{r.MeterUrn}::{r.MeasurementKey}::{r.FileName}",
                             NodeId         = r.NodeId,
                             MeterUrn       = r.MeterUrn,
                             MeterFolder    = r.MeterFolder,
@@ -159,6 +290,7 @@ public sealed class FacilityDataBindingRegistry
                             DataStage      = r.DataStage,
                             Resolution     = r.Resolution,
                             Category       = r.Category,
+                            Unit           = string.Empty,
                         })
                         .ToList(),
                     StringComparer.OrdinalIgnoreCase);

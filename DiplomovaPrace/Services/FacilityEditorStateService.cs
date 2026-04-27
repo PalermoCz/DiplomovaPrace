@@ -27,6 +27,27 @@ public sealed class FacilitySavedWorkingSet
     public DateTime UpdatedUtc { get; init; } = DateTime.UtcNow;
 }
 
+public enum FacilityImportedBindingFileFormat
+{
+    FixedCsvSeries
+}
+
+public sealed class FacilityImportedBindingState
+{
+    public required string BindingId { get; init; }
+    public required string NodeKey { get; init; }
+    public required string ExactSignalCode { get; init; }
+    public required string Unit { get; init; }
+    public required string OriginalFileName { get; init; }
+    public required string StorageRelativePath { get; init; }
+    public string? MeterUrn { get; init; }
+    public string? SourceLabel { get; init; }
+    public FacilityImportedBindingFileFormat FileFormat { get; init; } = FacilityImportedBindingFileFormat.FixedCsvSeries;
+    public string Resolution { get; init; } = "irregular";
+    public long? FileSizeBytes { get; init; }
+    public DateTime ImportedUtc { get; init; } = DateTime.UtcNow;
+}
+
 public sealed class FacilityStructureNode
 {
     public required string NodeKey { get; init; }
@@ -84,7 +105,7 @@ public sealed class FacilityStructureEditResult
 
 public sealed class FacilityEditorStateService
 {
-    private const int CurrentSchemaVersion = 4;
+    private const int CurrentSchemaVersion = 5;
 
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly string _stateFilePath;
@@ -201,6 +222,93 @@ public sealed class FacilityEditorStateService
         {
             var state = await LoadStateUnsafeAsync(ct);
             return NormalizeStructureState(state.Structure);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<IReadOnlyList<FacilityImportedBindingState>> GetImportedBindingsAsync(CancellationToken ct = default)
+    {
+        await _gate.WaitAsync(ct);
+
+        try
+        {
+            var state = await LoadStateUnsafeAsync(ct);
+            return state.ImportedBindings
+                .GroupBy(binding => binding.BindingId, StringComparer.OrdinalIgnoreCase)
+                .Select(group => NormalizeImportedBinding(group.Last()))
+                .OrderBy(binding => binding.NodeKey, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(binding => binding.ExactSignalCode, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(binding => binding.ImportedUtc)
+                .ToList();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<IReadOnlyList<FacilityImportedBindingState>> GetImportedBindingsByNodeKeyAsync(
+        string? nodeKey,
+        CancellationToken ct = default)
+    {
+        var normalizedNodeKey = NormalizeOptionalNodeKey(nodeKey);
+        if (string.IsNullOrWhiteSpace(normalizedNodeKey))
+        {
+            return [];
+        }
+
+        await _gate.WaitAsync(ct);
+
+        try
+        {
+            var state = await LoadStateUnsafeAsync(ct);
+            return state.ImportedBindings
+                .Where(binding => binding.NodeKey.Equals(normalizedNodeKey, StringComparison.OrdinalIgnoreCase))
+                .GroupBy(binding => binding.BindingId, StringComparer.OrdinalIgnoreCase)
+                .Select(group => NormalizeImportedBinding(group.Last()))
+                .OrderBy(binding => binding.ExactSignalCode, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(binding => binding.ImportedUtc)
+                .ToList();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task SaveImportedBindingAsync(FacilityImportedBindingState binding, CancellationToken ct = default)
+    {
+        await _gate.WaitAsync(ct);
+
+        try
+        {
+            var normalized = NormalizeImportedBinding(binding);
+            var state = await LoadStateUnsafeAsync(ct);
+            var existingIndex = state.ImportedBindings.FindIndex(existing =>
+                existing.BindingId.Equals(normalized.BindingId, StringComparison.OrdinalIgnoreCase));
+
+            if (existingIndex >= 0)
+            {
+                state.ImportedBindings[existingIndex] = normalized;
+            }
+            else
+            {
+                state.ImportedBindings.Add(normalized);
+            }
+
+            state.ImportedBindings = state.ImportedBindings
+                .GroupBy(existing => existing.BindingId, StringComparer.OrdinalIgnoreCase)
+                .Select(group => NormalizeImportedBinding(group.Last()))
+                .OrderBy(existing => existing.NodeKey, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(existing => existing.ExactSignalCode, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(existing => existing.ImportedUtc)
+                .ToList();
+            state.SchemaVersion = CurrentSchemaVersion;
+
+            await PersistStateUnsafeAsync(state, ct);
         }
         finally
         {
@@ -961,6 +1069,56 @@ public sealed class FacilityEditorStateService
             || nodeState.Tags.Count > 0;
     }
 
+    private static FacilityImportedBindingState NormalizeImportedBinding(FacilityImportedBindingState binding)
+    {
+        var bindingId = binding.BindingId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(bindingId))
+        {
+            throw new InvalidOperationException("BindingId musí být vyplněný.");
+        }
+
+        var nodeKey = binding.NodeKey?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(nodeKey))
+        {
+            throw new InvalidOperationException("NodeKey bindingu musí být vyplněný.");
+        }
+
+        if (!FacilitySignalTaxonomy.TryParseExactCode(binding.ExactSignalCode, out var exactSignalCode) || exactSignalCode.IsEmpty)
+        {
+            throw new InvalidOperationException("Exact signal code bindingu musí být vyplněný.");
+        }
+
+        var unit = binding.Unit?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(unit))
+        {
+            throw new InvalidOperationException("Unit bindingu musí být vyplněná.");
+        }
+
+        var originalFileName = Path.GetFileName(binding.OriginalFileName?.Trim() ?? string.Empty);
+        if (string.IsNullOrWhiteSpace(originalFileName))
+        {
+            throw new InvalidOperationException("Original file name bindingu musí být vyplněný.");
+        }
+
+        var storageRelativePath = NormalizeStorageRelativePath(binding.StorageRelativePath);
+
+        return new FacilityImportedBindingState
+        {
+            BindingId = bindingId,
+            NodeKey = nodeKey,
+            ExactSignalCode = exactSignalCode.Value,
+            Unit = unit,
+            OriginalFileName = originalFileName,
+            StorageRelativePath = storageRelativePath,
+            MeterUrn = NormalizeOptionalText(binding.MeterUrn),
+            SourceLabel = NormalizeOptionalText(binding.SourceLabel),
+            FileFormat = binding.FileFormat,
+            Resolution = string.IsNullOrWhiteSpace(binding.Resolution) ? "irregular" : binding.Resolution.Trim(),
+            FileSizeBytes = binding.FileSizeBytes.HasValue && binding.FileSizeBytes.Value > 0 ? binding.FileSizeBytes.Value : null,
+            ImportedUtc = binding.ImportedUtc == default ? DateTime.UtcNow : binding.ImportedUtc
+        };
+    }
+
     private static FacilityNodeEditorState NormalizeNodeState(FacilityNodeEditorState nodeState)
     {
         var nodeKey = nodeState.NodeKey?.Trim() ?? string.Empty;
@@ -1069,6 +1227,29 @@ public sealed class FacilityEditorStateService
         return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
     }
 
+    private static string NormalizeStorageRelativePath(string? raw)
+    {
+        var normalized = raw?.Trim().Replace('\\', '/') ?? string.Empty;
+        normalized = normalized.TrimStart('/');
+
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new InvalidOperationException("StorageRelativePath bindingu musí být vyplněná.");
+        }
+
+        if (Path.IsPathRooted(normalized))
+        {
+            throw new InvalidOperationException("StorageRelativePath bindingu nesmí být absolutní cesta.");
+        }
+
+        if (normalized.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment == ".."))
+        {
+            throw new InvalidOperationException("StorageRelativePath bindingu nesmí obsahovat '..'.");
+        }
+
+        return normalized;
+    }
+
     private static double? NormalizeHint(double? hint)
     {
         if (!hint.HasValue || !double.IsFinite(hint.Value))
@@ -1080,6 +1261,7 @@ public sealed class FacilityEditorStateService
     {
         public int SchemaVersion { get; set; } = CurrentSchemaVersion;
         public List<FacilityNodeEditorState> NodeEdits { get; set; } = [];
+        public List<FacilityImportedBindingState> ImportedBindings { get; set; } = [];
         public List<FacilityNodeStylePreset> StylePresets { get; set; } = [];
         public List<FacilitySavedWorkingSet> WorkingSets { get; set; } = [];
         public FacilityStructureStateDocument Structure { get; set; } = new();

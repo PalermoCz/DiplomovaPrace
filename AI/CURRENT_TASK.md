@@ -1,180 +1,174 @@
 # CURRENT TASK
 
 ## Název
-Implementační krok 2: import write path, binding persistence a minimální import UI pro jednu časovou řadu
+Implementační krok 3: signal selection a první obecné analytiky (trend, basic stats, subtree aggregation)
 
 ## Kontext
-Máme hotový foundation krok:
+Máme hotové:
 - built-in typy `area`, `bus`, `weather`
 - signal taxonomy (`exact signal code` + `signal family`)
-- multi-binding read foundation
-- facility weather resolver
-- první bezpečný cleanup legacy special-case logiky
+- multi-binding foundation
+- weather source resolver foundation
+- minimální import write path
+- binding persistence
+- read path pro importované bindings
+- minimální binding preview na nodu
 
-Teď potřebujeme udělat druhý krok:
-- umožnit zapisovat nové signal bindings na node z UI
-- bez implementace samotných analytických funkcí
-
----
-
-## Už schválená pravidla
-- aplikace je selection-first
-- analytika patří do spodní analytics sekce
-- `NodeType` zůstává volný string
-- built-in speciální typy jsou jen:
-  - `area`
-  - `bus`
-  - `weather`
-- jeden node může mít více datových bindingů
-- import je jen jeden, ne dataset/generic split
-- CSV formát je fixní:
-  - 1. sloupec = timestamp
-  - 2. sloupec = hodnota
-  - oddělovač = čárka
-- nechceme vybírat:
-  - time column
-  - value column
-  - resolution
-  - processing level
-- resolution má být interní metadata, ne pole v UI
-- spacing timestampů může být pravidelný i nepravidelný
-- processing level nebude v UI vůbec
-- nechceme odvozovat význam signálu z názvu souboru
-- uživatel musí explicitně vybrat **exact signal code**
-- `Meter URN` má zůstat volitelné metadata zdroje
-
-### Built-in exact signal codes pro import
-- `P`
-- `P1`
-- `P2`
-- `P3`
-- `W`
-- `W_in`
-- `W_out`
-- `U1`
-- `U2`
-- `U3`
-- `I1`
-- `I2`
-- `I3`
-- `PF`
-- `PF1`
-- `PF2`
-- `PF3`
-- `Q`
-- `Ta`
-- `custom`
+Aplikace je selection-first a analytics patří do spodní analytics sekce.
 
 ---
 
 ## Cíl kroku
-Implementovat minimální end-to-end import jedné časové řady na vybraný node tak, aby:
-1. uživatel mohl na node nahrát 1 soubor = 1 série
-2. uživatel zvolil exact signal code
-3. uživatel zvolil unit
-4. volitelně mohl zadat Meter URN / source label
-5. binding se korektně perzistoval
-6. šel následně číst přes nový multi-binding foundation model
+Implementovat první skutečně použitelnou analytickou vrstvu nad novým binding modelem:
 
-Tento krok stále **NENÍ** o KPI, baseline ani analytických grafech.
+1. umožnit zvolit **aktivní exact signal code** pro current selection scope
+2. ukázat první obecné analytiky:
+   - trend
+   - basic stats
+   - subtree aggregation tam, kde dává smysl
+
+Tento krok ještě **NENÍ**:
+- baseline
+- near-base / near-peak
+- LDC
+- EUI
+- weather-aware analytika
+- electrical diagnostics
+- formula engine
+
+---
+
+## Už schválené principy
+- node může mít více bindingů
+- analytics se nesmí řídit jen `primary binding`
+- exact signal code je explicitní identita série
+- signal family se používá interně
+- selection může být:
+  - single node
+  - subtree
+  - multi-node selection
+- `area` je strukturální subtree scope
+- `bus` je strukturální helper
+- `weather` je mimo běžný selection flow
+- fixed CSV import už existuje
+- fallbacky musí být explicitní, ne tiché
 
 ---
 
 ## Co přesně chci implementovat
 
-### 1. Minimální import UI
-Najdi nejvhodnější místo v existujícím editor/import workflow a přidej minimální UI pro import jedné série.
-
-#### UI má umožnit:
-- vybrat cílový node
-- vybrat soubor
-- vybrat exact signal code z dropdownu
-- zadat unit
-- volitelně zadat Meter URN / source label
-
-#### UI nesmí obsahovat:
-- time column picker
-- value column picker
-- resolution input
-- processing level input
-- phase input
-- direction input
-
-#### Poznámka
-Phase i direction jsou reprezentované přes exact signal code:
-- `P1`, `P2`, `P3`
-- `W_in`, `W_out`
-
----
-
-### 2. CSV parsing pro fixed format
-Implementuj nebo uprav import tak, aby očekával:
-- 1. sloupec = timestamp
-- 2. sloupec = value
-- oddělovač = čárka
+### 1. Active analytics signal selection
+Implementuj vrstvu, která pro aktuální selection scope určí, jaké exact signal codes jsou k dispozici.
 
 #### Požadavky
-- timestamp musí být parsován z prvního sloupce
-- value z druhého sloupce
-- spacing může být pravidelný i nepravidelný
-- import nesmí vyžadovat ruční zadání resolution
-- pokud série obsahuje nevalidní řádky, chci bezpečné a srozumitelné chování (validace / chybová zpráva)
-- tento krok ještě nemusí řešit složité cleaning scénáře
-
----
-
-### 3. Binding persistence
-Implementuj zápis bindingu na node tak, aby:
-- node mohl mít více bindingů
-- nový binding byl perzistentní
-- binding obsahoval:
-  - node id
-  - exact signal code
-  - unit
-  - source reference / file metadata
-  - volitelně Meter URN / source label
-  - případná interní metadata nutná pro čtení
+- pro selected node / selection scope zjisti dostupné bindingy
+- nabídni uživateli výběr aktivního exact signal code
+- pokud je v aktuálním scope právě jeden smysluplný kandidát, může být auto-selected
+- pokud jich je více, uživatel si musí vybrat
+- pokud žádný není dostupný, ukaž srozumitelný empty state
 
 #### Důležité
-- nerozbij stávající graph model
-- nepřepiš foundation krok na jiný model
-- navazuj na nový multi-binding foundation
+- nechci, aby aplikace tiše spadla na libovolný `primary binding`
+- nechci, aby se význam signálu odvozoval z názvu souboru
+- tato vrstva musí být připravená pro další analytické kroky
 
 ---
 
-### 4. Napojení na read path
-Po importu musí být binding:
-- dohledatelný přes binding registry / nový resolver
-- čitelný přes nový multi-binding model
-- připravený pro další analytické prompty
+### 2. Selection-scope signal availability
+Implementuj minimální logiku pro zjištění, jaké signály jsou v aktuálním selection scope použitelné.
 
-Tzn. nechci jen „uložený soubor někde bokem“, ale skutečně napojený binding.
+#### Potřebuji rozlišit alespoň:
+- exact signal codes dostupné v aktuálním scope
+- signal family
+- jestli jde signal:
+  - zobrazit jako single-node sérii
+  - agregovat přes selection
+  - nebo je jen context-only / unsupported pro aggregate
+
+#### Minimální pravidla pro tento krok
+- exact signal code se považuje za kompatibilní, pokud je dostupný ve vybraném scope
+- subtree aggregation dělej jen pro aditivní signal families:
+  - `power`
+  - `energy`
+- pro ostatní signal families zatím nezkoušej složitou agregaci přes více node
+- pokud selection není kompatibilní pro aggregation, ukaž to explicitně
 
 ---
 
-### 5. Minimální zobrazení bindingů na nodu
-Pokud je to v tomto kroku bezpečné a malé, přidej minimální přehled bindingů na selected node:
-- exact signal code
-- unit
-- případně Meter URN
-- případně source file / label
+### 3. Trend analytika
+Implementuj první obecnou analytiku:
+- trend selected signalu v čase
 
-Nemusí to být finální UX, jen minimální ověření, že bindingy jsou na nodu opravdu vidět a použitelné.
+#### Požadavky
+- funguje pro single node
+- funguje pro subtree / multi-node selection jen když je aggregation validní
+- používá nový active signal selection
+- používá nový multi-binding read path
+- musí běžet ve spodní analytics sekci
 
-Pokud by to scope zbytečně nafouklo, napiš to a nech to na další krok.
+#### Scope
+- žádná pokročilá stylizace
+- žádná baseline overlay
+- jen první čistý trend chart
+
+---
+
+### 4. Basic stats
+Přidej k trendu minimální základní statistiky pro aktuální signal scope:
+
+#### Minimálně
+- min
+- max
+- average
+- count of points
+- time range / coverage pokud to je v tomto kroku snadné
+
+#### Důležité
+- stats se musí počítat nad skutečně použitou sérií / agregací
+- ne nad jiným fallback signálem
+
+---
+
+### 5. Subtree aggregation – první verze
+Implementuj první bezpečnou verzi subtree aggregation.
+
+#### Požadavky
+- funguje pro `area` a jiné výběry subtree
+- pouze pro aditivní families:
+  - `power`
+  - `energy`
+- agregace = součet hodnot v čase přes kompatibilní nody
+- pokud selection obsahuje nekompatibilní mix, ukaž explicitní unavailable / incompatible state
+
+#### Důležité
+- v tomto kroku neimplementuj složité phase-summing heuristiky
+- nepokoušej se ještě sčítat `P1+P2+P3` do `P` automaticky
+- to necháme až na další rozhodnutí / krok
+
+---
+
+### 6. Minimal UI integration
+Pokud je to možné v tomto kroku, doplň do analytics sekce:
+- dropdown / selector aktivního exact signal code
+- trend
+- basic stats
+- jasné empty states / unavailable states
+
+Nechci ještě finální polished UX, ale funkční a čitelné minimum.
 
 ---
 
 ## Co je mimo scope tohoto kroku
 Neimplementuj:
-- KPI
 - baseline
-- trend grafy
-- LDC
+- near-base
+- near-peak
+- peak-base ratio
+- load duration curve
+- on-hour duration
 - EUI
-- subtree analytics
-- weather-aware výpočty
-- automatic energy integration UI
+- weather-aware analytics
+- electrical diagnostics
 - formula engine
 - fullscreen analytics
 
@@ -184,22 +178,21 @@ Neimplementuj:
 - nejdřív stručně napiš plán
 - pak implementuj
 - drž se scope tohoto kroku
-- neprováděj zbytečné změny mimo tento krok
 - pokud narazíš na blocker nebo nejasnost, napiš to explicitně
-- po dokončení aktualizuj `AI/WORKLOG.md`
-- build musí projít
+- po dokončení proveď build
+- aktualizuj `AI/WORKLOG.md`
 
 ---
 
 ## Akceptační kritéria
 Krok je hotový, pokud platí:
 
-1. Existuje minimální UI pro import 1 souboru = 1 série na node
-2. Uživatel při importu vybírá exact signal code a unit
-3. CSV parser očekává fixed 2-column formát (timestamp, value)
-4. Binding se perzistuje na node
-5. Node může mít více bindingů
-6. Nový binding je dostupný přes read path / registry
+1. U current selection scope lze zjistit dostupné exact signal codes
+2. Existuje aktivní analytics signal selection
+3. Lze zobrazit trend nad vybraným signálem
+4. Lze zobrazit základní stats nad vybraným signálem
+5. U subtree selection funguje první bezpečná agregace pro `power` a `energy`
+6. Nekompatibilní selection ukazuje srozumitelný unavailable state
 7. Build projde
-8. Nebyly omylem implementovány analytické funkce mimo scope
+8. Nebyly omylem implementovány KPI mimo scope tohoto kroku
 ``

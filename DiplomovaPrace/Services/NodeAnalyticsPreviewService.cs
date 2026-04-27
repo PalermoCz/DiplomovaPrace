@@ -3422,6 +3422,7 @@ public class NodeAnalyticsPreviewService
         public required string FileName { get; init; }
         /// <summary>SloĹľka v D:\DataSet\data\ pro binding-based zdroje. Null pro legacy flat CSV.</summary>
         public string? MeterFolder { get; init; }
+        public string? SourceFilePath { get; init; }
         public required string ColumnName { get; init; }
         public required string Title { get; init; }
         public string? NodeTypeHint { get; init; }
@@ -3432,6 +3433,7 @@ public class NodeAnalyticsPreviewService
         public bool IsPowerSignal { get; init; }
         public double PowerToKilowattFactor { get; init; } = 1.0;
         public bool SupportsDeviation { get; init; } = true;
+        public bool UsesFixedCsvSeriesFormat { get; init; }
     }
 
     private sealed class RunningStats
@@ -3488,27 +3490,64 @@ public class NodeAnalyticsPreviewService
             var signalFamily = binding.SignalFamily;
             var exactSignalCode = binding.ExactSignalCode;
             var isPowerSignal = signalFamily == FacilitySignalFamily.Power;
-            var isTempSignal = signalFamily == FacilitySignalFamily.WeatherTemperature;
             var isFlowSignal = exactSignalCode.Value is "qv" or "V";
+            var isFixedCsvSeries = binding.UsesFixedCsvSeriesFormat;
 
             string unit;
             string summaryLabel;
             string statsUnit;
             string statsLabel;
+            var powerToKilowattFactor = 1.0;
 
-            if (isPowerSignal)
+            if (signalFamily == FacilitySignalFamily.Power)
             {
                 unit = "kWh";
                 summaryLabel = "Interval energy";
                 statsUnit = "kW";
                 statsLabel = "Power";
+                powerToKilowattFactor = ResolvePowerToKilowattFactor(binding.Unit);
             }
-            else if (isTempSignal)
+            else if (signalFamily == FacilitySignalFamily.Energy)
             {
-                unit = "Â°C";
+                unit = string.IsNullOrWhiteSpace(binding.Unit) ? "kWh" : binding.Unit;
+                summaryLabel = "Interval energy";
+                statsUnit = unit;
+                statsLabel = "Energy";
+            }
+            else if (signalFamily == FacilitySignalFamily.WeatherTemperature)
+            {
+                unit = string.IsNullOrWhiteSpace(binding.Unit) ? "Â°C" : binding.Unit;
                 summaryLabel = "Average temperature";
-                statsUnit = "Â°C";
+                statsUnit = unit;
                 statsLabel = "Temperature";
+            }
+            else if (signalFamily == FacilitySignalFamily.Voltage)
+            {
+                unit = string.IsNullOrWhiteSpace(binding.Unit) ? "V" : binding.Unit;
+                summaryLabel = "Average voltage";
+                statsUnit = unit;
+                statsLabel = "Voltage";
+            }
+            else if (signalFamily == FacilitySignalFamily.Current)
+            {
+                unit = string.IsNullOrWhiteSpace(binding.Unit) ? "A" : binding.Unit;
+                summaryLabel = "Average current";
+                statsUnit = unit;
+                statsLabel = "Current";
+            }
+            else if (signalFamily == FacilitySignalFamily.PowerFactor)
+            {
+                unit = string.IsNullOrWhiteSpace(binding.Unit) ? string.Empty : binding.Unit;
+                summaryLabel = "Average power factor";
+                statsUnit = unit;
+                statsLabel = "Power factor";
+            }
+            else if (signalFamily == FacilitySignalFamily.ReactivePower)
+            {
+                unit = string.IsNullOrWhiteSpace(binding.Unit) ? "kVAr" : binding.Unit;
+                summaryLabel = "Reactive power";
+                statsUnit = unit;
+                statsLabel = "Reactive power";
             }
             else if (isFlowSignal)
             {
@@ -3519,31 +3558,37 @@ public class NodeAnalyticsPreviewService
             }
             else
             {
-                unit = binding.Category;   // fallback: category jako jednotka
-                summaryLabel = "Hodnota";
+                unit = !string.IsNullOrWhiteSpace(binding.Unit) ? binding.Unit : binding.Category;
+                summaryLabel = "Value";
                 statsUnit = string.Empty;
-                statsLabel = "Hodnota";
+                statsLabel = "Value";
             }
 
-            // NĂˇzev uzlu: meter_urn je pĹ™irozenĂ˝ identifikĂˇtor pro novĂ˝ dataset
-            var title = string.IsNullOrEmpty(binding.MeterUrn) ? nodeKey : binding.MeterUrn;
-            // Sloupec v CSV: <meter_urn>.<measurement_key>
-            var columnName = $"{binding.MeterUrn}.{binding.MeasurementKey}";
+            var title = !string.IsNullOrWhiteSpace(binding.MeterUrn)
+                ? binding.MeterUrn
+                : !string.IsNullOrWhiteSpace(binding.SourceLabel)
+                    ? binding.SourceLabel
+                    : nodeKey;
+            var columnName = isFixedCsvSeries
+                ? "value"
+                : $"{binding.MeterUrn}.{binding.MeasurementKey}";
 
             return new CuratedNodeSource
             {
                 FileName           = binding.FileName,
                 MeterFolder        = binding.MeterFolder,
+                SourceFilePath     = binding.SourceFilePath,
                 ColumnName         = columnName,
                 Title              = title,
-                NodeTypeHint       = binding.Category,
+                NodeTypeHint       = !string.IsNullOrWhiteSpace(binding.Category) ? binding.Category : signalFamily.ToString(),
                 Unit               = unit,
                 SummaryLabel       = summaryLabel,
                 StatsUnit          = statsUnit,
                 StatsLabel         = statsLabel,
                 IsPowerSignal      = isPowerSignal,
-                PowerToKilowattFactor = isPowerSignal ? 0.001 : 1.0,  // Watts â†’ kW
+                PowerToKilowattFactor = isPowerSignal ? powerToKilowattFactor : 1.0,
                 SupportsDeviation  = isPowerSignal,   // jen P-signĂˇly majĂ­ baseline overlay
+                UsesFixedCsvSeriesFormat = isFixedCsvSeries,
             };
         }
 
@@ -3649,6 +3694,11 @@ public class NodeAnalyticsPreviewService
     /// </summary>
     private string? ResolveCuratedFilePath(CuratedNodeSource source)
     {
+        if (!string.IsNullOrWhiteSpace(source.SourceFilePath) && File.Exists(source.SourceFilePath))
+        {
+            return source.SourceFilePath;
+        }
+
         // Binding-based zdroj (novĂ˝ dataset)
         if (!string.IsNullOrEmpty(source.MeterFolder))
         {
@@ -4481,6 +4531,17 @@ public class NodeAnalyticsPreviewService
         }
 
         return rawValue * source.PowerToKilowattFactor;
+    }
+
+    private static double ResolvePowerToKilowattFactor(string? rawUnit)
+    {
+        return rawUnit?.Trim().ToLowerInvariant() switch
+        {
+            "w" => 0.001,
+            "kw" => 1.0,
+            "mw" => 1000.0,
+            _ => 1.0,
+        };
     }
 
     private static double NormalizeValueForAggregation(double rawValue, CuratedNodeSource source, double sampleStepHours)

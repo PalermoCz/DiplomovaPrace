@@ -1,11 +1,14 @@
 ﻿@page "/"
 @page "/facility"
+@using Microsoft.AspNetCore.Components.Forms
 @using DiplomovaPrace.Services
 @using DiplomovaPrace.Persistence.Schematic
 @using DiplomovaPrace.Components.Editor
 @rendermode InteractiveServer
 @inject FacilityQueryService FacilityQueryService
 @inject FacilityEditorStateService FacilityEditorStateService
+@inject FacilityDataBindingRegistry BindingRegistry
+@inject FacilityNodeSeriesImportService NodeSeriesImportService
 @inject NodeAnalyticsPreviewService AnalyticsPreview
 @inject IEditorSessionService SessionService
 @inject IJSRuntime JSRuntime
@@ -639,33 +642,130 @@
                 @* ══ TAB: IMPORT DATA ═══════════════════════════════════ *@
                 else if (_editorActiveTab == "import")
                 {
-                    <div class="ep-node-header ep-node-header-placeholder">
-                        <div class="ep-node-header-label">Import data</div>
-                        <div class="ep-node-header-key">Data source connection</div>
-                    </div>
-                    <div class="ep-section">
-                        <div class="ep-section-label">Data binding</div>
-                        <div class="ep-placeholder">
-                            <svg width="28" height="28" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" class="ep-placeholder-icon"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></svg>
-                            <div class="ep-placeholder-text">
-                                Data source connection will be implemented in a later step.
-                            </div>
-                            <div class="ep-placeholder-sub">External source binding - CSV import - Meter mapping</div>
-                        </div>
-                    </div>
-                    @if (editorHasFocusNode && !string.IsNullOrWhiteSpace(_selectedFacilityNode!.MeterUrn))
+                    @if (!editorHasFocusNode || !CanEditFocusedNode)
                     {
-                        <div class="ep-section">
-                            <div class="ep-section-label">Current Meter URN</div>
-                            <div class="ep-value-chip">@_selectedFacilityNode.MeterUrn</div>
+                        <div class="ep-node-header ep-node-header-placeholder">
+                            <div class="ep-node-header-label">Import data</div>
+                            <div class="ep-node-header-key">One series per selected node</div>
+                        </div>
+                        <div class="wb-editor-empty-state">
+                            <svg width="22" height="22" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" class="wb-editor-empty-icon"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></svg>
+                            <div>Select one editable node to import a fixed CSV time series.</div>
                         </div>
                     }
-                    <div class="ep-footer">
-                        <button class="btn btn-sm btn-outline-secondary ep-btn-save" disabled title="This feature will be available in a later step">
-                            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" class="me-1" aria-hidden="true"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></svg>
-                            Import data
-                        </button>
-                    </div>
+                    else
+                    {
+                        var selectedBindings = GetSelectedNodeBindingsForPreview();
+
+                        <div class="ep-node-header">
+                            <div class="ep-node-header-label">@_selectedFacilityNode!.Label</div>
+                            <div class="ep-node-header-key">@_selectedFacilityNode.NodeKey</div>
+                        </div>
+
+                        <div class="ep-section">
+                            <div class="ep-section-label">Import one series</div>
+                            <div class="ep-field">
+                                <label>CSV file</label>
+                                <InputFile class="form-control form-control-sm" OnChange="HandleImportSeriesFileSelected" accept=".csv" />
+                            </div>
+                            @if (_importSeriesFile is not null)
+                            {
+                                <div class="ep-hint">Selected file: @_importSeriesFile.Name</div>
+                            }
+                            <div class="ep-field-row">
+                                <div class="ep-field">
+                                    <label>Exact signal code</label>
+                                    <select class="form-select form-select-sm" @bind="_importExactSignalCodeInput">
+                                        @foreach (var exactCode in ImportExactSignalCodeOptions)
+                                        {
+                                            <option value="@exactCode.Value">@exactCode.Value</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="ep-field">
+                                    <label>Unit</label>
+                                    <input class="form-control form-control-sm" @bind="_importUnitInput" @bind:event="oninput" maxlength="40" placeholder="kW, kWh, °C" />
+                                </div>
+                            </div>
+                            <div class="ep-field-row">
+                                <div class="ep-field">
+                                    <label>Meter URN</label>
+                                    <input class="form-control form-control-sm" @bind="_importMeterUrnInput" @bind:event="oninput" maxlength="200" placeholder="optional source reference" />
+                                </div>
+                                <div class="ep-field">
+                                    <label>Source label</label>
+                                    <input class="form-control form-control-sm" @bind="_importSourceLabelInput" @bind:event="oninput" maxlength="200" placeholder="optional file/source label" />
+                                </div>
+                            </div>
+                            <div class="ep-hint">Expected CSV format: first column = timestamp, second column = value, comma delimiter.</div>
+                            <div class="ep-footer">
+                                <button class="btn btn-sm btn-primary ep-btn-save"
+                                        @onclick="ImportSeriesForSelectedNodeAsync"
+                                        disabled="@(_isImportingSeries || _importSeriesFile is null || string.IsNullOrWhiteSpace(_importUnitInput))">
+                                    @if (_isImportingSeries)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                        <span>Importing...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Import data</span>
+                                    }
+                                </button>
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(_importStatusMessage))
+                        {
+                            <div class="ep-status-msg">@_importStatusMessage</div>
+                        }
+
+                        @if (_importErrors.Count > 0)
+                        {
+                            <div class="ep-section">
+                                <div class="ep-section-label">Import validation</div>
+                                @foreach (var error in _importErrors.Take(8))
+                                {
+                                    <div class="wb-link-item wb-link-item-compact">
+                                        <div class="wb-link-item-title">Line @error.LineNumber</div>
+                                        <div class="wb-link-item-note">@error.Reason</div>
+                                    </div>
+                                }
+                                @if (_importErrors.Count > 8)
+                                {
+                                    <div class="ep-hint">@(_importErrors.Count - 8) additional invalid rows were omitted from this preview.</div>
+                                }
+                            </div>
+                        }
+
+                        <div class="ep-section">
+                            <div class="ep-section-label">Node bindings</div>
+                            @if (selectedBindings.Count == 0)
+                            {
+                                <div class="ep-placeholder">
+                                    <svg width="24" height="24" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" class="ep-placeholder-icon"><path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h.5A1.5 1.5 0 0 1 15 2.5v11A1.5 1.5 0 0 1 13.5 15h-11A1.5 1.5 0 0 1 1 13.5v-11A1.5 1.5 0 0 1 2.5 1H3V.5a.5.5 0 0 1 .5-.5M2 4v9.5a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5V4z"/></svg>
+                                    <div class="ep-placeholder-text">No bindings are attached to this node yet.</div>
+                                    <div class="ep-placeholder-sub">Imported and seeded bindings will appear here with exact signal code and unit.</div>
+                                </div>
+                            }
+                            else
+                            {
+                                @foreach (var binding in selectedBindings)
+                                {
+                                    <div class="wb-link-item wb-link-item-compact">
+                                        <div class="wb-link-item-title">
+                                            @binding.ExactSignalCode.Value
+                                            @if (!string.IsNullOrWhiteSpace(binding.Unit))
+                                            {
+                                                <span> · @binding.Unit</span>
+                                            }
+                                        </div>
+                                        <div class="wb-link-item-note">@BuildBindingPreviewText(binding)</div>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    }
                 }
 
                 @* ══ TAB: STYLE ════════════════════════════════════════ *@
@@ -2233,6 +2333,7 @@
         "context-only"
     ];
     private static readonly SemanticSelectionMutationMode[] SemanticSelectionMutationModeOptions = Enum.GetValues<SemanticSelectionMutationMode>();
+    private static readonly IReadOnlyList<FacilitySignalCode> ImportExactSignalCodeOptions = FacilitySignalTaxonomy.GetKnownCodes().ToList();
 
     private FacilitySchematicV2? _canvasV2;
     private DiplomovaPrace.Persistence.Schematic.FacilityEntity? _facility;
@@ -2318,6 +2419,14 @@
     private string _newNodeParentNodeKeyInput = string.Empty;
     private string _newNodeMeterUrnInput = string.Empty;
     private string? _structureStatusMessage;
+    private IBrowserFile? _importSeriesFile;
+    private string _importExactSignalCodeInput = FacilitySignalCode.P.Value;
+    private string _importUnitInput = string.Empty;
+    private string _importMeterUrnInput = string.Empty;
+    private string _importSourceLabelInput = string.Empty;
+    private bool _isImportingSeries;
+    private string? _importStatusMessage;
+    private IReadOnlyList<CsvImportError> _importErrors = [];
     private string _workingSetNameInput = string.Empty;
     private string _workingSetDescriptionInput = string.Empty;
     private string? _workingSetStatusMessage;
@@ -2775,8 +2884,7 @@
                 
                 if (_selectedFacilityNode != null)
                 {
-                    _isCuratedNode = !string.IsNullOrEmpty(_selectedFacilityNode.MeterUrn)
-                        || _selectedFacilityNode.NodeKey is "pv_main" or "chp_main" or "cooling_main" or "heating_main";
+                    _isCuratedNode = IsCuratedNode(_selectedFacilityNode);
                     await ReloadPreviewDataAsync();
                 }
                 else
@@ -3359,6 +3467,7 @@
             _reconnectParentSearchInput = string.Empty;
             _isReconnectParentPickerOpen = false;
             ResetAdditionalRelationshipDraft();
+            ResetImportDraft();
             RestoreFocusedNodeStyleDraft();
             return;
         }
@@ -3394,6 +3503,7 @@
             SyncEditorTagsInputFromSelected();
             _editorTagSearchInput = string.Empty;
             _editorNoteInput = nodeState.Note ?? string.Empty;
+            ResetImportDraft();
             RestoreFocusedNodeStyleDraft();
             return;
         }
@@ -3403,7 +3513,137 @@
         _editorReservedTagsHidden.Clear();
         _editorTagSearchInput = string.Empty;
         _editorNoteInput = string.Empty;
+        ResetImportDraft();
         RestoreFocusedNodeStyleDraft();
+    }
+
+    private void ResetImportDraft()
+    {
+        _importSeriesFile = null;
+        _importExactSignalCodeInput = FacilitySignalCode.P.Value;
+        _importUnitInput = string.Empty;
+        _importMeterUrnInput = _selectedFacilityNode?.MeterUrn ?? string.Empty;
+        _importSourceLabelInput = string.Empty;
+        _importStatusMessage = null;
+        _importErrors = [];
+        _isImportingSeries = false;
+    }
+
+    private void HandleImportSeriesFileSelected(InputFileChangeEventArgs args)
+    {
+        _importSeriesFile = args.File;
+        _importStatusMessage = null;
+        _importErrors = [];
+    }
+
+    private async Task ImportSeriesForSelectedNodeAsync()
+    {
+        if (_selectedFacilityNode is null || !CanEditFocusedNode)
+        {
+            _importStatusMessage = "Select one editable node before importing data.";
+            _importErrors = [];
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (_importSeriesFile is null)
+        {
+            _importStatusMessage = "Choose a CSV file before starting the import.";
+            _importErrors = [];
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        _isImportingSeries = true;
+        _importStatusMessage = null;
+        _importErrors = [];
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            await using var stream = _importSeriesFile.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024);
+            var result = await NodeSeriesImportService.ImportAsync(
+                stream,
+                new FacilityNodeSeriesImportRequest(
+                    _selectedFacilityNode.NodeKey,
+                    _importExactSignalCodeInput,
+                    _importUnitInput,
+                    _importSeriesFile.Name,
+                    NormalizeOptionalText(_importMeterUrnInput),
+                    NormalizeOptionalText(_importSourceLabelInput)));
+
+            _importStatusMessage = result.Message;
+            _importErrors = result.Errors;
+
+            if (result.Success)
+            {
+                _importSeriesFile = null;
+                _isCuratedNode = IsCuratedNode(_selectedFacilityNode);
+                await ReloadPreviewDataAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _importStatusMessage = $"Import failed: {ex.Message}";
+            _importErrors = [];
+        }
+        finally
+        {
+            _isImportingSeries = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private IReadOnlyList<FacilityDataBindingRegistry.BindingRecord> GetSelectedNodeBindingsForPreview()
+    {
+        if (_selectedFacilityNode is null)
+        {
+            return [];
+        }
+
+        return BindingRegistry.GetBindings(_selectedFacilityNode.NodeKey)
+            .OrderByDescending(binding => string.Equals(binding.DataStage, "imported", StringComparison.OrdinalIgnoreCase))
+            .ThenBy(binding => binding.ExactSignalCode.Value, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(binding => binding.Unit, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static string BuildBindingPreviewText(FacilityDataBindingRegistry.BindingRecord binding)
+    {
+        var parts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(binding.MeterUrn))
+        {
+            parts.Add($"Meter URN: {binding.MeterUrn}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(binding.SourceLabel))
+        {
+            parts.Add($"Label: {binding.SourceLabel}");
+        }
+
+        var fileName = !string.IsNullOrWhiteSpace(binding.OriginalFileName)
+            ? binding.OriginalFileName
+            : binding.FileName;
+        if (!string.IsNullOrWhiteSpace(fileName))
+        {
+            parts.Add($"File: {fileName}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(binding.DataStage))
+        {
+            parts.Add(binding.DataStage);
+        }
+
+        return parts.Count == 0 ? "No additional metadata." : string.Join(" · ", parts);
+    }
+
+    private bool IsCuratedNode(DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity? node)
+    {
+        return node is not null
+            && (BindingRegistry.IsSupported(node.NodeKey)
+                || !string.IsNullOrEmpty(node.MeterUrn)
+                || node.NodeKey is "pv_main" or "chp_main" or "cooling_main" or "heating_main");
     }
 
     private async Task AddAdditionalRelationshipAsync()

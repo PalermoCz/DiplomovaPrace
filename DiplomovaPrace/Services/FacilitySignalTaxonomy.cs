@@ -33,6 +33,7 @@ public readonly record struct FacilitySignalCode
     public static readonly FacilitySignalCode PF3 = new("PF3");
     public static readonly FacilitySignalCode Q = new("Q");
     public static readonly FacilitySignalCode Ta = new("Ta");
+    public static readonly FacilitySignalCode Custom = new("custom");
 
     public FacilitySignalCode(string? value)
     {
@@ -70,6 +71,7 @@ public static class FacilitySignalTaxonomy
             [FacilitySignalCode.PF3.Value] = FacilitySignalCode.PF3,
             [FacilitySignalCode.Q.Value] = FacilitySignalCode.Q,
             [FacilitySignalCode.Ta.Value] = FacilitySignalCode.Ta,
+            [FacilitySignalCode.Custom.Value] = FacilitySignalCode.Custom,
         };
 
     private static readonly IReadOnlyDictionary<string, FacilitySignalFamily> FamiliesByCode =
@@ -94,6 +96,7 @@ public static class FacilitySignalTaxonomy
             [FacilitySignalCode.PF3.Value] = FacilitySignalFamily.PowerFactor,
             [FacilitySignalCode.Q.Value] = FacilitySignalFamily.ReactivePower,
             [FacilitySignalCode.Ta.Value] = FacilitySignalFamily.WeatherTemperature,
+            [FacilitySignalCode.Custom.Value] = FacilitySignalFamily.Custom,
         };
 
     public static IReadOnlyCollection<FacilitySignalCode> GetKnownCodes()

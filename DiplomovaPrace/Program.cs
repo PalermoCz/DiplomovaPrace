@@ -41,6 +41,7 @@ builder.Services.AddScoped<ICsvMeasurementImportService, CsvMeasurementImportSer
 builder.Services.AddScoped<IKpiService, KpiService>();
 builder.Services.AddScoped<IBaselineService, BaselineService>();
 builder.Services.AddSingleton<FacilityEditorStateService>();
+builder.Services.AddScoped<FacilityNodeSeriesImportService>();
 builder.Services.AddScoped<FacilityImportService>();
 builder.Services.AddScoped<FacilityQueryService>();
 // FacilityDataBindingRegistry: Singleton — načte dataset_bindings_fixed.csv jednou při startu.
