@@ -250,6 +250,27 @@ public sealed class FacilityEditorStateService
         }
     }
 
+    public IReadOnlyList<FacilityImportedBindingState> GetImportedBindingsSnapshot()
+    {
+        _gate.Wait();
+
+        try
+        {
+            var state = LoadStateUnsafe();
+            return state.ImportedBindings
+                .GroupBy(binding => binding.BindingId, StringComparer.OrdinalIgnoreCase)
+                .Select(group => NormalizeImportedBinding(group.Last()))
+                .OrderBy(binding => binding.NodeKey, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(binding => binding.ExactSignalCode, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(binding => binding.ImportedUtc)
+                .ToList();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     public async Task<IReadOnlyList<FacilityImportedBindingState>> GetImportedBindingsByNodeKeyAsync(
         string? nodeKey,
         CancellationToken ct = default)
@@ -309,6 +330,51 @@ public sealed class FacilityEditorStateService
             state.SchemaVersion = CurrentSchemaVersion;
 
             await PersistStateUnsafeAsync(state, ct);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<FacilityImportedBindingState?> DeleteImportedBindingAsync(string? bindingId, CancellationToken ct = default)
+    {
+        var normalizedBindingId = NormalizeOptionalText(bindingId);
+        if (string.IsNullOrWhiteSpace(normalizedBindingId))
+        {
+            return null;
+        }
+
+        await _gate.WaitAsync(ct);
+
+        try
+        {
+            var state = await LoadStateUnsafeAsync(ct);
+            var removedBinding = state.ImportedBindings
+                .Where(existing => existing.BindingId.Equals(normalizedBindingId, StringComparison.OrdinalIgnoreCase))
+                .Select(NormalizeImportedBinding)
+                .OrderByDescending(existing => existing.ImportedUtc)
+                .FirstOrDefault();
+
+            if (removedBinding is null)
+            {
+                return null;
+            }
+
+            state.ImportedBindings.RemoveAll(existing =>
+                existing.BindingId.Equals(normalizedBindingId, StringComparison.OrdinalIgnoreCase));
+
+            state.ImportedBindings = state.ImportedBindings
+                .GroupBy(existing => existing.BindingId, StringComparer.OrdinalIgnoreCase)
+                .Select(group => NormalizeImportedBinding(group.Last()))
+                .OrderBy(existing => existing.NodeKey, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(existing => existing.ExactSignalCode, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(existing => existing.ImportedUtc)
+                .ToList();
+            state.SchemaVersion = CurrentSchemaVersion;
+
+            await PersistStateUnsafeAsync(state, ct);
+            return removedBinding;
         }
         finally
         {
@@ -767,6 +833,25 @@ public sealed class FacilityEditorStateService
         try
         {
             var raw = await File.ReadAllTextAsync(_stateFilePath, ct);
+            var state = JsonSerializer.Deserialize<FacilityEditorStateDocument>(raw, JsonOptions);
+            return state ?? new FacilityEditorStateDocument();
+        }
+        catch
+        {
+            return new FacilityEditorStateDocument();
+        }
+    }
+
+    private FacilityEditorStateDocument LoadStateUnsafe()
+    {
+        if (!File.Exists(_stateFilePath))
+        {
+            return new FacilityEditorStateDocument();
+        }
+
+        try
+        {
+            var raw = File.ReadAllText(_stateFilePath);
             var state = JsonSerializer.Deserialize<FacilityEditorStateDocument>(raw, JsonOptions);
             return state ?? new FacilityEditorStateDocument();
         }

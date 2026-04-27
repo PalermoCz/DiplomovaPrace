@@ -4,6 +4,68 @@
 [2026-04-27]
 
 ### Task
+Diagnostika a oprava hanging rout `/` a `/facility`
+
+### What changed
+
+**`DiplomovaPrace/Services/FacilityDataBindingRegistry.cs`:**
+- Fixed route-blocking startup behavior in the binding registry constructor.
+- Removed the sync-over-async call to `FacilityEditorStateService.GetImportedBindingsAsync().GetAwaiter().GetResult()` used while constructing the registry.
+- Registry bootstrap now loads imported binding overlay data from a synchronous editor-state snapshot instead of blocking on async file/state loading during component DI activation.
+
+**`DiplomovaPrace/Services/FacilityEditorStateService.cs`:**
+- Added a synchronous imported-bindings snapshot read path used only for safe registry bootstrap.
+- Added a synchronous state file loader so registry initialization no longer depends on async semaphore/file IO during page construction.
+
+### Root cause
+- `/` and `/facility` both resolve to `FacilityWorkbench`, but the request was hanging before `FacilityWorkbench.OnInitializedAsync`.
+- The actual blocker was `FacilityDataBindingRegistry` construction during DI for the page graph.
+- The constructor performed sync-over-async editor-state loading, which blocked route rendering before the first HTML byte was sent.
+
+### Build
+- Standard `dotnet build` task was blocked by a locked `bin\Debug\net10.0\DiplomovaPrace.dll` held by the active VS debugger process, so the default output build could not complete in this environment.
+- Isolated validation build succeeded with `dotnet build .\DiplomovaPrace\DiplomovaPrace.csproj -o .\build-validation\route-hang-final`.
+
+### Validation scope
+- HTTP smoke test passed on the isolated final build:
+  - `/health` → `200 OK`
+  - `/` → `200 OK`
+  - `/facility` → `200 OK`
+- Temporary diagnostics used during investigation were removed after confirming the fix.
+
+### Date
+[2026-04-27]
+
+### Task
+Implementační krok 3b: binding conflict policy, delete workflow a krátká stabilizace import/analytics UX
+
+### What changed
+
+**`DiplomovaPrace/Services/FacilityNodeSeriesImportService.cs`:**
+- Added an exact-signal duplicate guard before CSV parsing/writing, so a node cannot import another active binding with the same exact signal code.
+- Added imported-binding delete workflow that removes the persisted binding, drops the live registry overlay entry, and performs best-effort cleanup of the stored normalized CSV file.
+
+**`DiplomovaPrace/Services/FacilityEditorStateService.cs` and `DiplomovaPrace/Services/FacilityDataBindingRegistry.cs`:**
+- Added persistent imported-binding deletion support in editor state.
+- Extended live binding records with imported timestamp metadata and registry-side removal for imported overlay bindings.
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- Binding preview now shows import time for imported bindings.
+- Added delete action for imported bindings directly in the node binding preview.
+- Import success now keeps the active exact signal selection populated when the scope previously had no explicit signal selected.
+- Import/delete path reuses preview reload so Signal Analytics availability and empty states refresh immediately after binding changes.
+
+### Build
+- `dotnet build` successful.
+
+### Validation scope
+- Build validation performed after duplicate guard, delete workflow, preview metadata, and analytics refresh changes.
+- Browser smoke test was attempted, but the integrated browser and a direct localhost HTTP probe both timed out against `/facility`, so browser validation was not completed in this pass.
+
+### Date
+[2026-04-27]
+
+### Task
 Implementační krok 3: active signal selection, selection-scope availability, trend, basic stats a první bezpečná subtree aggregation
 
 ### What changed

@@ -32,6 +32,7 @@ public sealed class FacilityDataBindingRegistry
         public string? SourceLabel { get; init; }
         public string? OriginalFileName { get; init; }
         public string? SourceFilePath { get; init; }
+        public DateTime? ImportedUtc { get; init; }
         public bool UsesFixedCsvSeriesFormat { get; init; }
         public FacilitySignalCode ExactSignalCode => FacilitySignalTaxonomy.NormalizeExactCode(MeasurementKey);
         public FacilitySignalFamily SignalFamily => FacilitySignalTaxonomy.ResolveFamily(ExactSignalCode);
@@ -129,6 +130,20 @@ public sealed class FacilityDataBindingRegistry
         }
     }
 
+    public bool RemoveImportedBinding(string? bindingId)
+    {
+        var normalizedBindingId = bindingId?.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedBindingId))
+        {
+            return false;
+        }
+
+        lock (_syncRoot)
+        {
+            return _importedBindingsById.Remove(normalizedBindingId);
+        }
+    }
+
     /// <summary>
     /// Sestaví absolutní cestu DataRootPath/meterFolder/fileName.
     /// Vrátí null pokud cesta neexistuje nebo DataRootPath není nakonfigurováno.
@@ -201,10 +216,7 @@ public sealed class FacilityDataBindingRegistry
     {
         try
         {
-            var importedBindings = editorStateService
-                .GetImportedBindingsAsync()
-                .GetAwaiter()
-                .GetResult();
+            var importedBindings = editorStateService.GetImportedBindingsSnapshot();
 
             return importedBindings
                 .Select(binding => CreateImportedBindingRecord(binding, null, contentRootPath))
@@ -246,6 +258,7 @@ public sealed class FacilityDataBindingRegistry
             SourceLabel = state.SourceLabel,
             OriginalFileName = state.OriginalFileName,
             SourceFilePath = resolvedAbsolutePath,
+            ImportedUtc = state.ImportedUtc,
             UsesFixedCsvSeriesFormat = state.FileFormat == FacilityImportedBindingFileFormat.FixedCsvSeries,
         };
     }

@@ -753,14 +753,27 @@
                                 @foreach (var binding in selectedBindings)
                                 {
                                     <div class="wb-link-item wb-link-item-compact">
-                                        <div class="wb-link-item-title">
-                                            @binding.ExactSignalCode.Value
-                                            @if (!string.IsNullOrWhiteSpace(binding.Unit))
-                                            {
-                                                <span> · @binding.Unit</span>
-                                            }
+                                        <div>
+                                            <div class="wb-link-item-title">
+                                                @binding.ExactSignalCode.Value
+                                                @if (!string.IsNullOrWhiteSpace(binding.Unit))
+                                                {
+                                                    <span> · @binding.Unit</span>
+                                                }
+                                            </div>
+                                            <div class="wb-link-item-note">@BuildBindingPreviewText(binding)</div>
                                         </div>
-                                        <div class="wb-link-item-note">@BuildBindingPreviewText(binding)</div>
+
+                                        @if (IsImportedBinding(binding))
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-danger py-0 px-2"
+                                                    title="Delete imported binding"
+                                                    aria-label="Delete imported binding"
+                                                    @onclick="() => DeleteSelectedNodeBindingAsync(binding.BindingId)">
+                                                <i class="bi bi-x-lg" aria-hidden="true"></i>
+                                            </button>
+                                        }
                                     </div>
                                 }
                             }
@@ -3817,6 +3830,11 @@
             if (result.Success)
             {
                 _importSeriesFile = null;
+                if (result.Binding is not null && string.IsNullOrWhiteSpace(_activeAnalyticsSignalCodeValue))
+                {
+                    _activeAnalyticsSignalCodeValue = result.Binding.ExactSignalCode;
+                }
+
                 _isCuratedNode = IsCuratedNode(_selectedFacilityNode);
                 await ReloadPreviewDataAsync();
             }
@@ -3842,10 +3860,49 @@
 
         return BindingRegistry.GetBindings(_selectedFacilityNode.NodeKey)
             .OrderByDescending(binding => string.Equals(binding.DataStage, "imported", StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(binding => binding.ImportedUtc ?? DateTime.MinValue)
             .ThenBy(binding => binding.ExactSignalCode.Value, StringComparer.OrdinalIgnoreCase)
             .ThenBy(binding => binding.Unit, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
+
+    private async Task DeleteSelectedNodeBindingAsync(string bindingId)
+    {
+        if (_selectedFacilityNode is null || !CanEditFocusedNode)
+        {
+            _importStatusMessage = "Select one editable node before deleting a binding.";
+            _importErrors = [];
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var binding = GetSelectedNodeBindingsForPreview()
+            .FirstOrDefault(existing => existing.BindingId.Equals(bindingId, StringComparison.OrdinalIgnoreCase));
+
+        if (binding is null || !IsImportedBinding(binding))
+        {
+            _importStatusMessage = "Only imported bindings can be deleted from this panel.";
+            _importErrors = [];
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var result = await NodeSeriesImportService.DeleteImportedBindingAsync(binding.BindingId);
+        _importStatusMessage = result.Message;
+        _importErrors = [];
+
+        if (result.Success)
+        {
+            _isCuratedNode = IsCuratedNode(_selectedFacilityNode);
+            await ReloadPreviewDataAsync();
+            return;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private static bool IsImportedBinding(FacilityDataBindingRegistry.BindingRecord binding)
+        => string.Equals(binding.DataStage, "imported", StringComparison.OrdinalIgnoreCase);
 
     private static string BuildBindingPreviewText(FacilityDataBindingRegistry.BindingRecord binding)
     {
@@ -3869,9 +3926,14 @@
             parts.Add($"File: {fileName}");
         }
 
+        if (binding.ImportedUtc.HasValue)
+        {
+            parts.Add($"Imported: {binding.ImportedUtc.Value.ToLocalTime():dd/MM/yyyy HH:mm}");
+        }
+
         if (!string.IsNullOrWhiteSpace(binding.DataStage))
         {
-            parts.Add(binding.DataStage);
+            parts.Add($"Stage: {binding.DataStage}");
         }
 
         return parts.Count == 0 ? "No additional metadata." : string.Join(" · ", parts);

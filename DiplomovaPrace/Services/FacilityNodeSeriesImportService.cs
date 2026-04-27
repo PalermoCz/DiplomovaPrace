@@ -18,6 +18,12 @@ public sealed record FacilityNodeSeriesImportResult(
     int SkippedCount,
     IReadOnlyList<CsvImportError> Errors);
 
+public sealed record FacilityNodeBindingDeleteResult(
+    bool Success,
+    string Message,
+    string? BindingId,
+    string? ExactSignalCode);
+
 public sealed class FacilityNodeSeriesImportService
 {
     private readonly IWebHostEnvironment _environment;
@@ -43,6 +49,18 @@ public sealed class FacilityNodeSeriesImportService
         CancellationToken ct = default)
     {
         var normalizedRequest = NormalizeRequest(request);
+        var exactSignalCode = FacilitySignalTaxonomy.NormalizeExactCode(normalizedRequest.ExactSignalCode);
+        if (_bindingRegistry.GetBindings(normalizedRequest.NodeKey, exactSignalCode).Count > 0)
+        {
+            var duplicateMessage = $"Import blocked: node {normalizedRequest.NodeKey} already has a binding for exact signal code '{exactSignalCode.Value}'. Delete the existing binding first.";
+            _logger.LogInformation(
+                "FacilityNodeSeriesImportService: duplicate import blocked for node '{NodeKey}' and exact signal '{ExactSignalCode}'.",
+                normalizedRequest.NodeKey,
+                exactSignalCode.Value);
+
+            return new FacilityNodeSeriesImportResult(false, duplicateMessage, null, 0, 0, []);
+        }
+
         var errors = new List<CsvImportError>();
         var samples = new List<ImportedSeriesSample>();
         var lineNumber = 0;
@@ -159,6 +177,38 @@ public sealed class FacilityNodeSeriesImportService
         }
     }
 
+    public async Task<FacilityNodeBindingDeleteResult> DeleteImportedBindingAsync(
+        string? bindingId,
+        CancellationToken ct = default)
+    {
+        var normalizedBindingId = bindingId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(normalizedBindingId))
+        {
+            return new FacilityNodeBindingDeleteResult(false, "Delete failed: binding id is missing.", null, null);
+        }
+
+        var deletedBinding = await _editorStateService.DeleteImportedBindingAsync(normalizedBindingId, ct);
+        if (deletedBinding is null)
+        {
+            return new FacilityNodeBindingDeleteResult(false, "Delete failed: the imported binding was not found.", null, null);
+        }
+
+        _bindingRegistry.RemoveImportedBinding(deletedBinding.BindingId);
+        TryDeleteImportedFile(deletedBinding.StorageRelativePath);
+
+        _logger.LogInformation(
+            "FacilityNodeSeriesImportService: deleted imported binding '{BindingId}' for node '{NodeKey}' and exact signal '{ExactSignalCode}'.",
+            deletedBinding.BindingId,
+            deletedBinding.NodeKey,
+            deletedBinding.ExactSignalCode);
+
+        return new FacilityNodeBindingDeleteResult(
+            true,
+            $"Binding '{deletedBinding.ExactSignalCode}' was deleted from node {deletedBinding.NodeKey}. You can import this exact signal code again.",
+            deletedBinding.BindingId,
+            deletedBinding.ExactSignalCode);
+    }
+
     private static FacilityNodeSeriesImportRequest NormalizeRequest(FacilityNodeSeriesImportRequest request)
     {
         var nodeKey = request.NodeKey?.Trim() ?? string.Empty;
@@ -198,6 +248,32 @@ public sealed class FacilityNodeSeriesImportService
     private static string BuildStorageRelativePath(string nodeKey, string bindingId)
     {
         return $"App_Data/facility-imports/{SanitizePathSegment(nodeKey)}/{bindingId}.csv";
+    }
+
+    private void TryDeleteImportedFile(string storageRelativePath)
+    {
+        if (string.IsNullOrWhiteSpace(storageRelativePath))
+        {
+            return;
+        }
+
+        var absolutePath = Path.GetFullPath(Path.Combine(
+            _environment.ContentRootPath,
+            storageRelativePath.Replace('/', Path.DirectorySeparatorChar)));
+
+        if (!File.Exists(absolutePath))
+        {
+            return;
+        }
+
+        try
+        {
+            File.Delete(absolutePath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "FacilityNodeSeriesImportService: failed to delete imported file '{Path}'.", absolutePath);
+        }
     }
 
     private static string SanitizePathSegment(string raw)

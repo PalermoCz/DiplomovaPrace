@@ -1,176 +1,120 @@
 # CURRENT TASK
 
 ## Název
-Implementační krok 3: signal selection a první obecné analytiky (trend, basic stats, subtree aggregation)
+Implementační krok 3c: import/editor UX completion + series semantics for cumulative energy counters
 
 ## Kontext
 Máme hotové:
-- built-in typy `area`, `bus`, `weather`
+- built-in typy foundation (`area`, `bus`, `weather`)
 - signal taxonomy (`exact signal code` + `signal family`)
 - multi-binding foundation
-- weather source resolver foundation
-- minimální import write path
+- import write path
 - binding persistence
-- read path pro importované bindings
-- minimální binding preview na nodu
+- duplicate guard podle exact signal code
+- Signal Analytics panel s active signal selection, trendem a basic stats
+- hanging route bug je opravený
 
-Aplikace je selection-first a analytics patří do spodní analytics sekce.
+Po ručním smoke testu se ukázaly tyto nedodělky:
 
----
+1. v binding preview chybí viditelná delete akce (červený křížek)
+2. parser importu počítá header řádek jako invalid row
+3. editor pro `NodeType` nenabízí built-in typy (`area`, `bus`, `weather`)
+4. signály `W`, `W_in`, `W_out` se v Signal Analytics chovají jako běžné raw series, ale pro uživatele dávají větší smysl jako cumulative energy counters s odvozeným interval delta pohledem
 
-## Cíl kroku
-Implementovat první skutečně použitelnou analytickou vrstvu nad novým binding modelem:
-
-1. umožnit zvolit **aktivní exact signal code** pro current selection scope
-2. ukázat první obecné analytiky:
-   - trend
-   - basic stats
-   - subtree aggregation tam, kde dává smysl
-
-Tento krok ještě **NENÍ**:
-- baseline
-- near-base / near-peak
-- LDC
-- EUI
-- weather-aware analytika
-- electrical diagnostics
-- formula engine
-
----
-
-## Už schválené principy
-- node může mít více bindingů
-- analytics se nesmí řídit jen `primary binding`
-- exact signal code je explicitní identita série
-- signal family se používá interně
-- selection může být:
-  - single node
-  - subtree
-  - multi-node selection
-- `area` je strukturální subtree scope
-- `bus` je strukturální helper
-- `weather` je mimo běžný selection flow
-- fixed CSV import už existuje
-- fallbacky musí být explicitní, ne tiché
+## Cíl
+Dotažení posledních UX/datových nedodělků před dalšími analytickými funkcemi.
 
 ---
 
 ## Co přesně chci implementovat
 
-### 1. Active analytics signal selection
-Implementuj vrstvu, která pro aktuální selection scope určí, jaké exact signal codes jsou k dispozici.
+### 1. Delete binding UI
+Do `NODE BINDINGS` preview přidej viditelnou delete akci.
 
 #### Požadavky
-- pro selected node / selection scope zjisti dostupné bindingy
-- nabídni uživateli výběr aktivního exact signal code
-- pokud je v aktuálním scope právě jeden smysluplný kandidát, může být auto-selected
-- pokud jich je více, uživatel si musí vybrat
-- pokud žádný není dostupný, ukaž srozumitelný empty state
-
-#### Důležité
-- nechci, aby aplikace tiše spadla na libovolný `primary binding`
-- nechci, aby se význam signálu odvozoval z názvu souboru
-- tato vrstva musí být připravená pro další analytické kroky
+- delete akce musí být skutečně vidět v UI
+- delete musí odstranit binding z persistence i registry/read path
+- po delete se má refreshnout binding preview i Signal Analytics panel
+- po delete musí být možné znovu importovat stejný exact signal code
 
 ---
 
-### 2. Selection-scope signal availability
-Implementuj minimální logiku pro zjištění, jaké signály jsou v aktuálním selection scope použitelné.
+### 2. Header handling v import parseru
+Uprav parser fixed CSV importu tak, aby:
+- automaticky rozpoznal a přeskočil header řádek typu:
+  - `datetime_utc,<valueColumn>`
+- header se nesmí počítat jako invalid row
 
-#### Potřebuji rozlišit alespoň:
-- exact signal codes dostupné v aktuálním scope
-- signal family
-- jestli jde signal:
-  - zobrazit jako single-node sérii
-  - agregovat přes selection
-  - nebo je jen context-only / unsupported pro aggregate
+#### Dále
+- parser musí umět timestampy jak ve formátu:
+  - `2018-01-02T19:15:00.000000+00:00`
+- tak i ve formátu:
+  - `2017-12-30 23:00:00+00:00`
 
-#### Minimální pravidla pro tento krok
-- exact signal code se považuje za kompatibilní, pokud je dostupný ve vybraném scope
-- subtree aggregation dělej jen pro aditivní signal families:
-  - `power`
-  - `energy`
-- pro ostatní signal families zatím nezkoušej složitou agregaci přes více node
-- pokud selection není kompatibilní pro aggregation, ukaž to explicitně
+#### Invalid row reporting
+- zachovej validaci invalid řádků
+- ale summary musí být srozumitelnější:
+  - pokud je header přeskočen, nemá být reportovaný jako chyba
 
 ---
 
-### 3. Trend analytika
-Implementuj první obecnou analytiku:
-- trend selected signalu v čase
+### 3. NodeType built-in suggestions
+V editoru pro `NodeType` nech volný string input, ale přidej built-in suggestions / dropdown návrhy pro:
+- `area`
+- `bus`
+- `weather`
 
 #### Požadavky
-- funguje pro single node
-- funguje pro subtree / multi-node selection jen když je aggregation validní
-- používá nový active signal selection
-- používá nový multi-binding read path
-- musí běžet ve spodní analytics sekci
-
-#### Scope
-- žádná pokročilá stylizace
-- žádná baseline overlay
-- jen první čistý trend chart
+- uživatel pořád musí mít možnost napsat vlastní typ
+- nechci z `NodeType` udělat tvrdý enum select
+- built-in typy mají být snadno dostupné a viditelné
 
 ---
 
-### 4. Basic stats
-Přidej k trendu minimální základní statistiky pro aktuální signal scope:
+### 4. Series semantics pro `W`, `W_in`, `W_out`
+Rozšiř interní signal model o jednoduchou semantics vrstvu:
 
 #### Minimálně
-- min
-- max
-- average
-- count of points
-- time range / coverage pokud to je v tomto kroku snadné
+- `sample_series`
+- `cumulative_counter`
 
-#### Důležité
-- stats se musí počítat nad skutečně použitou sérií / agregací
-- ne nad jiným fallback signálem
+#### Mapování pro tento krok
+- `W`
+- `W_in`
+- `W_out`
+→ `cumulative_counter`
 
----
-
-### 5. Subtree aggregation – první verze
-Implementuj první bezpečnou verzi subtree aggregation.
-
-#### Požadavky
-- funguje pro `area` a jiné výběry subtree
-- pouze pro aditivní families:
-  - `power`
-  - `energy`
-- agregace = součet hodnot v čase přes kompatibilní nody
-- pokud selection obsahuje nekompatibilní mix, ukaž explicitní unavailable / incompatible state
-
-#### Důležité
-- v tomto kroku neimplementuj složité phase-summing heuristiky
-- nepokoušej se ještě sčítat `P1+P2+P3` do `P` automaticky
-- to necháme až na další rozhodnutí / krok
+Ostatní aktuálně podporované signály:
+→ `sample_series` (pokud není zjevný důvod jinak)
 
 ---
 
-### 6. Minimal UI integration
-Pokud je to možné v tomto kroku, doplň do analytics sekce:
-- dropdown / selector aktivního exact signal code
-- trend
-- basic stats
-- jasné empty states / unavailable states
+### 5. Signal Analytics behavior pro cumulative counters
+Uprav Signal Analytics tak, aby pro signály se semantics `cumulative_counter` neukazoval jen raw counter trend jako hlavní default, ale odvozený intervalový pohled.
 
-Nechci ještě finální polished UX, ale funkční a čitelné minimum.
+#### Doporučení pro MVP
+- exact signal code zůstává `W`, `W_in`, `W_out`
+- ale trend + stats mají defaultně pracovat s **interval delta derived series**
+- zároveň přidej malou poznámku / status, že jde o odvozený pohled z cumulative counteru
+
+Pokud je to v tomto kroku moc rozsáhlé pro plné dotažení, tak aspoň:
+- interně zaveď semantics vrstvu
+- a připrav read path / UI hook na další krok
+
+Ale preferuji, aby už `W` v Signal Analytics dával uživatelsky rozumnější výsledek.
 
 ---
 
 ## Co je mimo scope tohoto kroku
 Neimplementuj:
-- baseline
 - near-base
 - near-peak
 - peak-base ratio
-- load duration curve
-- on-hour duration
+- LDC
+- baseline
 - EUI
-- weather-aware analytics
-- electrical diagnostics
-- formula engine
-- fullscreen analytics
+- další KPI
+- bulk import script
 
 ---
 
@@ -178,21 +122,21 @@ Neimplementuj:
 - nejdřív stručně napiš plán
 - pak implementuj
 - drž se scope tohoto kroku
-- pokud narazíš na blocker nebo nejasnost, napiš to explicitně
-- po dokončení proveď build
+- po dokončení napiš:
+  - co bylo změněno
+  - co zůstává na další krok
+- proveď build
 - aktualizuj `AI/WORKLOG.md`
 
 ---
 
 ## Akceptační kritéria
-Krok je hotový, pokud platí:
-
-1. U current selection scope lze zjistit dostupné exact signal codes
-2. Existuje aktivní analytics signal selection
-3. Lze zobrazit trend nad vybraným signálem
-4. Lze zobrazit základní stats nad vybraným signálem
-5. U subtree selection funguje první bezpečná agregace pro `power` a `energy`
-6. Nekompatibilní selection ukazuje srozumitelný unavailable state
-7. Build projde
-8. Nebyly omylem implementovány KPI mimo scope tohoto kroku
-``
+Krok je hotový, pokud:
+1. `NODE BINDINGS` preview obsahuje viditelnou delete akci
+2. delete funguje end-to-end
+3. import parser správně přeskočí header
+4. parser zvládne oba potvrzené timestamp formáty
+5. editor `NodeType` nabízí `area`, `bus`, `weather`, ale pořád dovolí vlastní text
+6. `W`, `W_in`, `W_out` mají interně semantics `cumulative_counter`
+7. Signal Analytics pro `W*` dává rozumnější výsledek než téměř plochý raw counter trend
+8. build projde

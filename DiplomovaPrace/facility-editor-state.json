@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "nodeEdits": [
     {
       "nodeKey": "design_studio",
@@ -1160,6 +1160,22 @@
       "xHint": 1760,
       "yHint": 1360,
       "updatedUtc": "2026-04-24T19:50:18.8047138Z"
+    }
+  ],
+  "importedBindings": [
+    {
+      "bindingId": "6dff60c20d2e499fb4477a51c6862900",
+      "nodeKey": "weather_root",
+      "exactSignalCode": "Ta",
+      "unit": "\u00B0C",
+      "originalFileName": "WeatherStation.Weather.Ta_corrected_resampled_15min.csv",
+      "storageRelativePath": "App_Data/facility-imports/weather_root/6dff60c20d2e499fb4477a51c6862900.csv",
+      "meterUrn": "test_urn",
+      "sourceLabel": null,
+      "fileFormat": "fixedCsvSeries",
+      "resolution": "irregular",
+      "fileSizeBytes": 10055487,
+      "importedUtc": "2026-04-27T17:49:53.7234223Z"
     }
   ],
   "stylePresets": [
