@@ -937,6 +937,117 @@ window.editorCanvas = (function () {
             });
         },
 
+        setupSelectionPieTooltip: function (svgId) {
+            var svg = document.getElementById(svgId);
+            if (!svg) return;
+            if (svg.dataset.selectionPieTooltipBound === '1') return;
+            svg.dataset.selectionPieTooltipBound = '1';
+
+            function escapeHtml(value) {
+                return String(value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/\"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
+            function findSegment(el) {
+                while (el && el !== svg) {
+                    if (el.dataset && el.dataset.selectionPieSegment === 'true') {
+                        return el;
+                    }
+                    el = el.parentElement;
+                }
+                return null;
+            }
+
+            function ensureCard() {
+                var card = document.getElementById('selection-pie-hover-card');
+                if (!card) {
+                    card = document.createElement('div');
+                    card.id = 'selection-pie-hover-card';
+                    card.className = 'schematic-hover-card';
+                    document.body.appendChild(card);
+                }
+                return card;
+            }
+
+            function positionCard(card, e) {
+                var offsetX = 14;
+                var offsetY = 12;
+                var left = e.clientX + offsetX;
+                var top = e.clientY + offsetY;
+
+                card.style.left = left + 'px';
+                card.style.top = top + 'px';
+
+                var rect = card.getBoundingClientRect();
+                var maxRight = window.innerWidth - 8;
+                var maxBottom = window.innerHeight - 8;
+
+                if (rect.right > maxRight) {
+                    left = e.clientX - rect.width - offsetX;
+                }
+                if (rect.bottom > maxBottom) {
+                    top = e.clientY - rect.height - offsetY;
+                }
+
+                if (left < 8) left = 8;
+                if (top < 8) top = 8;
+
+                card.style.left = left + 'px';
+                card.style.top = top + 'px';
+            }
+
+            var activeSegment = null;
+            svg.addEventListener('mousemove', function (e) {
+                var segment = findSegment(e.target);
+                var card = ensureCard();
+
+                if (!segment) {
+                    if (activeSegment) {
+                        activeSegment.classList.remove('cp-donut-segment-active');
+                    }
+                    activeSegment = null;
+                    card.style.display = 'none';
+                    return;
+                }
+
+                if (activeSegment !== segment) {
+                    if (activeSegment) {
+                        activeSegment.classList.remove('cp-donut-segment-active');
+                    }
+                    activeSegment = segment;
+                    activeSegment.classList.add('cp-donut-segment-active');
+                    var label = segment.dataset.segmentLabel || 'Selection segment';
+                    var count = segment.dataset.segmentCount || '0';
+                    var percent = segment.dataset.segmentPercent || '0%';
+                    var detail = (segment.dataset.segmentDetail || '').trim();
+
+                    var html = '<div class="shc-label">' + escapeHtml(label) + '</div>';
+                    html += '<div class="shc-row"><span class="shc-key">Share</span><span class="shc-val">' + escapeHtml(count + ' nodes (' + percent + ')') + '</span></div>';
+                    if (detail) {
+                        html += '<div class="shc-row shc-note-row"><span class="shc-key">Detail</span><span class="shc-val shc-note-val">' + escapeHtml(detail) + '</span></div>';
+                    }
+
+                    card.innerHTML = html;
+                }
+
+                card.style.display = 'block';
+                positionCard(card, e);
+            });
+
+            svg.addEventListener('mouseleave', function () {
+                if (activeSegment) {
+                    activeSegment.classList.remove('cp-donut-segment-active');
+                }
+                activeSegment = null;
+                var card = document.getElementById('selection-pie-hover-card');
+                if (card) card.style.display = 'none';
+            });
+        },
+
         dispose: function () {
             var svg = getSvg();
 

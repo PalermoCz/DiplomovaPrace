@@ -1,61 +1,196 @@
 # CURRENT TASK
 
-## Goal
-Implement a real compact redesign of the top information/tools area in FacilityWorkbench and simplify editor/hover metadata UI.
+Read-only analýza kódbáze FacilityWorkbench.
 
-## Problem
-The previous pass did not produce a real redesign.
-The top area still visually blends together, the hierarchy is weak, the interval range is too small, the selection summary is badly composed, and the tools block still feels like the old panel with a few things removed.
+## Kontext
+Aplikace je facility graph editor / analytics workbench pro více budov.
+Dryad dataset používáme jen jako referenční realistický dataset pro diplomku a vývoj, ale cílový produkt musí fungovat i bez něj, nad uživatelsky importovanými daty.
 
-Current issues:
-- Interval / Selection / Tools are not visually separated enough
-- the selected interval range is too small and visually weak
-- the selection summary donut/card has poor composition
-- the tools area still does not feel like a compact card-based redesign
-- low-value status rows must remain removed
-- hover card is acceptable and should only receive the final Note/Style cleanup direction already decided
+### UX a selection model
+- aplikace je selection-first
+- single focus není pro analytiku source of truth
+- klik na node záměrně vybírá subtree / children
+- analytika patří do spodní analytics sekce
+- weather node je napojený mimo hlavní selection a běžně nebude součástí selection scope, pokud není vybraný root
 
-## Desired direction
-Deliver a materially new redesign built as 3 clearly separated cards:
+### Node model
+- NodeType zůstává volný string input
+- uživatel si může vytvářet vlastní typy
+- nechceme zavádět samostatné NodeBehaviorRole
+- chceme jen 3 built-in speciální typy:
+  - area
+  - bus
+  - weather
+- všechny ostatní typy jsou generic
+- area node je strukturální kontejner; typicky sám nemá data, ale child node data má
+- weather znamená venkovní meteostanici, ne indoor teploměr
 
-1. Interval card
-2. Selection summary card
-3. Tools card
+### Data model
+- jeden node má do budoucna podporovat více datových bindingů / signálů současně
+- nebudeme rozdělovat dataset import a generic import
+- import je jen jeden a CSV formát má být jednoduchý:
+  - 1. sloupec = timestamp
+  - 2. sloupec = hodnota
+- nechceme uživatele nutit vybírat:
+  - time column
+  - value column
+  - resolution
+  - processing level
+- resolution se má řešit interně, nikoliv jako vstup od uživatele
+- spacing timestampů může být pravidelný i nepravidelný
+- processing level nechceme v UI vůbec
+- nechceme derivovat meaning signálu z názvu souboru
+- místo toho chceme explicitní volbu signal kind při importu
 
-And additionally:
-- remove Tags from active UI / active functionality
-- remove Editor Tags section
-- keep Hover card compact with Note instead of Tags
-- keep the whole redesigned area more compact and more readable on Full HD
+### Built-in signal kinds pro vestavěné analytiky
+Uvažovaný směr:
+- exact signal code se volí explicitně při importu
+- aplikace má vestavěně rozumět minimálně těmto signal codes:
+  - P
+  - P1
+  - P2
+  - P3
+  - W
+  - W_in
+  - W_out
+  - U1
+  - U2
+  - U3
+  - I1
+  - I2
+  - I3
+  - PF
+  - PF1
+  - PF2
+  - PF3
+  - Q
+  - Ta
+- další signály mohou být importovány jako custom / advanced
+- aplikace má interně umět mapovat exact signal codes na širší signal family:
+  - power
+  - energy
+  - voltage
+  - current
+  - power_factor
+  - reactive_power
+  - weather_temperature
+  - custom/other
 
-## Scope
-Implementation only for:
-- top info/tools box redesign
-- removal of Tags from active UI / active flow
-- removal of Editor Tags section
-- hover card Note + Style display-name cleanup
+### Diplomka a data quality
+- diplomová práce nemá řešit čištění dat
+- chceme používat hotová zpracovaná data, zejména `*_corrected_resampled_15min.csv.gz`
+- raw/harmonized vrstvy nechceme řešit jako primární vstup
 
-## Do NOT change
-- Do not reopen Interval logic/semantics beyond the visual redesign
-- Do not redesign the whole page outside this area
-- Do not redesign analytics tabs/content
-- Do not change graph/database/topology architecture
-- Do not perform browser validation
-- Do not use browser automation
-- Do not do broad persisted tag cleanup/migration
+### Legacy
+- `weather_main` a podobné legacy special-case klíče nechceme
+- NodeTags už nejsou používané a nechceme je vracet
+- relevantní metadata jsou:
+  - NodeType
+  - Zone
+  - Meter URN (je potřeba zjistit jeho reálnou roli)
 
-## Constraints
-- The result must feel like a new layout, not just reduced spacing
-- Cards must be visibly separated with borders/radius/background contrast
-- The selected interval range must become visually prominent
-- The selection summary must be re-composed with proper KPI + donut structure
-- The tools card must be genuinely card-based and compact
-- Build/compile validation only; provide manual validation checklist for the user
+## Cíl
+Zjistit, jak do současné architektury realisticky doplnit:
+1. built-in special handling pro `area`, `bus`, `weather`
+2. multi-signal per-node binding model
+3. explicit signal-kind model pro import
+4. internal signal-family model pro vestavěné analytiky
+5. automatické weather source resolution mimo selection
+6. fallback logiku při chybějících built-in signálech
+7. cleanup legacy special-case node keys
+8. roli Meter URN v novém import a binding modelu
 
-## Guardrails
-- No fake redesign through small spacing tweaks
-- No labels inside donut slices
-- No large legend block for the donut
-- No reintroduction of low-value status rows
-- Tags must not remain in active filters/editor
-- Keep hover card compact and read-only
+## Co chci zjistit
+
+### 1. Built-in type handling
+Najdi nejlepší místo v kódu, kde řešit speciální built-in typy:
+- area
+- bus
+- weather
+
+Chci vědět:
+- kde to dnes dává největší smysl zavěsit
+- jak to řešit bez zavádění druhého pole typu NodeBehaviorRole
+- jaké soubory / služby / komponenty by to ovlivnilo
+
+### 2. Multi-signal per-node binding model
+Zjisti:
+- kde dnes kód silně předpokládá `1 node = 1 primary binding`
+- co by se muselo změnit, aby `1 node = více signals`
+- jaký je nejlepší minimální binding model
+
+Navrhni minimální binding strukturu:
+- node id
+- exact signal code
+- unit
+- optional source label / meter identifier
+- optional internal metadata
+
+Neimplementuj, jen navrhni podle reality kódu.
+
+### 3. Exact signal code vs signal family
+Zjisti:
+- kde v kódu nejlépe reprezentovat exact signal codes
+- kde v kódu nejlépe reprezentovat jejich mapování na signal families
+- jak dnes kód rozlišuje power vs non-power signály
+- jak by se to propsalo do importu a analytics
+
+### 4. Import model
+Zjisti:
+- jak nejlépe zapadá do současné architektury model:
+  - 1 file = 1 time series
+  - 1. sloupec timestamp
+  - 2. sloupec value
+  - signal kind se vybírá explicitně při importu
+  - resolution se nezadává
+  - processing level se nezadává
+- kde by se to nejlépe zavěsilo do dnešního import workflow
+- co by bylo potřeba změnit
+
+### 5. Weather source resolution
+Zjisti:
+- jak by analytics vrstva měla najít facility weather source, když weather node typicky není v selectionu
+- kde to v dnešním kódu nejlépe zavěsit
+- jaké legacy assumptions tomu dnes brání
+
+### 6. Fallback logika při chybějících signálech
+Na základě reality kódu napiš:
+- co by se dnes rozbilo, kdyby chyběl `P`
+- co by se rozbilo, kdyby chyběla `W`
+- co by se rozbilo, kdyby chyběla `Ta`
+- co by se rozbilo, kdyby node měl jen custom signal
+- co by bylo potřeba udělat, aby aplikace uměla graceful degradation podle dostupných signals
+
+### 7. Meter URN role
+Zjisti:
+- jak přesně dnes funguje Meter URN
+- jestli je to hlavní identifikátor zdroje
+- jestli se přes něj váže binding registry / preview analytika
+- jestli má být součástí nového import modelu jako povinné nebo volitelné metadata
+
+### 8. Legacy cleanup
+Najdi:
+- kde přesně žijí `weather_main` a jiné legacy special-case node keys
+- jaké další legacy assumptions existují
+- co je potřeba změnit pro čistý nový model
+
+## Output format
+1. Executive summary
+2. Built-in type handling options
+3. Multi-signal feasibility
+4. Recommended binding model
+5. Exact signal code vs signal family hook points
+6. Import hook points
+7. Weather source resolution
+8. Fallback implications
+9. Meter URN findings
+10. Legacy cleanup findings
+11. Recommended next steps
+12. Open questions for human decision
+
+## Pravidla
+- read-only
+- žádné změny v kódu
+- nehádat
+- opírat se o konkrétní soubory a symboly
+- pokud něco není zřejmé, napsat to explicitně

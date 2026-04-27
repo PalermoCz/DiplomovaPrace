@@ -1032,45 +1032,47 @@
                         <div class="cp-selection-kpi">
                             <div class="cp-sel-count-big">@SelectionCount</div>
                             <div class="cp-sel-count-label">SELECTED NODES</div>
-                            @if (!HasSelectedNodes)
-                            {
-                                <div class="cp-sel-empty-hint">Click a node in the schematic to begin</div>
-                            }
                         </div>
                         <div class="cp-selection-visual">
                             <div class="cp-sel-donut-shell">
                                 <div class="cp-sel-donut">
                                     @{
                                         var donutSegments = GetSelectionDonutSegments();
-                                        const double donutRadius = 38;
-                                        var donutCircumference = 2 * Math.PI * donutRadius;
-                                        var donutOffset = 0d;
+                                        const double pieCenterX = 54;
+                                        const double pieCenterY = 54;
+                                        const double pieRadius = 44;
+                                        var pieStartAngle = -90d;
                                     }
-                                    <svg width="108" height="108" viewBox="0 0 108 108" class="cp-donut-svg" aria-hidden="true">
-                                        <circle cx="54" cy="54" r="38" fill="none" stroke="#e2e8f0" stroke-width="16"></circle>
-                                        @foreach (var segment in donutSegments)
+                                    <svg id="@SelectionPieChartSvgId" width="108" height="108" viewBox="0 0 108 108" class="cp-donut-svg" aria-hidden="true">
+                                        @if (donutSegments.Count == 0)
                                         {
-                                            var dashLength = Math.Max((segment.Count / (double)SupportedSelectionSummaryCount) * donutCircumference, 3.0);
-                                            var gapLength = Math.Max(donutCircumference - dashLength, 0.0);
-                                            var dashArray = FormattableString.Invariant($"{dashLength:F3} {gapLength:F3}");
-                                            var dashOffset = FormattableString.Invariant($"{-donutOffset:F3}");
-
-                                            <circle class="cp-donut-segment"
-                                                    cx="54"
-                                                    cy="54"
-                                                    r="38"
-                                                    fill="none"
-                                                    stroke="@segment.Color"
-                                                    stroke-width="16"
-                                                    stroke-dasharray="@dashArray"
-                                                    stroke-dashoffset="@dashOffset"
-                                                    transform="rotate(-90 54 54)">
-                                                <title>@segment.Tooltip</title>
-                                            </circle>
-
-                                            donutOffset += dashLength;
+                                            <circle cx="54" cy="54" r="44" fill="#e2e8f0"></circle>
                                         }
-                                        <circle cx="54" cy="54" r="24" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"></circle>
+                                        else
+                                        {
+                                            @foreach (var segment in donutSegments)
+                                            {
+                                                var segmentSweepAngle = (segment.Count / (double)SupportedSelectionSummaryCount) * 360d;
+                                                if (segmentSweepAngle <= 0d)
+                                                {
+                                                    continue;
+                                                }
+
+                                                var segmentPath = DescribePieSlicePath(pieCenterX, pieCenterY, pieRadius, pieStartAngle, segmentSweepAngle);
+                                                var segmentPercent = (segment.Count / (double)SupportedSelectionSummaryCount).ToString("P0");
+
+                                                <path class="cp-donut-segment"
+                                                      d="@segmentPath"
+                                                      fill="@segment.Color"
+                                                      data-selection-pie-segment="true"
+                                                      data-segment-label="@segment.Label"
+                                                      data-segment-count="@segment.Count"
+                                                      data-segment-percent="@segmentPercent"
+                                                      data-segment-detail="@segment.DetailText"></path>
+
+                                                pieStartAngle += segmentSweepAngle;
+                                            }
+                                        }
                                     </svg>
                                 </div>
                             </div>
@@ -2670,13 +2672,24 @@
         SessionService.SetActiveTool(EditorTool.Select);
     }
 
-    protected override Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            Task.Delay(80).ContinueWith(_ => InvokeAsync(GoHomeAsync));
+            await Task.Delay(80);
+            await GoHomeAsync();
         }
-        return Task.CompletedTask;
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("editorCanvas.setupSelectionPieTooltip", SelectionPieChartSvgId);
+        }
+        catch (InvalidOperationException)
+        {
+        }
+        catch (Microsoft.JSInterop.JSDisconnectedException)
+        {
+        }
     }
 
     private async Task ReloadData(bool preserveSelection = false, string? preferredFocusNodeKey = null)
@@ -6432,7 +6445,9 @@
         return supportedItems;
     }
 
-    private sealed record SelectionDonutSegment(string Label, int Count, string Color, string Tooltip);
+    private const string SelectionPieChartSvgId = "cp-selection-pie-chart";
+
+    private sealed record SelectionDonutSegment(string Label, int Count, string Color, string Tooltip, string? DetailText = null);
 
     private int SupportedSelectionSummaryCount => GetSupportedSelectionSummaryItems().Count;
 
@@ -6457,10 +6472,9 @@
             .ToList();
 
         var segments = new List<SelectionDonutSegment>();
-        var otherDescriptions = new List<string>();
         var totalCount = supportedItems.Count;
 
-        foreach (var group in groups.Take(4))
+        foreach (var group in groups)
         {
             var percentage = (double)group.Count / totalCount;
             segments.Add(new SelectionDonutSegment(
@@ -6470,24 +6484,39 @@
                 $"{group.Label}: {group.Count} nodes ({percentage:P0})"));
         }
 
-        foreach (var group in groups.Skip(4))
-        {
-            otherDescriptions.Add($"{group.Label} {group.Count}");
-        }
-
-        if (otherDescriptions.Count > 0)
-        {
-            var visibleCount = segments.Sum(segment => segment.Count);
-            var otherCount = totalCount - visibleCount;
-            var otherPercentage = (double)otherCount / totalCount;
-            segments.Add(new SelectionDonutSegment(
-                "Other",
-                otherCount,
-                "#94a3b8",
-                $"Other: {otherCount} nodes ({otherPercentage:P0}) | Contains: {string.Join(", ", otherDescriptions)}"));
-        }
-
         return segments;
+    }
+
+    private static string DescribePieSlicePath(double centerX, double centerY, double radius, double startAngleDeg, double sweepAngleDeg)
+    {
+        if (sweepAngleDeg <= 0d)
+        {
+            return string.Empty;
+        }
+
+        if (sweepAngleDeg >= 359.999d)
+        {
+            var diameter = radius * 2d;
+            return FormattableString.Invariant(
+                $"M {centerX:F3} {centerY:F3} m {-radius:F3} 0 a {radius:F3} {radius:F3} 0 1 0 {diameter:F3} 0 a {radius:F3} {radius:F3} 0 1 0 {-diameter:F3} 0 Z");
+        }
+
+        var startRad = DegreesToRadians(startAngleDeg);
+        var endRad = DegreesToRadians(startAngleDeg + sweepAngleDeg);
+
+        var startX = centerX + (radius * Math.Cos(startRad));
+        var startY = centerY + (radius * Math.Sin(startRad));
+        var endX = centerX + (radius * Math.Cos(endRad));
+        var endY = centerY + (radius * Math.Sin(endRad));
+        var largeArcFlag = sweepAngleDeg > 180d ? 1 : 0;
+
+        return FormattableString.Invariant(
+            $"M {centerX:F3} {centerY:F3} L {startX:F3} {startY:F3} A {radius:F3} {radius:F3} 0 {largeArcFlag} 1 {endX:F3} {endY:F3} Z");
+    }
+
+    private static double DegreesToRadians(double degrees)
+    {
+        return degrees * Math.PI / 180d;
     }
 
     private string ResolveNodeTypeFillColor(IEnumerable<DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity> nodes)

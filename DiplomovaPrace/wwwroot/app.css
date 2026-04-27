@@ -8,6 +8,16 @@ html, body {
    Defined here (not in scoped CSS) so :root works correctly.
    ══════════════════════════════════════════════════════════ */
 :root {
+    /* facility dashboard shell */
+    --wb-shell-bg-start: #f8fafc;
+    --wb-shell-bg-end: #f1f5f9;
+    --wb-surface: #ffffff;
+    --wb-surface-soft: #f8fafc;
+    --wb-border: #d7dee8;
+    --wb-border-soft: #e2e8f0;
+    --wb-shadow-soft: 0 10px 24px rgba(15, 23, 42, 0.05);
+    --wb-radius-md: 12px;
+
     /* surfaces */
     --ep-bg-panel: #ffffff;
     --ep-bg-content: #f8fafc;
@@ -110,4 +120,13 @@ h1:focus {
 
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
+}
+
+.facility-layout-shell {
+    height: 100vh;
+    background: linear-gradient(180deg, var(--wb-shell-bg-start) 0%, var(--wb-shell-bg-end) 100%);
+}
+
+.facility-layout-main {
+    background: transparent;
 }

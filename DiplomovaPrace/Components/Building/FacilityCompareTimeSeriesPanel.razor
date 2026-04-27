@@ -3,7 +3,15 @@
 @inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
 
-<div class="card border-0 shadow-sm mb-3">
+<style>
+    .compare-chart-host {
+        height: clamp(13rem, 22vh, 16rem);
+        width: 100%;
+        min-width: 0;
+    }
+</style>
+
+<div class="card border-0 shadow-none mb-0 bg-transparent">
     <div class="card-body p-3">
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
             <div class="text-muted text-uppercase fw-bold" style="font-size: 0.8rem;">@GetPanelTitle(Data)</div>
@@ -41,7 +49,7 @@
         }
         else
         {
-            <div id="@_chartElementId" style="height: 260px; width: 100%;"></div>
+            <div id="@_chartElementId" class="compare-chart-host"></div>
             <div class="small text-muted mt-2">Status: Y axis <strong>@Data.YAxisLabel</strong> · visible series <strong>@Data.Series.Count</strong>@(Data.ExcludedNodeMessages.Count > 0 ? $" · excluded nodes: {Data.ExcludedNodeMessages.Count}" : string.Empty)</div>
         }
     </div>

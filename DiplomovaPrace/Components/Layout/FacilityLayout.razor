@@ -1,10 +1,10 @@
 @inherits LayoutComponentBase
 
-<div class="d-flex flex-column" style="height: 100vh;">
+<div class="facility-layout-shell d-flex flex-column">
     <FacilityTopbar @rendermode="InteractiveServer" />
 
     @* Hlavní pracovní plocha bez sidebaru *@
-    <main class="flex-grow-1 overflow-hidden position-relative">
+    <main class="facility-layout-main flex-grow-1 overflow-hidden position-relative">
         @Body
     </main>
 
