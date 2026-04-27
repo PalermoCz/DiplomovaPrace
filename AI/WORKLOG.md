@@ -1,6 +1,40 @@
 # Worklog
 
 ### Date
+[2026-04-27]
+
+### Task
+Implementační krok 1: built-in typy, signal taxonomy, multi-binding foundation, weather resolver a první legacy cleanup
+
+### What changed
+
+**Foundation services:**
+- Added `FacilityBuiltInNodeTypes` as the central built-in `NodeType` resolver for `area`, `bus`, `weather`, plus the single legacy `weather_main` fallback point.
+- Added `FacilitySignalTaxonomy` with first-class `FacilitySignalCode` and central `FacilitySignalFamily` mapping for the requested built-in exact signal codes.
+- Added `FacilityWeatherSourceResolver` for facility-level weather node discovery and `Ta` binding lookup outside normal selection flow.
+
+**`DiplomovaPrace/Services/FacilityDataBindingRegistry.cs`:**
+- `BindingRecord` now exposes centralized exact signal code and signal family metadata.
+- Added multi-binding-aware read helpers for all bindings, exact signal code filtering, signal family filtering, and preferred binding selection over filtered subsets.
+- Preserved existing `GetPrimaryBinding()` compatibility, but moved its selection logic into the new centralized preference path.
+- Exact signal matching is case-insensitive.
+
+**Legacy cleanup and call-site adoption:**
+- `FacilityNodeSemantics` now resolves weather context through the central built-in helper instead of a raw `weather_main` check.
+- Built-in `area` and `bus` now feed central semantic classification.
+- Replaced direct `weather_main` checks in `NodeAnalyticsPreviewService`, `SchematicComposerV2`, `EditorCanvas`, `EditorView`, and `FacilityWorkbench` with central helpers.
+- Centralized the legacy weather curated fallback in `NodeAnalyticsPreviewService`; user-facing copy now refers to the weather context node instead of the raw legacy key.
+
+### Build
+- `dotnet build` successful.
+
+### Validation scope
+- Build-only validation performed.
+- Import UI and analytics feature work intentionally not implemented in this step.
+
+---
+
+### Date
 [2026-05-01 21:10]
 
 ### Task

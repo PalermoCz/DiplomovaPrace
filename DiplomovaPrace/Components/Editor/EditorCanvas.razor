@@ -672,8 +672,8 @@
     {
         severity = default;
 
-        // weather_main je explanatory uzel, ne energetický alert node.
-        if (string.Equals(nodeKey, "weather_main", StringComparison.OrdinalIgnoreCase))
+        // Weather context node je explanatory uzel, ne energetický alert node.
+        if (FacilityNodeSemantics.IsWeatherContextNode(nodeKey))
         {
             return false;
         }

@@ -3064,7 +3064,7 @@
 
         if (FacilityNodeSemantics.IsWeatherContextNode(nodeKey))
         {
-            _structureStatusMessage = "weather_main is a context-only node and cannot be added through the schematic editor.";
+            _structureStatusMessage = "The weather context node is reserved and cannot be added through the schematic editor.";
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -6946,7 +6946,7 @@
     {
         if (IsWeatherNode(nodeKey))
         {
-            return "The weather_main node is only an explanatory factor in this sprint, so energy alerts are intentionally not evaluated here.";
+            return "The weather context node is only an explanatory factor in this sprint, so energy alerts are intentionally not evaluated here.";
         }
 
         if (deviation?.IsAvailable != true)
@@ -6999,7 +6999,7 @@
 
     private static bool IsWeatherNode(string? nodeKey)
     {
-        return string.Equals(nodeKey, "weather_main", StringComparison.OrdinalIgnoreCase);
+        return FacilityNodeSemantics.IsWeatherContextNode(nodeKey);
     }
 
     private static bool TryParseCustomDateInput(string raw, out DateTime parsedDateUtc)

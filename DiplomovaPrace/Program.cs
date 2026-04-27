@@ -45,6 +45,7 @@ builder.Services.AddScoped<FacilityImportService>();
 builder.Services.AddScoped<FacilityQueryService>();
 // FacilityDataBindingRegistry: Singleton — načte dataset_bindings_fixed.csv jednou při startu.
 builder.Services.AddSingleton<FacilityDataBindingRegistry>();
+builder.Services.AddSingleton<FacilityWeatherSourceResolver>();
 builder.Services.AddScoped<NodeAnalyticsPreviewService>();
 builder.Services.AddScoped<FacilityAlertSummaryService>();
 

@@ -380,7 +380,7 @@ public static class SchematicComposerV2
 
     private static bool IsExcludedNode(string nodeKey)
     {
-        return string.Equals(nodeKey, "weather_main", StringComparison.OrdinalIgnoreCase);
+        return FacilityBuiltInNodeTypes.IsLegacyWeatherNodeKey(nodeKey);
     }
 
     // ── Link building ────────────────────────────────────────────────────────

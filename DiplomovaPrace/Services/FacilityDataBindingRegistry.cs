@@ -27,6 +27,8 @@ public sealed class FacilityDataBindingRegistry
         public string DataStage { get; init; } = string.Empty;
         public string Resolution { get; init; } = string.Empty;
         public string Category { get; init; } = string.Empty;
+        public FacilitySignalCode ExactSignalCode => FacilitySignalTaxonomy.NormalizeExactCode(MeasurementKey);
+        public FacilitySignalFamily SignalFamily => FacilitySignalTaxonomy.ResolveFamily(ExactSignalCode);
     }
 
     private readonly IReadOnlyDictionary<string, IReadOnlyList<BindingRecord>> _byNodeId;
@@ -47,6 +49,12 @@ public sealed class FacilityDataBindingRegistry
     public IReadOnlyList<BindingRecord> GetBindings(string nodeId)
         => _byNodeId.TryGetValue(nodeId, out var list) ? list : [];
 
+    public IReadOnlyList<BindingRecord> GetBindings(string nodeId, FacilitySignalCode exactSignalCode)
+        => FilterBindings(nodeId, binding => FacilitySignalTaxonomy.MatchesExactCode(binding.ExactSignalCode, exactSignalCode));
+
+    public IReadOnlyList<BindingRecord> GetBindings(string nodeId, FacilitySignalFamily signalFamily)
+        => FilterBindings(nodeId, binding => binding.SignalFamily == signalFamily);
+
     /// <summary>
     /// Vrátí preferovaný binding pro node.
     /// Priorita: P@15min → P → Ta@15min → Ta → jakýkoliv@15min → první dostupný.
@@ -56,13 +64,14 @@ public sealed class FacilityDataBindingRegistry
         if (!_byNodeId.TryGetValue(nodeId, out var bindings) || bindings.Count == 0)
             return null;
 
-        return bindings.FirstOrDefault(b => b.MeasurementKey == "P" && b.Resolution == "15min")
-            ?? bindings.FirstOrDefault(b => b.MeasurementKey == "P")
-            ?? bindings.FirstOrDefault(b => b.MeasurementKey == "Ta" && b.Resolution == "15min")
-            ?? bindings.FirstOrDefault(b => b.MeasurementKey == "Ta")
-            ?? bindings.FirstOrDefault(b => b.Resolution == "15min")
-            ?? bindings[0];
+        return SelectPreferredBinding(bindings);
     }
+
+    public BindingRecord? GetPreferredBinding(string nodeId, FacilitySignalCode exactSignalCode)
+        => SelectPreferredBinding(GetBindings(nodeId, exactSignalCode));
+
+    public BindingRecord? GetPreferredBinding(string nodeId, FacilitySignalFamily signalFamily)
+        => SelectPreferredBinding(GetBindings(nodeId, signalFamily));
 
     /// <summary>Vrátí true pokud pro node existuje alespoň jedna vazba.</summary>
     public bool IsSupported(string nodeId)
@@ -82,6 +91,35 @@ public sealed class FacilityDataBindingRegistry
         var path = Path.GetFullPath(Path.Combine(_dataRootPath, meterFolder, fileName));
         return File.Exists(path) ? path : null;
     }
+
+    private IReadOnlyList<BindingRecord> FilterBindings(string nodeId, Func<BindingRecord, bool> predicate)
+    {
+        if (!_byNodeId.TryGetValue(nodeId, out var bindings) || bindings.Count == 0)
+        {
+            return [];
+        }
+
+        return bindings.Where(predicate).ToList();
+    }
+
+    private static BindingRecord? SelectPreferredBinding(IEnumerable<BindingRecord> bindings)
+    {
+        var bindingList = bindings as IReadOnlyList<BindingRecord> ?? bindings.ToList();
+        if (bindingList.Count == 0)
+        {
+            return null;
+        }
+
+        return bindingList.FirstOrDefault(binding => FacilitySignalTaxonomy.MatchesExactCode(binding.ExactSignalCode, FacilitySignalCode.P) && IsPreferredResolution(binding))
+            ?? bindingList.FirstOrDefault(binding => FacilitySignalTaxonomy.MatchesExactCode(binding.ExactSignalCode, FacilitySignalCode.P))
+            ?? bindingList.FirstOrDefault(binding => FacilitySignalTaxonomy.MatchesExactCode(binding.ExactSignalCode, FacilitySignalCode.Ta) && IsPreferredResolution(binding))
+            ?? bindingList.FirstOrDefault(binding => FacilitySignalTaxonomy.MatchesExactCode(binding.ExactSignalCode, FacilitySignalCode.Ta))
+            ?? bindingList.FirstOrDefault(IsPreferredResolution)
+            ?? bindingList[0];
+    }
+
+    private static bool IsPreferredResolution(BindingRecord binding)
+        => string.Equals(binding.Resolution, "15min", StringComparison.OrdinalIgnoreCase);
 
     // ── Načítání CSV ──────────────────────────────────────────────────────────
 

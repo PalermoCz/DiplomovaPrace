@@ -1,196 +1,205 @@
 # CURRENT TASK
 
-Read-only analýza kódbáze FacilityWorkbench.
+## Název
+Implementační krok 2: import write path, binding persistence a minimální import UI pro jednu časovou řadu
 
 ## Kontext
-Aplikace je facility graph editor / analytics workbench pro více budov.
-Dryad dataset používáme jen jako referenční realistický dataset pro diplomku a vývoj, ale cílový produkt musí fungovat i bez něj, nad uživatelsky importovanými daty.
+Máme hotový foundation krok:
+- built-in typy `area`, `bus`, `weather`
+- signal taxonomy (`exact signal code` + `signal family`)
+- multi-binding read foundation
+- facility weather resolver
+- první bezpečný cleanup legacy special-case logiky
 
-### UX a selection model
+Teď potřebujeme udělat druhý krok:
+- umožnit zapisovat nové signal bindings na node z UI
+- bez implementace samotných analytických funkcí
+
+---
+
+## Už schválená pravidla
 - aplikace je selection-first
-- single focus není pro analytiku source of truth
-- klik na node záměrně vybírá subtree / children
 - analytika patří do spodní analytics sekce
-- weather node je napojený mimo hlavní selection a běžně nebude součástí selection scope, pokud není vybraný root
-
-### Node model
-- NodeType zůstává volný string input
-- uživatel si může vytvářet vlastní typy
-- nechceme zavádět samostatné NodeBehaviorRole
-- chceme jen 3 built-in speciální typy:
-  - area
-  - bus
-  - weather
-- všechny ostatní typy jsou generic
-- area node je strukturální kontejner; typicky sám nemá data, ale child node data má
-- weather znamená venkovní meteostanici, ne indoor teploměr
-
-### Data model
-- jeden node má do budoucna podporovat více datových bindingů / signálů současně
-- nebudeme rozdělovat dataset import a generic import
-- import je jen jeden a CSV formát má být jednoduchý:
+- `NodeType` zůstává volný string
+- built-in speciální typy jsou jen:
+  - `area`
+  - `bus`
+  - `weather`
+- jeden node může mít více datových bindingů
+- import je jen jeden, ne dataset/generic split
+- CSV formát je fixní:
   - 1. sloupec = timestamp
   - 2. sloupec = hodnota
-- nechceme uživatele nutit vybírat:
+  - oddělovač = čárka
+- nechceme vybírat:
   - time column
   - value column
   - resolution
   - processing level
-- resolution se má řešit interně, nikoliv jako vstup od uživatele
+- resolution má být interní metadata, ne pole v UI
 - spacing timestampů může být pravidelný i nepravidelný
-- processing level nechceme v UI vůbec
-- nechceme derivovat meaning signálu z názvu souboru
-- místo toho chceme explicitní volbu signal kind při importu
+- processing level nebude v UI vůbec
+- nechceme odvozovat význam signálu z názvu souboru
+- uživatel musí explicitně vybrat **exact signal code**
+- `Meter URN` má zůstat volitelné metadata zdroje
 
-### Built-in signal kinds pro vestavěné analytiky
-Uvažovaný směr:
-- exact signal code se volí explicitně při importu
-- aplikace má vestavěně rozumět minimálně těmto signal codes:
-  - P
-  - P1
-  - P2
-  - P3
-  - W
-  - W_in
-  - W_out
-  - U1
-  - U2
-  - U3
-  - I1
-  - I2
-  - I3
-  - PF
-  - PF1
-  - PF2
-  - PF3
-  - Q
-  - Ta
-- další signály mohou být importovány jako custom / advanced
-- aplikace má interně umět mapovat exact signal codes na širší signal family:
-  - power
-  - energy
-  - voltage
-  - current
-  - power_factor
-  - reactive_power
-  - weather_temperature
-  - custom/other
+### Built-in exact signal codes pro import
+- `P`
+- `P1`
+- `P2`
+- `P3`
+- `W`
+- `W_in`
+- `W_out`
+- `U1`
+- `U2`
+- `U3`
+- `I1`
+- `I2`
+- `I3`
+- `PF`
+- `PF1`
+- `PF2`
+- `PF3`
+- `Q`
+- `Ta`
+- `custom`
 
-### Diplomka a data quality
-- diplomová práce nemá řešit čištění dat
-- chceme používat hotová zpracovaná data, zejména `*_corrected_resampled_15min.csv.gz`
-- raw/harmonized vrstvy nechceme řešit jako primární vstup
+---
 
-### Legacy
-- `weather_main` a podobné legacy special-case klíče nechceme
-- NodeTags už nejsou používané a nechceme je vracet
-- relevantní metadata jsou:
-  - NodeType
-  - Zone
-  - Meter URN (je potřeba zjistit jeho reálnou roli)
+## Cíl kroku
+Implementovat minimální end-to-end import jedné časové řady na vybraný node tak, aby:
+1. uživatel mohl na node nahrát 1 soubor = 1 série
+2. uživatel zvolil exact signal code
+3. uživatel zvolil unit
+4. volitelně mohl zadat Meter URN / source label
+5. binding se korektně perzistoval
+6. šel následně číst přes nový multi-binding foundation model
 
-## Cíl
-Zjistit, jak do současné architektury realisticky doplnit:
-1. built-in special handling pro `area`, `bus`, `weather`
-2. multi-signal per-node binding model
-3. explicit signal-kind model pro import
-4. internal signal-family model pro vestavěné analytiky
-5. automatické weather source resolution mimo selection
-6. fallback logiku při chybějících built-in signálech
-7. cleanup legacy special-case node keys
-8. roli Meter URN v novém import a binding modelu
+Tento krok stále **NENÍ** o KPI, baseline ani analytických grafech.
 
-## Co chci zjistit
+---
 
-### 1. Built-in type handling
-Najdi nejlepší místo v kódu, kde řešit speciální built-in typy:
-- area
-- bus
-- weather
+## Co přesně chci implementovat
 
-Chci vědět:
-- kde to dnes dává největší smysl zavěsit
-- jak to řešit bez zavádění druhého pole typu NodeBehaviorRole
-- jaké soubory / služby / komponenty by to ovlivnilo
+### 1. Minimální import UI
+Najdi nejvhodnější místo v existujícím editor/import workflow a přidej minimální UI pro import jedné série.
 
-### 2. Multi-signal per-node binding model
-Zjisti:
-- kde dnes kód silně předpokládá `1 node = 1 primary binding`
-- co by se muselo změnit, aby `1 node = více signals`
-- jaký je nejlepší minimální binding model
+#### UI má umožnit:
+- vybrat cílový node
+- vybrat soubor
+- vybrat exact signal code z dropdownu
+- zadat unit
+- volitelně zadat Meter URN / source label
 
-Navrhni minimální binding strukturu:
-- node id
+#### UI nesmí obsahovat:
+- time column picker
+- value column picker
+- resolution input
+- processing level input
+- phase input
+- direction input
+
+#### Poznámka
+Phase i direction jsou reprezentované přes exact signal code:
+- `P1`, `P2`, `P3`
+- `W_in`, `W_out`
+
+---
+
+### 2. CSV parsing pro fixed format
+Implementuj nebo uprav import tak, aby očekával:
+- 1. sloupec = timestamp
+- 2. sloupec = value
+- oddělovač = čárka
+
+#### Požadavky
+- timestamp musí být parsován z prvního sloupce
+- value z druhého sloupce
+- spacing může být pravidelný i nepravidelný
+- import nesmí vyžadovat ruční zadání resolution
+- pokud série obsahuje nevalidní řádky, chci bezpečné a srozumitelné chování (validace / chybová zpráva)
+- tento krok ještě nemusí řešit složité cleaning scénáře
+
+---
+
+### 3. Binding persistence
+Implementuj zápis bindingu na node tak, aby:
+- node mohl mít více bindingů
+- nový binding byl perzistentní
+- binding obsahoval:
+  - node id
+  - exact signal code
+  - unit
+  - source reference / file metadata
+  - volitelně Meter URN / source label
+  - případná interní metadata nutná pro čtení
+
+#### Důležité
+- nerozbij stávající graph model
+- nepřepiš foundation krok na jiný model
+- navazuj na nový multi-binding foundation
+
+---
+
+### 4. Napojení na read path
+Po importu musí být binding:
+- dohledatelný přes binding registry / nový resolver
+- čitelný přes nový multi-binding model
+- připravený pro další analytické prompty
+
+Tzn. nechci jen „uložený soubor někde bokem“, ale skutečně napojený binding.
+
+---
+
+### 5. Minimální zobrazení bindingů na nodu
+Pokud je to v tomto kroku bezpečné a malé, přidej minimální přehled bindingů na selected node:
 - exact signal code
 - unit
-- optional source label / meter identifier
-- optional internal metadata
+- případně Meter URN
+- případně source file / label
 
-Neimplementuj, jen navrhni podle reality kódu.
+Nemusí to být finální UX, jen minimální ověření, že bindingy jsou na nodu opravdu vidět a použitelné.
 
-### 3. Exact signal code vs signal family
-Zjisti:
-- kde v kódu nejlépe reprezentovat exact signal codes
-- kde v kódu nejlépe reprezentovat jejich mapování na signal families
-- jak dnes kód rozlišuje power vs non-power signály
-- jak by se to propsalo do importu a analytics
+Pokud by to scope zbytečně nafouklo, napiš to a nech to na další krok.
 
-### 4. Import model
-Zjisti:
-- jak nejlépe zapadá do současné architektury model:
-  - 1 file = 1 time series
-  - 1. sloupec timestamp
-  - 2. sloupec value
-  - signal kind se vybírá explicitně při importu
-  - resolution se nezadává
-  - processing level se nezadává
-- kde by se to nejlépe zavěsilo do dnešního import workflow
-- co by bylo potřeba změnit
+---
 
-### 5. Weather source resolution
-Zjisti:
-- jak by analytics vrstva měla najít facility weather source, když weather node typicky není v selectionu
-- kde to v dnešním kódu nejlépe zavěsit
-- jaké legacy assumptions tomu dnes brání
+## Co je mimo scope tohoto kroku
+Neimplementuj:
+- KPI
+- baseline
+- trend grafy
+- LDC
+- EUI
+- subtree analytics
+- weather-aware výpočty
+- automatic energy integration UI
+- formula engine
+- fullscreen analytics
 
-### 6. Fallback logika při chybějících signálech
-Na základě reality kódu napiš:
-- co by se dnes rozbilo, kdyby chyběl `P`
-- co by se rozbilo, kdyby chyběla `W`
-- co by se rozbilo, kdyby chyběla `Ta`
-- co by se rozbilo, kdyby node měl jen custom signal
-- co by bylo potřeba udělat, aby aplikace uměla graceful degradation podle dostupných signals
+---
 
-### 7. Meter URN role
-Zjisti:
-- jak přesně dnes funguje Meter URN
-- jestli je to hlavní identifikátor zdroje
-- jestli se přes něj váže binding registry / preview analytika
-- jestli má být součástí nového import modelu jako povinné nebo volitelné metadata
+## Pravidla práce
+- nejdřív stručně napiš plán
+- pak implementuj
+- drž se scope tohoto kroku
+- neprováděj zbytečné změny mimo tento krok
+- pokud narazíš na blocker nebo nejasnost, napiš to explicitně
+- po dokončení aktualizuj `AI/WORKLOG.md`
+- build musí projít
 
-### 8. Legacy cleanup
-Najdi:
-- kde přesně žijí `weather_main` a jiné legacy special-case node keys
-- jaké další legacy assumptions existují
-- co je potřeba změnit pro čistý nový model
+---
 
-## Output format
-1. Executive summary
-2. Built-in type handling options
-3. Multi-signal feasibility
-4. Recommended binding model
-5. Exact signal code vs signal family hook points
-6. Import hook points
-7. Weather source resolution
-8. Fallback implications
-9. Meter URN findings
-10. Legacy cleanup findings
-11. Recommended next steps
-12. Open questions for human decision
+## Akceptační kritéria
+Krok je hotový, pokud platí:
 
-## Pravidla
-- read-only
-- žádné změny v kódu
-- nehádat
-- opírat se o konkrétní soubory a symboly
-- pokud něco není zřejmé, napsat to explicitně
+1. Existuje minimální UI pro import 1 souboru = 1 série na node
+2. Uživatel při importu vybírá exact signal code a unit
+3. CSV parser očekává fixed 2-column formát (timestamp, value)
+4. Binding se perzistuje na node
+5. Node může mít více bindingů
+6. Nový binding je dostupný přes read path / registry
+7. Build projde
+8. Nebyly omylem implementovány analytické funkce mimo scope
+``

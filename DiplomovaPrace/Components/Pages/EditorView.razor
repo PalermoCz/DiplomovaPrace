@@ -120,7 +120,7 @@
                             <div class="card-body py-2 px-3">
                                 <div style="font-size: 0.85rem;" class="text-muted text-uppercase mb-1">@_curatedPreviewData.Title</div>
                                 <div class="fs-5 fw-bold text-dark">
-                                    @if (_selectedFacilityNode?.NodeKey == "weather_main")
+                                    @if (IsWeatherContextNode(_selectedFacilityNode))
                                     {
                                         @(_curatedPreviewData.Average.ToString("N1")) <span style="font-size: 0.9rem; font-weight: normal; color: #64748b;">°C (průměr)</span>
                                     }
@@ -355,7 +355,7 @@
                 
                 if (_selectedFacilityNode != null)
                 {
-                    _isCuratedNode = _selectedFacilityNode.NodeKey is "pv_main" or "chp_main" or "cooling_main" or "heating_main" or "weather_main";
+                    _isCuratedNode = IsCuratedAnalyticsNode(_selectedFacilityNode);
 
                     if (_isCuratedNode || !string.IsNullOrEmpty(_selectedFacilityNode.MeterUrn))
                     {
@@ -393,6 +393,15 @@
         }
 
         await InvokeAsync(StateHasChanged);
+    }
+
+    private static bool IsWeatherContextNode(DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity? node)
+        => node is not null && FacilityNodeSemantics.IsWeatherContextNode(node.NodeKey, node.NodeType);
+
+    private static bool IsCuratedAnalyticsNode(DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity node)
+    {
+        return node.NodeKey is "pv_main" or "chp_main" or "cooling_main" or "heating_main"
+            || FacilityNodeSemantics.IsWeatherContextNode(node.NodeKey, node.NodeType);
     }
 
     private async void HandleActiveBuildingChanged()

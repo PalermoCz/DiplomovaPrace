@@ -3381,7 +3381,7 @@ public class NodeAnalyticsPreviewService
 
     public async Task<CuratedNodeDeviationSummary> GetCuratedDeviationSummaryAsync(string nodeKey, DateTime from, DateTime to, CancellationToken ct = default)
     {
-        if (nodeKey == "weather_main")
+        if (FacilityBuiltInNodeTypes.IsLegacyWeatherNodeKey(nodeKey))
         {
             return new CuratedNodeDeviationSummary
             {
@@ -3485,10 +3485,11 @@ public class NodeAnalyticsPreviewService
         var binding = _bindingRegistry.GetPrimaryBinding(nodeKey);
         if (binding is not null)
         {
-            // UrÄŤenĂ­ signĂˇlnĂ­ho charakteru podle measurement_key
-            var isPowerSignal = binding.MeasurementKey is "P" or "P1" or "P2" or "P3";
-            var isTempSignal = binding.MeasurementKey is "Ta" or "Trl" or "Tvl" or "Tdiff";
-            var isFlowSignal = binding.MeasurementKey is "qv" or "V";
+            var signalFamily = binding.SignalFamily;
+            var exactSignalCode = binding.ExactSignalCode;
+            var isPowerSignal = signalFamily == FacilitySignalFamily.Power;
+            var isTempSignal = signalFamily == FacilitySignalFamily.WeatherTemperature;
+            var isFlowSignal = exactSignalCode.Value is "qv" or "V";
 
             string unit;
             string summaryLabel;
@@ -3547,6 +3548,22 @@ public class NodeAnalyticsPreviewService
         }
 
         // â”€â”€ 2. Legacy fallback (starĂ© agregovanĂ© CSV uzly â€” zachovĂˇny pro pĹ™echod) â”€
+        if (FacilityBuiltInNodeTypes.IsLegacyWeatherNodeKey(nodeKey))
+        {
+            return new CuratedNodeSource
+            {
+                FileName = "weather.csv",
+                ColumnName = "WeatherStation.Weather.Ta",
+                Title = "Instant average temperature",
+                NodeTypeHint = FacilityBuiltInNodeTypes.WeatherNodeType,
+                Unit = "Â°C",
+                SummaryLabel = "Average temperature",
+                StatsUnit = "Â°C",
+                StatsLabel = "Temperature",
+                SupportsDeviation = false
+            };
+        }
+
         return nodeKey switch
         {
             "pv_main" => new CuratedNodeSource
@@ -3604,18 +3621,6 @@ public class NodeAnalyticsPreviewService
                 IsPowerSignal = true,
                 PowerToKilowattFactor = 0.001,
                 SupportsDeviation = true
-            },
-            "weather_main" => new CuratedNodeSource
-            {
-                FileName = "weather.csv",
-                ColumnName = "WeatherStation.Weather.Ta",
-                Title = "Instant average temperature",
-                NodeTypeHint = "weather",
-                Unit = "Â°C",
-                SummaryLabel = "Average temperature",
-                StatsUnit = "Â°C",
-                StatsLabel = "Temperature",
-                SupportsDeviation = false
             },
             _ => null
         };

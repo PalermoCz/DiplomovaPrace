@@ -149,9 +149,20 @@ public static class FacilityNodeSemantics
         string? label,
         FacilityNodeRole? role = null)
     {
-        if (IsWeatherContextNode(nodeKey))
+        if (IsWeatherContextNode(nodeKey, nodeType))
         {
             return FacilityNodeSemanticType.WeatherContext;
+        }
+
+        var builtInNodeKind = FacilityBuiltInNodeTypes.ResolveKind(nodeType);
+        if (builtInNodeKind == FacilityBuiltInNodeKind.Area)
+        {
+            return FacilityNodeSemanticType.ZonalContext;
+        }
+
+        if (builtInNodeKind == FacilityBuiltInNodeKind.Bus)
+        {
+            return FacilityNodeSemanticType.Distribution;
         }
 
         var effectiveRole = role ?? ResolveRole(nodeKey, nodeType, label);
@@ -245,7 +256,7 @@ public static class FacilityNodeSemantics
             tags.Add("servers");
         }
 
-        if (IsWeatherContextNode(nodeKey))
+        if (IsWeatherContextNode(nodeKey, nodeType))
         {
             tags.Add("weather-context");
             tags.Add("context-only");
@@ -398,9 +409,14 @@ public static class FacilityNodeSemantics
 
     public static FacilityNodeRole ResolveRole(string? nodeKey, string? nodeType = null, string? label = null)
     {
-        if (IsWeatherContextNode(nodeKey))
+        if (IsWeatherContextNode(nodeKey, nodeType))
         {
             return FacilityNodeRole.OtherUnclassified;
+        }
+
+        if (FacilityBuiltInNodeTypes.IsBus(nodeType))
+        {
+            return FacilityNodeRole.PowerDistribution;
         }
 
         if (!string.IsNullOrWhiteSpace(nodeKey) && NodeKeyRoleOverrides.TryGetValue(nodeKey, out var keyRole))
@@ -462,9 +478,9 @@ public static class FacilityNodeSemantics
         };
     }
 
-    public static bool IsWeatherContextNode(string? nodeKey)
+    public static bool IsWeatherContextNode(string? nodeKey, string? nodeType = null)
     {
-        return string.Equals(nodeKey, "weather_main", StringComparison.OrdinalIgnoreCase);
+        return FacilityBuiltInNodeTypes.IsWeatherNode(nodeKey, nodeType);
     }
 
     private static bool TagMatches(string tag, string requiredTag)
