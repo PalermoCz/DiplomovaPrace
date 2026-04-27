@@ -1626,6 +1626,104 @@
             {
                 @if (IsOverviewTabActive)
                 {
+                <div class="overview-widget overview-widget-soft mb-3">
+                    <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+                        <div>
+                            <h6>Signal Analytics</h6>
+                            <div class="small text-muted">@SelectionSignalScopeDescription</div>
+                        </div>
+
+                        @if (ActiveSelectionSignalAvailability is not null)
+                        {
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="badge bg-light text-secondary border">Family: @ActiveSelectionSignalAvailability.SignalFamily</span>
+                                <span class="badge bg-light text-secondary border">Mode: @ActiveSelectionSignalAvailability.AvailabilityLabel</span>
+                                <span class="badge bg-light text-secondary border">Matching nodes: @ActiveSelectionSignalAvailability.MatchingNodeCount</span>
+                            </div>
+                        }
+                    </div>
+
+                    @if (_selectionSignalAvailability.Options.Count == 0)
+                    {
+                        <div class="alert alert-secondary py-2 mb-0 border-0">@(_selectionSignalAvailability.Message ?? "No exact signal bindings are available in the current scope.")</div>
+                    }
+                    else
+                    {
+                        <div class="row g-3 align-items-end mb-3">
+                            <div class="col-xl-4 col-lg-5">
+                                <label class="form-label form-label-sm">Active exact signal code</label>
+                                <select class="form-select form-select-sm" value="@_activeAnalyticsSignalCodeValue" @onchange="OnActiveAnalyticsSignalChanged">
+                                    @if (_selectionSignalAvailability.Options.Count > 1)
+                                    {
+                                        <option value="">Choose exact signal code...</option>
+                                    }
+
+                                    @foreach (var option in _selectionSignalAvailability.Options)
+                                    {
+                                        <option value="@option.ExactSignalCode.Value">@option.ExactSignalCode.Value · @option.SignalFamily · @option.AvailabilityLabel</option>
+                                    }
+                                </select>
+                                <div class="form-text">@ActiveSelectionSignalHelperText</div>
+                            </div>
+
+                            <div class="col-xl-8 col-lg-7">
+                                <div class="small text-muted mb-2">Scope availability</div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    @foreach (var option in _selectionSignalAvailability.Options)
+                                    {
+                                        var isActiveSignal = string.Equals(_activeAnalyticsSignalCodeValue, option.ExactSignalCode.Value, StringComparison.OrdinalIgnoreCase);
+                                        <span class="badge @(isActiveSignal ? "bg-primary text-white" : "bg-light text-secondary border")">
+                                            @option.ExactSignalCode.Value · @option.SignalFamily · @option.AvailabilityLabel
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        @if (_isPreviewLoading)
+                        {
+                            <div class="text-muted d-flex align-items-center">
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span> Updating signal trend and stats...
+                            </div>
+                        }
+                        else if (ActiveSelectionSignalAvailability is null)
+                        {
+                            <div class="alert alert-info py-2 mb-0 border-0">Choose an exact signal code to render the trend and basic stats for this scope.</div>
+                        }
+                        else
+                        {
+                            <div class="small text-muted mb-3">@(_selectionSignalAnalyticsResult?.Message ?? ActiveSelectionSignalAvailability.AvailabilityMessage)</div>
+
+                            @if (_selectionSignalAnalyticsResult?.BasicStats is not null)
+                            {
+                                var signalStats = _selectionSignalAnalyticsResult.BasicStats;
+
+                                <div class="micro-grid mb-3">
+                                    <div class="micro-kpi"><div class="metric-caption">Min</div><div class="fw-semibold">@FormatSelectionSignalStatValue(signalStats.Min, signalStats.Unit)</div></div>
+                                    <div class="micro-kpi"><div class="metric-caption">Max</div><div class="fw-semibold">@FormatSelectionSignalStatValue(signalStats.Max, signalStats.Unit)</div></div>
+                                    <div class="micro-kpi"><div class="metric-caption">Average</div><div class="fw-semibold">@FormatSelectionSignalStatValue(signalStats.Average, signalStats.Unit)</div></div>
+                                    <div class="micro-kpi"><div class="metric-caption">Points</div><div class="fw-semibold">@signalStats.PointCount.ToString("N0")</div></div>
+                                    <div class="micro-kpi"><div class="metric-caption">Coverage</div><div class="fw-semibold">@FormatSelectionSignalCoverage(signalStats)</div></div>
+                                </div>
+                            }
+
+                            @if (_selectionSignalAnalyticsResult?.TimeSeries is not null)
+                            {
+                                <FacilityTimeSeriesPanel Data="@_selectionSignalAnalyticsResult.TimeSeries"
+                                                        SelectedMode="@_selectionSignalTimeSeriesMode"
+                                                        SelectedModeChanged="OnSelectionSignalTimeSeriesModeChanged"
+                                                        ShowBaselineOverlay="false"
+                                                        ShowBaselineToggle="false"
+                                                        IsLoading="false" />
+                            }
+                            else
+                            {
+                                <div class="alert alert-secondary py-2 mb-0 border-0">@(_selectionSignalAnalyticsResult?.Message ?? ActiveSelectionSignalAvailability.AvailabilityMessage)</div>
+                            }
+                        }
+                    }
+                </div>
+
                 <div class="overview-grid main-analytics-grid">
                     <div class="main-overview-column">
                         <div class="overview-widget main-kpi-widget">
@@ -2355,6 +2453,10 @@
     private CuratedNodeCompareTimeSeriesResult? _curatedCompareTimeSeriesData;
     private CuratedNodeTimeSeriesResult? _overviewChartTimeSeriesData;
     private CuratedNodeTimeSeriesMode _timeSeriesMode = CuratedNodeTimeSeriesMode.Auto;
+    private CuratedNodeTimeSeriesMode _selectionSignalTimeSeriesMode = CuratedNodeTimeSeriesMode.Auto;
+    private SelectionSignalAvailabilityResult _selectionSignalAvailability = new();
+    private SelectionSignalAnalyticsResult? _selectionSignalAnalyticsResult;
+    private string _activeAnalyticsSignalCodeValue = string.Empty;
     private bool _showBaselineOverlay;
     private bool _isOverviewChartLoading;
     private int _overviewChartLoadVersion;
@@ -2494,6 +2596,18 @@
 
     private async Task<DateTime?> GetCurrentPresetAnchorUtcAsync()
     {
+        var activeSignalCode = ActiveSelectionSignalCode;
+        var signalScopeNodeKeys = GetSignalAnalyticsScopeNodeKeys();
+        if (!activeSignalCode.IsEmpty && signalScopeNodeKeys.Count > 0)
+        {
+            var signalDomain = await AnalyticsPreview.GetCuratedSelectionTimeDomainUtcAsync(signalScopeNodeKeys, activeSignalCode);
+            if (signalDomain.MaxUtc.HasValue)
+            {
+                _presetAnchorNoteText = "Anchor: latest data in the active signal scope";
+                return signalDomain.MaxUtc.Value;
+            }
+        }
+
         if (ShouldUseAggregateAnalyticsIntervalScope)
         {
             var domain = await AnalyticsPreview.GetCuratedSelectionTimeDomainUtcAsync(GetSelectionAggregateNodeKeys());
@@ -2522,6 +2636,13 @@
 
     private async Task<(DateTime? MinUtc, DateTime? MaxUtc)> GetCurrentAnalyticsTimeDomainUtcAsync()
     {
+        var activeSignalCode = ActiveSelectionSignalCode;
+        var signalScopeNodeKeys = GetSignalAnalyticsScopeNodeKeys();
+        if (!activeSignalCode.IsEmpty && signalScopeNodeKeys.Count > 0)
+        {
+            return await AnalyticsPreview.GetCuratedSelectionTimeDomainUtcAsync(signalScopeNodeKeys, activeSignalCode);
+        }
+
         if (ShouldUseAggregateAnalyticsIntervalScope)
         {
             return await AnalyticsPreview.GetCuratedSelectionTimeDomainUtcAsync(GetSelectionAggregateNodeKeys());
@@ -2533,6 +2654,124 @@
         }
 
         return await AnalyticsPreview.GetCuratedNodeTimeDomainUtcAsync(_selectedFacilityNode.NodeKey);
+    }
+
+    private FacilitySignalCode ActiveSelectionSignalCode => FacilitySignalTaxonomy.NormalizeExactCode(_activeAnalyticsSignalCodeValue);
+
+    private SelectionSignalAvailabilityItem? ActiveSelectionSignalAvailability => _selectionSignalAvailability.Options
+        .FirstOrDefault(option => string.Equals(option.ExactSignalCode.Value, _activeAnalyticsSignalCodeValue, StringComparison.OrdinalIgnoreCase));
+
+    private string SelectionSignalScopeDescription
+    {
+        get
+        {
+            var scopeNodeCount = GetSignalAnalyticsScopeNodeKeys().Count;
+            if (scopeNodeCount == 0)
+            {
+                return "No analytics scope is resolved yet.";
+            }
+
+            return ShouldUseAggregateAnalyticsIntervalScope
+                ? $"Exact signal availability is resolved across {scopeNodeCount} nodes in the current selection scope."
+                : "Exact signal availability is resolved for the current focused node.";
+        }
+    }
+
+    private string ActiveSelectionSignalHelperText
+    {
+        get
+        {
+            if (_selectionSignalAvailability.Options.Count == 0)
+            {
+                return _selectionSignalAvailability.Message ?? "No exact signal bindings are available in the current scope.";
+            }
+
+            if (ActiveSelectionSignalAvailability is null)
+            {
+                return _selectionSignalAvailability.Options.Count == 1
+                    ? "The only compatible exact signal code was auto-selected for this scope."
+                    : "Choose an exact signal code to render trend and basic stats for this scope.";
+            }
+
+            return ActiveSelectionSignalAvailability.AvailabilityMessage;
+        }
+    }
+
+    private IReadOnlyList<string> GetSignalAnalyticsScopeNodeKeys()
+    {
+        var selectionScope = GetSelectionAggregateNodeKeys();
+        if (selectionScope.Count > 0)
+        {
+            return selectionScope;
+        }
+
+        if (_selectedFacilityNode is not null && !IsWeatherNode(_selectedFacilityNode.NodeKey))
+        {
+            return [_selectedFacilityNode.NodeKey];
+        }
+
+        return [];
+    }
+
+    private void SyncSelectionSignalAvailability()
+    {
+        _selectionSignalAvailability = AnalyticsPreview.GetSelectionSignalAvailability(GetSignalAnalyticsScopeNodeKeys());
+
+        if (_selectionSignalAvailability.Options.Count == 0)
+        {
+            _activeAnalyticsSignalCodeValue = string.Empty;
+            _selectionSignalAnalyticsResult = null;
+            return;
+        }
+
+        var hasCurrentSelection = _selectionSignalAvailability.Options.Any(option =>
+            string.Equals(option.ExactSignalCode.Value, _activeAnalyticsSignalCodeValue, StringComparison.OrdinalIgnoreCase));
+
+        if (!hasCurrentSelection)
+        {
+            _activeAnalyticsSignalCodeValue = _selectionSignalAvailability.Options.Count == 1
+                ? _selectionSignalAvailability.Options[0].ExactSignalCode.Value
+                : string.Empty;
+        }
+
+        if (string.IsNullOrWhiteSpace(_activeAnalyticsSignalCodeValue))
+        {
+            _selectionSignalAnalyticsResult = null;
+        }
+    }
+
+    private async Task RefreshSelectionSignalAnalyticsAsync((DateTime From, DateTime To) interval)
+    {
+        var activeSignalCode = ActiveSelectionSignalCode;
+        var scopeNodeKeys = GetSignalAnalyticsScopeNodeKeys();
+
+        if (activeSignalCode.IsEmpty || scopeNodeKeys.Count == 0 || !string.IsNullOrWhiteSpace(_customIntervalValidationMessage))
+        {
+            _selectionSignalAnalyticsResult = null;
+            return;
+        }
+
+        _selectionSignalAnalyticsResult = await AnalyticsPreview.GetSelectionSignalAnalyticsAsync(
+            scopeNodeKeys,
+            activeSignalCode,
+            interval.From,
+            interval.To,
+            _selectionSignalTimeSeriesMode);
+    }
+
+    private static string FormatSelectionSignalStatValue(double value, string unit)
+        => string.IsNullOrWhiteSpace(unit)
+            ? value.ToString("N2")
+            : $"{value:N2} {unit}";
+
+    private static string FormatSelectionSignalCoverage(SelectionSignalBasicStats stats)
+    {
+        if (!stats.FirstTimestampUtc.HasValue || !stats.LastTimestampUtc.HasValue)
+        {
+            return "N/A";
+        }
+
+        return $"{stats.FirstTimestampUtc.Value.ToLocalTime():dd/MM/yyyy HH:mm} - {stats.LastTimestampUtc.Value.ToLocalTime():dd/MM/yyyy HH:mm}";
     }
 
     private (DateTime From, DateTime To) GetSafeCustomInterval()
@@ -5142,6 +5381,30 @@
         }
     }
 
+    private async Task OnSelectionSignalTimeSeriesModeChanged(CuratedNodeTimeSeriesMode mode)
+    {
+        if (_selectionSignalTimeSeriesMode == mode)
+        {
+            return;
+        }
+
+        _selectionSignalTimeSeriesMode = mode;
+        await RefreshSelectionSignalAnalyticsAsync(GetInterval());
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnActiveAnalyticsSignalChanged(ChangeEventArgs e)
+    {
+        var nextValue = e.Value?.ToString()?.Trim() ?? string.Empty;
+        if (string.Equals(_activeAnalyticsSignalCodeValue, nextValue, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _activeAnalyticsSignalCodeValue = nextValue;
+        await ReloadPreviewDataAsync();
+    }
+
     private async Task OnShowBaselineOverlayChanged(bool enabled)
     {
         if (_showBaselineOverlay == enabled)
@@ -5161,6 +5424,9 @@
 
         if (!hasSelectionContext && !hasFocusAnalyticsContext)
         {
+            _selectionSignalAvailability = new();
+            _selectionSignalAnalyticsResult = null;
+            _activeAnalyticsSignalCodeValue = string.Empty;
             _nodePreviewData = null;
             _curatedPreviewData = null;
             _curatedDeviationData = null;
@@ -5174,6 +5440,8 @@
             return;
         }
 
+        SyncSelectionSignalAvailability();
+
         _isPreviewLoading = true;
         _isOverviewChartLoading = false;
         _overviewChartLoadVersion++;
@@ -5186,6 +5454,7 @@
             var interval = GetInterval();
             var aggregateNodeKeys = GetSelectionAggregateNodeKeys();
             Task<CuratedSelectionAggregateOverviewResult>? aggregateTask = null;
+            Task<SelectionSignalAnalyticsResult>? selectionSignalTask = null;
 
             if (_selectedInterval == "custom")
             {
@@ -5224,6 +5493,16 @@
                 {
                     _customIntervalValidationMessage = null;
                 }
+            }
+
+            if (!skipPostRefresh && !ActiveSelectionSignalCode.IsEmpty && GetSignalAnalyticsScopeNodeKeys().Count > 0)
+            {
+                selectionSignalTask = AnalyticsPreview.GetSelectionSignalAnalyticsAsync(
+                    GetSignalAnalyticsScopeNodeKeys(),
+                    ActiveSelectionSignalCode,
+                    interval.From,
+                    interval.To,
+                    _selectionSignalTimeSeriesMode);
             }
 
             if (!skipPostRefresh && aggregateNodeKeys.Count > 0)
@@ -5320,6 +5599,10 @@
                 _overviewChartTimeSeriesData = _selectionAggregateOverview?.TimeSeries;
                 SeedOverviewChartCache(aggregateNodeKeys, interval.From, interval.To, _timeSeriesMode, _overviewChartTimeSeriesData);
             }
+
+            _selectionSignalAnalyticsResult = !skipPostRefresh && selectionSignalTask is not null
+                ? await selectionSignalTask
+                : null;
         }
         finally
         {
@@ -6300,6 +6583,9 @@
 
     private void ClearPreviewState()
     {
+        _selectionSignalAvailability = new();
+        _selectionSignalAnalyticsResult = null;
+        _activeAnalyticsSignalCodeValue = string.Empty;
         _nodePreviewData = null;
         _curatedPreviewData = null;
         _selectionAggregateOverview = null;

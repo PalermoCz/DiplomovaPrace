@@ -4,6 +4,41 @@
 [2026-04-27]
 
 ### Task
+Implementační krok 3: active signal selection, selection-scope availability, trend, basic stats a první bezpečná subtree aggregation
+
+### What changed
+
+**`DiplomovaPrace/Services/NodeAnalyticsPreviewService.cs`:**
+- Added explicit selection-scope signal availability over the current node / subtree scope, grouped by exact signal code and annotated with signal family plus availability mode (`single-node series`, `aggregate sum`, `aggregate unsupported`).
+- Added explicit exact-signal analytics read path so analytics no longer silently collapse to `primary binding` when a concrete signal was selected.
+- Added first signal analytics result pipeline for:
+  - active exact signal code resolution
+  - trend loading over the selected signal
+  - basic stats over the actually used series
+  - first safe selection aggregation only for additive families `power` and `energy`
+- Added signal-aware time-domain helpers so preset/custom interval anchoring can follow the active signal scope.
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- Added a new `Signal Analytics` panel to the overview analytics section.
+- Added active exact signal code selection UI with explicit empty state when multiple signals exist and the user has not chosen one yet.
+- Added visible scope availability summary for all exact signal codes in the current scope.
+- Added trend rendering for the active signal and basic stats (`min`, `max`, `average`, `count of points`, `coverage`) over the real selected/aggregated series.
+- Wired the panel into existing analytics reload flow and interval handling while keeping unsupported aggregate mixes explicit instead of falling back silently.
+
+**`DiplomovaPrace/Components/Building/FacilityTimeSeriesPanel.razor`:**
+- Added an option to hide the baseline toggle so the new signal trend stays within this step's scope and does not surface baseline controls.
+
+### Build
+- `dotnet build` successful.
+
+### Validation scope
+- Build validation performed after wiring the signal selection, availability logic, trend, stats, and first additive subtree aggregation.
+- Intentionally not implemented in this step: baseline, LDC, near-base/near-peak, and other KPI/features outside the requested scope.
+
+### Date
+[2026-04-27]
+
+### Task
 Implementační krok 2: import write path, binding persistence a minimální import UI pro jednu časovou řadu
 
 ### What changed

@@ -123,6 +123,58 @@ public sealed class CuratedSelectionAggregateRequestOptions
     };
 }
 
+public enum SelectionSignalAvailabilityKind
+{
+    SingleNodeSeries,
+    AggregateSeries,
+    AggregateUnavailable
+}
+
+public sealed class SelectionSignalAvailabilityItem
+{
+    public FacilitySignalCode ExactSignalCode { get; init; }
+    public FacilitySignalFamily SignalFamily { get; init; } = FacilitySignalFamily.Custom;
+    public string Unit { get; init; } = string.Empty;
+    public int ScopeNodeCount { get; init; }
+    public int MatchingNodeCount { get; init; }
+    public int NonMatchingNodeCount { get; init; }
+    public SelectionSignalAvailabilityKind AvailabilityKind { get; init; } = SelectionSignalAvailabilityKind.SingleNodeSeries;
+    public string AvailabilityLabel { get; init; } = string.Empty;
+    public string AvailabilityMessage { get; init; } = string.Empty;
+    public IReadOnlyList<string> MatchingNodeKeys { get; init; } = [];
+
+    public bool CanRenderSingleNodeSeries => AvailabilityKind == SelectionSignalAvailabilityKind.SingleNodeSeries;
+    public bool CanAggregate => AvailabilityKind == SelectionSignalAvailabilityKind.AggregateSeries;
+}
+
+public sealed class SelectionSignalAvailabilityResult
+{
+    public IReadOnlyList<SelectionSignalAvailabilityItem> Options { get; init; } = [];
+    public string? Message { get; init; }
+}
+
+public sealed class SelectionSignalBasicStats
+{
+    public double Min { get; init; }
+    public double Max { get; init; }
+    public double Average { get; init; }
+    public int PointCount { get; init; }
+    public DateTime? FirstTimestampUtc { get; init; }
+    public DateTime? LastTimestampUtc { get; init; }
+    public string Unit { get; init; } = string.Empty;
+}
+
+public sealed class SelectionSignalAnalyticsResult
+{
+    public SelectionSignalAvailabilityItem? SelectionSignal { get; init; }
+    public CuratedNodeTimeSeriesResult? TimeSeries { get; init; }
+    public SelectionSignalBasicStats? BasicStats { get; init; }
+    public bool IsAvailable { get; init; }
+    public bool IsAggregate { get; init; }
+    public string Message { get; init; } = string.Empty;
+    public IReadOnlyList<string> ContributingNodeKeys { get; init; } = [];
+}
+
 public sealed class CuratedSelectionContributionItem
 {
     public string NodeKey { get; init; } = string.Empty;
@@ -600,6 +652,162 @@ public class NodeAnalyticsPreviewService
         return !string.IsNullOrWhiteSpace(nodeKey) && _bindingRegistry.IsSupported(nodeKey);
     }
 
+    public SelectionSignalAvailabilityResult GetSelectionSignalAvailability(IEnumerable<string> nodeKeys)
+    {
+        var distinctNodeKeys = nodeKeys?
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList() ?? [];
+
+        if (distinctNodeKeys.Count == 0)
+        {
+            return new SelectionSignalAvailabilityResult
+            {
+                Message = "Select a node or a subtree to inspect available analytics signals."
+            };
+        }
+
+        var bindingContexts = new List<SignalBindingContext>();
+
+        foreach (var nodeKey in distinctNodeKeys)
+        {
+            var exactSignalCodes = _bindingRegistry.GetBindings(nodeKey)
+                .Where(binding => !binding.ExactSignalCode.IsEmpty)
+                .GroupBy(binding => binding.ExactSignalCode.Value, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First().ExactSignalCode)
+                .ToList();
+
+            foreach (var exactSignalCode in exactSignalCodes)
+            {
+                var binding = _bindingRegistry.GetPreferredBinding(nodeKey, exactSignalCode);
+                var source = ResolveCuratedNodeSource(nodeKey, exactSignalCode);
+                if (binding is null || source is null)
+                {
+                    continue;
+                }
+
+                bindingContexts.Add(new SignalBindingContext(nodeKey, binding, source));
+            }
+        }
+
+        if (bindingContexts.Count == 0)
+        {
+            return new SelectionSignalAvailabilityResult
+            {
+                Message = "No exact signal bindings are available in the current analytics scope."
+            };
+        }
+
+        var options = bindingContexts
+            .GroupBy(context => context.Binding.ExactSignalCode.Value, StringComparer.OrdinalIgnoreCase)
+            .Select(group => BuildSelectionSignalAvailabilityItem(group, distinctNodeKeys.Count))
+            .OrderBy(option => option.SignalFamily.ToString(), StringComparer.OrdinalIgnoreCase)
+            .ThenBy(option => option.ExactSignalCode.Value, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return new SelectionSignalAvailabilityResult
+        {
+            Options = options,
+            Message = options.Count == 0
+                ? "No exact signal bindings are available in the current analytics scope."
+                : null
+        };
+    }
+
+    public async Task<SelectionSignalAnalyticsResult> GetSelectionSignalAnalyticsAsync(
+        IEnumerable<string> nodeKeys,
+        FacilitySignalCode exactSignalCode,
+        DateTime from,
+        DateTime to,
+        CuratedNodeTimeSeriesMode mode = CuratedNodeTimeSeriesMode.Auto,
+        CancellationToken ct = default)
+    {
+        if (exactSignalCode.IsEmpty)
+        {
+            return new SelectionSignalAnalyticsResult
+            {
+                Message = "Choose an exact signal code first."
+            };
+        }
+
+        var availability = GetSelectionSignalAvailability(nodeKeys);
+        var option = availability.Options.FirstOrDefault(item => FacilitySignalTaxonomy.MatchesExactCode(item.ExactSignalCode, exactSignalCode));
+
+        if (option is null)
+        {
+            return new SelectionSignalAnalyticsResult
+            {
+                Message = availability.Message ?? "The selected signal is not available in the current analytics scope."
+            };
+        }
+
+        if (option.CanRenderSingleNodeSeries)
+        {
+            var nodeKey = option.MatchingNodeKeys.FirstOrDefault();
+            if (string.IsNullOrWhiteSpace(nodeKey))
+            {
+                return new SelectionSignalAnalyticsResult
+                {
+                    SelectionSignal = option,
+                    Message = "The selected signal does not resolve to a usable node in the current scope."
+                };
+            }
+
+            var timeSeries = await GetCuratedTimeSeriesAsync(
+                nodeKey,
+                exactSignalCode,
+                from,
+                to,
+                mode,
+                includeBaselineOverlay: false,
+                ct);
+
+            return new SelectionSignalAnalyticsResult
+            {
+                SelectionSignal = option,
+                TimeSeries = timeSeries,
+                BasicStats = BuildSelectionSignalBasicStats(timeSeries),
+                IsAvailable = timeSeries is not null && timeSeries.Points.Count > 0,
+                IsAggregate = false,
+                Message = timeSeries is null
+                    ? "The selected signal cannot be resolved to a time-series source."
+                    : timeSeries.Points.Count == 0
+                        ? timeSeries.NoDataMessage ?? "No time-series data is available for the selected signal in the current interval."
+                        : option.AvailabilityMessage,
+                ContributingNodeKeys = [nodeKey]
+            };
+        }
+
+        if (!option.CanAggregate)
+        {
+            return new SelectionSignalAnalyticsResult
+            {
+                SelectionSignal = option,
+                IsAvailable = false,
+                IsAggregate = true,
+                Message = option.AvailabilityMessage,
+                ContributingNodeKeys = option.MatchingNodeKeys
+            };
+        }
+
+        var aggregateTimeSeries = await GetSelectionSignalAggregateTimeSeriesAsync(option, from, to, mode, ct);
+
+        return new SelectionSignalAnalyticsResult
+        {
+            SelectionSignal = option,
+            TimeSeries = aggregateTimeSeries,
+            BasicStats = BuildSelectionSignalBasicStats(aggregateTimeSeries),
+            IsAvailable = aggregateTimeSeries is not null && aggregateTimeSeries.Points.Count > 0,
+            IsAggregate = true,
+            Message = aggregateTimeSeries is null
+                ? "The aggregate trend could not be resolved for the selected signal."
+                : aggregateTimeSeries.Points.Count == 0
+                    ? aggregateTimeSeries.NoDataMessage ?? "No time-series data is available for the selected signal in the current interval."
+                    : option.AvailabilityMessage,
+            ContributingNodeKeys = option.MatchingNodeKeys
+        };
+    }
+
     public async Task<CuratedNodeSummary?> GetCuratedSummaryAsync(string nodeKey, DateTime from, DateTime to, CancellationToken ct = default)
     {
         var source = ResolveCuratedNodeSource(nodeKey);
@@ -624,8 +832,43 @@ public class NodeAnalyticsPreviewService
         CuratedNodeTimeSeriesMode mode = CuratedNodeTimeSeriesMode.Auto,
         bool includeBaselineOverlay = false,
         CancellationToken ct = default)
+        => await GetCuratedTimeSeriesCoreAsync(
+            nodeKey,
+            ResolveCuratedNodeSource(nodeKey),
+            from,
+            to,
+            mode,
+            includeBaselineOverlay,
+            ct);
+
+    public async Task<CuratedNodeTimeSeriesResult?> GetCuratedTimeSeriesAsync(
+        string nodeKey,
+        FacilitySignalCode exactSignalCode,
+        DateTime from,
+        DateTime to,
+        CuratedNodeTimeSeriesMode mode = CuratedNodeTimeSeriesMode.Auto,
+        bool includeBaselineOverlay = false,
+        CancellationToken ct = default)
+        => exactSignalCode.IsEmpty
+            ? null
+            : await GetCuratedTimeSeriesCoreAsync(
+                nodeKey,
+                ResolveCuratedNodeSource(nodeKey, exactSignalCode),
+                from,
+                to,
+                mode,
+                includeBaselineOverlay,
+                ct);
+
+    private async Task<CuratedNodeTimeSeriesResult?> GetCuratedTimeSeriesCoreAsync(
+        string nodeKey,
+        CuratedNodeSource? source,
+        DateTime from,
+        DateTime to,
+        CuratedNodeTimeSeriesMode mode,
+        bool includeBaselineOverlay,
+        CancellationToken ct)
     {
-        var source = ResolveCuratedNodeSource(nodeKey);
         if (source is null)
         {
             return null;
@@ -3154,6 +3397,12 @@ public class NodeAnalyticsPreviewService
         return maxTimestamp;
     }
 
+    public async Task<DateTime?> GetCuratedNodeMaxTimestampUtcAsync(string nodeKey, FacilitySignalCode exactSignalCode, CancellationToken ct = default)
+    {
+        var domain = await GetCuratedNodeTimeDomainUtcAsync(nodeKey, exactSignalCode, ct);
+        return domain.MaxUtc;
+    }
+
     public async Task<(DateTime? MinUtc, DateTime? MaxUtc)> GetCuratedSelectionTimeDomainUtcAsync(
         IEnumerable<string> nodeKeys,
         CancellationToken ct = default)
@@ -3222,6 +3471,20 @@ public class NodeAnalyticsPreviewService
         }
 
         return (minUtc, maxUtc);
+    }
+
+    public async Task<(DateTime? MinUtc, DateTime? MaxUtc)> GetCuratedSelectionTimeDomainUtcAsync(
+        IEnumerable<string> nodeKeys,
+        FacilitySignalCode exactSignalCode,
+        CancellationToken ct = default)
+    {
+        var bindingContexts = ResolveSignalBindingContexts(nodeKeys, exactSignalCode);
+        if (bindingContexts.Count == 0)
+        {
+            return (null, null);
+        }
+
+        return await GetTimeDomainUtcForSourcesAsync(bindingContexts.Select(context => context.Source), ct);
     }
 
     public async Task<CuratedNodeCompareTimeSeriesResult?> GetCuratedCompareTimeSeriesAsync(
@@ -3379,6 +3642,39 @@ public class NodeAnalyticsPreviewService
         return domain;
     }
 
+    public async Task<(DateTime? MinUtc, DateTime? MaxUtc)> GetCuratedNodeTimeDomainUtcAsync(string nodeKey, FacilitySignalCode exactSignalCode, CancellationToken ct = default)
+    {
+        if (exactSignalCode.IsEmpty)
+        {
+            return (null, null);
+        }
+
+        var source = ResolveCuratedNodeSource(nodeKey, exactSignalCode);
+        if (source is null)
+        {
+            return (null, null);
+        }
+
+        var filePath = ResolveCuratedFilePath(source);
+        if (filePath is null)
+        {
+            return (null, null);
+        }
+
+        if (_timeDomainCache.TryGetValue(filePath, out var cachedDomain))
+        {
+            return (cachedDomain.MinUtc, cachedDomain.MaxUtc);
+        }
+
+        var domain = await GetTimeDomainUtcAsync(filePath, ct);
+        if (domain.MinUtc.HasValue && domain.MaxUtc.HasValue)
+        {
+            _timeDomainCache[filePath] = (domain.MinUtc.Value, domain.MaxUtc.Value);
+        }
+
+        return domain;
+    }
+
     public async Task<CuratedNodeDeviationSummary> GetCuratedDeviationSummaryAsync(string nodeKey, DateTime from, DateTime to, CancellationToken ct = default)
     {
         if (FacilityBuiltInNodeTypes.IsLegacyWeatherNodeKey(nodeKey))
@@ -3436,6 +3732,11 @@ public class NodeAnalyticsPreviewService
         public bool UsesFixedCsvSeriesFormat { get; init; }
     }
 
+    private sealed record SignalBindingContext(
+        string NodeKey,
+        FacilityDataBindingRegistry.BindingRecord Binding,
+        CuratedNodeSource Source);
+
     private sealed class RunningStats
     {
         public double Sum { get; private set; }
@@ -3482,114 +3783,18 @@ public class NodeAnalyticsPreviewService
     /// Fallback: legacy hardcoded mapping pro starĂ© uzly (pv_main, chp_main, ...).
     /// </summary>
     private CuratedNodeSource? ResolveCuratedNodeSource(string nodeKey)
+        => ResolveCuratedNodeSource(nodeKey, null);
+
+    private CuratedNodeSource? ResolveCuratedNodeSource(string nodeKey, FacilitySignalCode? exactSignalCode)
     {
         // â”€â”€ 1. Binding-based lookup (novĂ˝ dataset) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        var binding = _bindingRegistry.GetPrimaryBinding(nodeKey);
+        var binding = exactSignalCode.HasValue && !exactSignalCode.Value.IsEmpty
+            ? _bindingRegistry.GetPreferredBinding(nodeKey, exactSignalCode.Value)
+            : _bindingRegistry.GetPrimaryBinding(nodeKey);
+
         if (binding is not null)
         {
-            var signalFamily = binding.SignalFamily;
-            var exactSignalCode = binding.ExactSignalCode;
-            var isPowerSignal = signalFamily == FacilitySignalFamily.Power;
-            var isFlowSignal = exactSignalCode.Value is "qv" or "V";
-            var isFixedCsvSeries = binding.UsesFixedCsvSeriesFormat;
-
-            string unit;
-            string summaryLabel;
-            string statsUnit;
-            string statsLabel;
-            var powerToKilowattFactor = 1.0;
-
-            if (signalFamily == FacilitySignalFamily.Power)
-            {
-                unit = "kWh";
-                summaryLabel = "Interval energy";
-                statsUnit = "kW";
-                statsLabel = "Power";
-                powerToKilowattFactor = ResolvePowerToKilowattFactor(binding.Unit);
-            }
-            else if (signalFamily == FacilitySignalFamily.Energy)
-            {
-                unit = string.IsNullOrWhiteSpace(binding.Unit) ? "kWh" : binding.Unit;
-                summaryLabel = "Interval energy";
-                statsUnit = unit;
-                statsLabel = "Energy";
-            }
-            else if (signalFamily == FacilitySignalFamily.WeatherTemperature)
-            {
-                unit = string.IsNullOrWhiteSpace(binding.Unit) ? "Â°C" : binding.Unit;
-                summaryLabel = "Average temperature";
-                statsUnit = unit;
-                statsLabel = "Temperature";
-            }
-            else if (signalFamily == FacilitySignalFamily.Voltage)
-            {
-                unit = string.IsNullOrWhiteSpace(binding.Unit) ? "V" : binding.Unit;
-                summaryLabel = "Average voltage";
-                statsUnit = unit;
-                statsLabel = "Voltage";
-            }
-            else if (signalFamily == FacilitySignalFamily.Current)
-            {
-                unit = string.IsNullOrWhiteSpace(binding.Unit) ? "A" : binding.Unit;
-                summaryLabel = "Average current";
-                statsUnit = unit;
-                statsLabel = "Current";
-            }
-            else if (signalFamily == FacilitySignalFamily.PowerFactor)
-            {
-                unit = string.IsNullOrWhiteSpace(binding.Unit) ? string.Empty : binding.Unit;
-                summaryLabel = "Average power factor";
-                statsUnit = unit;
-                statsLabel = "Power factor";
-            }
-            else if (signalFamily == FacilitySignalFamily.ReactivePower)
-            {
-                unit = string.IsNullOrWhiteSpace(binding.Unit) ? "kVAr" : binding.Unit;
-                summaryLabel = "Reactive power";
-                statsUnit = unit;
-                statsLabel = "Reactive power";
-            }
-            else if (isFlowSignal)
-            {
-                unit = "mÂł";
-                summaryLabel = "Volume";
-                statsUnit = "mÂł";
-                statsLabel = "Flow";
-            }
-            else
-            {
-                unit = !string.IsNullOrWhiteSpace(binding.Unit) ? binding.Unit : binding.Category;
-                summaryLabel = "Value";
-                statsUnit = string.Empty;
-                statsLabel = "Value";
-            }
-
-            var title = !string.IsNullOrWhiteSpace(binding.MeterUrn)
-                ? binding.MeterUrn
-                : !string.IsNullOrWhiteSpace(binding.SourceLabel)
-                    ? binding.SourceLabel
-                    : nodeKey;
-            var columnName = isFixedCsvSeries
-                ? "value"
-                : $"{binding.MeterUrn}.{binding.MeasurementKey}";
-
-            return new CuratedNodeSource
-            {
-                FileName           = binding.FileName,
-                MeterFolder        = binding.MeterFolder,
-                SourceFilePath     = binding.SourceFilePath,
-                ColumnName         = columnName,
-                Title              = title,
-                NodeTypeHint       = !string.IsNullOrWhiteSpace(binding.Category) ? binding.Category : signalFamily.ToString(),
-                Unit               = unit,
-                SummaryLabel       = summaryLabel,
-                StatsUnit          = statsUnit,
-                StatsLabel         = statsLabel,
-                IsPowerSignal      = isPowerSignal,
-                PowerToKilowattFactor = isPowerSignal ? powerToKilowattFactor : 1.0,
-                SupportsDeviation  = isPowerSignal,   // jen P-signĂˇly majĂ­ baseline overlay
-                UsesFixedCsvSeriesFormat = isFixedCsvSeries,
-            };
+            return BuildBindingCuratedNodeSource(nodeKey, binding);
         }
 
         // â”€â”€ 2. Legacy fallback (starĂ© agregovanĂ© CSV uzly â€” zachovĂˇny pro pĹ™echod) â”€
@@ -3668,6 +3873,379 @@ public class NodeAnalyticsPreviewService
                 SupportsDeviation = true
             },
             _ => null
+        };
+    }
+
+    private static bool IsAdditiveSignalFamily(FacilitySignalFamily signalFamily)
+        => signalFamily is FacilitySignalFamily.Power or FacilitySignalFamily.Energy;
+
+    private CuratedNodeSource BuildBindingCuratedNodeSource(string nodeKey, FacilityDataBindingRegistry.BindingRecord binding)
+    {
+        var signalFamily = binding.SignalFamily;
+        var exactSignalCode = binding.ExactSignalCode;
+        var isPowerSignal = signalFamily == FacilitySignalFamily.Power;
+        var isFlowSignal = exactSignalCode.Value is "qv" or "V";
+        var isFixedCsvSeries = binding.UsesFixedCsvSeriesFormat;
+
+        string unit;
+        string summaryLabel;
+        string statsUnit;
+        string statsLabel;
+        var powerToKilowattFactor = 1.0;
+
+        if (signalFamily == FacilitySignalFamily.Power)
+        {
+            unit = "kWh";
+            summaryLabel = "Interval energy";
+            statsUnit = "kW";
+            statsLabel = "Power";
+            powerToKilowattFactor = ResolvePowerToKilowattFactor(binding.Unit);
+        }
+        else if (signalFamily == FacilitySignalFamily.Energy)
+        {
+            unit = string.IsNullOrWhiteSpace(binding.Unit) ? "kWh" : binding.Unit;
+            summaryLabel = "Interval energy";
+            statsUnit = unit;
+            statsLabel = "Energy";
+        }
+        else if (signalFamily == FacilitySignalFamily.WeatherTemperature)
+        {
+            unit = string.IsNullOrWhiteSpace(binding.Unit) ? "Â°C" : binding.Unit;
+            summaryLabel = "Average temperature";
+            statsUnit = unit;
+            statsLabel = "Temperature";
+        }
+        else if (signalFamily == FacilitySignalFamily.Voltage)
+        {
+            unit = string.IsNullOrWhiteSpace(binding.Unit) ? "V" : binding.Unit;
+            summaryLabel = "Average voltage";
+            statsUnit = unit;
+            statsLabel = "Voltage";
+        }
+        else if (signalFamily == FacilitySignalFamily.Current)
+        {
+            unit = string.IsNullOrWhiteSpace(binding.Unit) ? "A" : binding.Unit;
+            summaryLabel = "Average current";
+            statsUnit = unit;
+            statsLabel = "Current";
+        }
+        else if (signalFamily == FacilitySignalFamily.PowerFactor)
+        {
+            unit = string.IsNullOrWhiteSpace(binding.Unit) ? string.Empty : binding.Unit;
+            summaryLabel = "Average power factor";
+            statsUnit = unit;
+            statsLabel = "Power factor";
+        }
+        else if (signalFamily == FacilitySignalFamily.ReactivePower)
+        {
+            unit = string.IsNullOrWhiteSpace(binding.Unit) ? "kVAr" : binding.Unit;
+            summaryLabel = "Reactive power";
+            statsUnit = unit;
+            statsLabel = "Reactive power";
+        }
+        else if (isFlowSignal)
+        {
+            unit = "mÂł";
+            summaryLabel = "Volume";
+            statsUnit = "mÂł";
+            statsLabel = "Flow";
+        }
+        else
+        {
+            unit = !string.IsNullOrWhiteSpace(binding.Unit) ? binding.Unit : binding.Category;
+            summaryLabel = "Value";
+            statsUnit = string.Empty;
+            statsLabel = "Value";
+        }
+
+        var title = !string.IsNullOrWhiteSpace(binding.MeterUrn)
+            ? binding.MeterUrn
+            : !string.IsNullOrWhiteSpace(binding.SourceLabel)
+                ? binding.SourceLabel
+                : nodeKey;
+        var columnName = isFixedCsvSeries
+            ? "value"
+            : $"{binding.MeterUrn}.{binding.MeasurementKey}";
+
+        return new CuratedNodeSource
+        {
+            FileName = binding.FileName,
+            MeterFolder = binding.MeterFolder,
+            SourceFilePath = binding.SourceFilePath,
+            ColumnName = columnName,
+            Title = title,
+            NodeTypeHint = !string.IsNullOrWhiteSpace(binding.Category) ? binding.Category : signalFamily.ToString(),
+            Unit = unit,
+            SummaryLabel = summaryLabel,
+            StatsUnit = statsUnit,
+            StatsLabel = statsLabel,
+            IsPowerSignal = isPowerSignal,
+            PowerToKilowattFactor = isPowerSignal ? powerToKilowattFactor : 1.0,
+            SupportsDeviation = isPowerSignal,
+            UsesFixedCsvSeriesFormat = isFixedCsvSeries,
+        };
+    }
+
+    private List<SignalBindingContext> ResolveSignalBindingContexts(IEnumerable<string> nodeKeys, FacilitySignalCode exactSignalCode)
+    {
+        if (exactSignalCode.IsEmpty || nodeKeys is null)
+        {
+            return [];
+        }
+
+        var contexts = new List<SignalBindingContext>();
+
+        foreach (var nodeKey in nodeKeys
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var binding = _bindingRegistry.GetPreferredBinding(nodeKey, exactSignalCode);
+            var source = ResolveCuratedNodeSource(nodeKey, exactSignalCode);
+            if (binding is null || source is null)
+            {
+                continue;
+            }
+
+            contexts.Add(new SignalBindingContext(nodeKey, binding, source));
+        }
+
+        return contexts;
+    }
+
+    private SelectionSignalAvailabilityItem BuildSelectionSignalAvailabilityItem(
+        IGrouping<string, SignalBindingContext> group,
+        int scopeNodeCount)
+    {
+        var contextList = group.ToList();
+        var firstContext = contextList[0];
+        var matchingNodeKeys = contextList
+            .Select(context => context.NodeKey)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(nodeKey => nodeKey, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var distinctUnits = contextList
+            .Select(context => ResolveTimeSeriesUnit(context.Source))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var signalFamily = firstContext.Binding.SignalFamily;
+        var nonMatchingNodeCount = Math.Max(0, scopeNodeCount - matchingNodeKeys.Count);
+
+        SelectionSignalAvailabilityKind availabilityKind;
+        string availabilityLabel;
+        string availabilityMessage;
+
+        if (matchingNodeKeys.Count == 1)
+        {
+            availabilityKind = SelectionSignalAvailabilityKind.SingleNodeSeries;
+            availabilityLabel = "Single-node series";
+            availabilityMessage = scopeNodeCount == 1
+                ? "Available on the current selection."
+                : $"Available on 1 of {scopeNodeCount} nodes in the current scope.";
+        }
+        else if (!IsAdditiveSignalFamily(signalFamily))
+        {
+            availabilityKind = SelectionSignalAvailabilityKind.AggregateUnavailable;
+            availabilityLabel = "Aggregate unsupported";
+            availabilityMessage = $"{signalFamily} signals are not aggregated across multiple nodes in this step.";
+        }
+        else if (distinctUnits.Count > 1)
+        {
+            availabilityKind = SelectionSignalAvailabilityKind.AggregateUnavailable;
+            availabilityLabel = "Incompatible aggregate";
+            availabilityMessage = "Matching nodes expose incompatible units, so aggregate trend is unavailable.";
+        }
+        else
+        {
+            availabilityKind = SelectionSignalAvailabilityKind.AggregateSeries;
+            availabilityLabel = "Aggregate sum";
+            availabilityMessage = nonMatchingNodeCount > 0
+                ? $"Aggregates {matchingNodeKeys.Count} matching nodes. {nonMatchingNodeCount} scope nodes do not expose this exact signal."
+                : $"Aggregates all {matchingNodeKeys.Count} matching nodes in the current scope.";
+        }
+
+        return new SelectionSignalAvailabilityItem
+        {
+            ExactSignalCode = firstContext.Binding.ExactSignalCode,
+            SignalFamily = signalFamily,
+            Unit = distinctUnits.FirstOrDefault() ?? string.Empty,
+            ScopeNodeCount = scopeNodeCount,
+            MatchingNodeCount = matchingNodeKeys.Count,
+            NonMatchingNodeCount = nonMatchingNodeCount,
+            AvailabilityKind = availabilityKind,
+            AvailabilityLabel = availabilityLabel,
+            AvailabilityMessage = availabilityMessage,
+            MatchingNodeKeys = matchingNodeKeys
+        };
+    }
+
+    private async Task<CuratedNodeTimeSeriesResult?> GetSelectionSignalAggregateTimeSeriesAsync(
+        SelectionSignalAvailabilityItem option,
+        DateTime from,
+        DateTime to,
+        CuratedNodeTimeSeriesMode mode,
+        CancellationToken ct)
+    {
+        var bindingContexts = ResolveSignalBindingContexts(option.MatchingNodeKeys, option.ExactSignalCode);
+        if (bindingContexts.Count == 0)
+        {
+            return null;
+        }
+
+        var nodeTasks = bindingContexts
+            .Select(context => GetCuratedTimeSeriesAsync(
+                context.NodeKey,
+                option.ExactSignalCode,
+                from,
+                to,
+                mode,
+                includeBaselineOverlay: false,
+                ct))
+            .ToArray();
+
+        await Task.WhenAll(nodeTasks);
+
+        var resolvedSeries = nodeTasks
+            .Select(task => task.Result)
+            .Where(result => result is not null)
+            .Cast<CuratedNodeTimeSeriesResult>()
+            .ToList();
+
+        if (resolvedSeries.Count == 0)
+        {
+            return null;
+        }
+
+        var template = resolvedSeries.First();
+        var seriesWithPoints = resolvedSeries
+            .Where(result => result.Points.Count > 0)
+            .ToList();
+
+        if (seriesWithPoints.Count == 0)
+        {
+            return new CuratedNodeTimeSeriesResult
+            {
+                NodeKey = "selection_set",
+                Title = $"{option.ExactSignalCode.Value} selection aggregate",
+                Unit = template.Unit,
+                YAxisLabel = template.YAxisLabel,
+                Granularity = template.Granularity,
+                GranularityLabel = template.GranularityLabel,
+                AggregationMethod = $"{template.AggregationMethod} Selection aggregate: sum of matching {option.ExactSignalCode.Value} series at each timestamp.",
+                InterpretationNote = ResolveSelectionSignalAggregateInterpretationNote(option.SignalFamily, template.Granularity),
+                RequestedMode = template.RequestedMode,
+                RequestedModeLabel = template.RequestedModeLabel,
+                BaselineOverlayRequested = false,
+                BaselineOverlayAvailable = false,
+                NoDataMessage = "No matching node has data for the selected signal in the current interval."
+            };
+        }
+
+        return new CuratedNodeTimeSeriesResult
+        {
+            NodeKey = "selection_set",
+            Title = $"{option.ExactSignalCode.Value} selection aggregate",
+            Unit = template.Unit,
+            YAxisLabel = template.YAxisLabel,
+            Granularity = template.Granularity,
+            GranularityLabel = template.GranularityLabel,
+            AggregationMethod = $"{template.AggregationMethod} Selection aggregate: sum of matching {option.ExactSignalCode.Value} series at each timestamp.",
+            InterpretationNote = ResolveSelectionSignalAggregateInterpretationNote(option.SignalFamily, template.Granularity),
+            RequestedMode = template.RequestedMode,
+            RequestedModeLabel = template.RequestedModeLabel,
+            BaselineOverlayRequested = false,
+            BaselineOverlayAvailable = false,
+            Points = SumTimeSeriesByTimestamp(seriesWithPoints.Select(result => result.Points))
+        };
+    }
+
+    private static SelectionSignalBasicStats? BuildSelectionSignalBasicStats(CuratedNodeTimeSeriesResult? timeSeries)
+    {
+        if (timeSeries is null || timeSeries.Points.Count == 0)
+        {
+            return null;
+        }
+
+        var values = timeSeries.Points.Select(point => point.Value).ToList();
+        return new SelectionSignalBasicStats
+        {
+            Min = values.Min(),
+            Max = values.Max(),
+            Average = values.Average(),
+            PointCount = values.Count,
+            FirstTimestampUtc = timeSeries.Points[0].TimestampUtc,
+            LastTimestampUtc = timeSeries.Points[^1].TimestampUtc,
+            Unit = timeSeries.Unit
+        };
+    }
+
+    private async Task<(DateTime? MinUtc, DateTime? MaxUtc)> GetTimeDomainUtcForSourcesAsync(
+        IEnumerable<CuratedNodeSource> sources,
+        CancellationToken ct)
+    {
+        DateTime? minUtc = null;
+        DateTime? maxUtc = null;
+        var visitedFilePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var source in sources)
+        {
+            var filePath = ResolveCuratedFilePath(source);
+            if (filePath is null || !visitedFilePaths.Add(filePath))
+            {
+                continue;
+            }
+
+            (DateTime? MinUtc, DateTime? MaxUtc) domain;
+            if (_timeDomainCache.TryGetValue(filePath, out var cachedDomain))
+            {
+                domain = (cachedDomain.MinUtc, cachedDomain.MaxUtc);
+            }
+            else
+            {
+                domain = await GetTimeDomainUtcAsync(filePath, ct);
+                if (domain.MinUtc.HasValue && domain.MaxUtc.HasValue)
+                {
+                    _timeDomainCache[filePath] = (domain.MinUtc.Value, domain.MaxUtc.Value);
+                }
+            }
+
+            if (!domain.MinUtc.HasValue || !domain.MaxUtc.HasValue)
+            {
+                continue;
+            }
+
+            if (!minUtc.HasValue || domain.MinUtc.Value < minUtc.Value)
+            {
+                minUtc = domain.MinUtc.Value;
+            }
+
+            if (!maxUtc.HasValue || domain.MaxUtc.Value > maxUtc.Value)
+            {
+                maxUtc = domain.MaxUtc.Value;
+            }
+        }
+
+        return (minUtc, maxUtc);
+    }
+
+    private static string ResolveSelectionSignalAggregateInterpretationNote(
+        FacilitySignalFamily signalFamily,
+        CuratedNodeTimeSeriesGranularity granularity)
+    {
+        return signalFamily switch
+        {
+            FacilitySignalFamily.Power => granularity switch
+            {
+                CuratedNodeTimeSeriesGranularity.HourlyAverage => "The chart shows the sum of hourly average power values across matching scope nodes.",
+                CuratedNodeTimeSeriesGranularity.DailyAverage => "The chart shows the sum of daily average power values across matching scope nodes.",
+                _ => "The chart shows the sum of instantaneous power values across matching scope nodes."
+            },
+            FacilitySignalFamily.Energy => granularity switch
+            {
+                CuratedNodeTimeSeriesGranularity.HourlyAverage => "The chart shows the sum of hourly average energy-series values across matching scope nodes.",
+                CuratedNodeTimeSeriesGranularity.DailyAverage => "The chart shows the sum of daily average energy-series values across matching scope nodes.",
+                _ => "The chart shows the sum of matching energy-series values across scope nodes."
+            },
+            _ => "The chart shows the selected signal in the current scope."
         };
     }
 
