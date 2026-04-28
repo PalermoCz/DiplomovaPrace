@@ -1,122 +1,282 @@
 # CURRENT TASK
 
 ## Název
-Read-only audit existujících analytických funkcí ve FacilityWorkbench a rozhodnutí keep / rework / remove
+Implementační krok 11: Aggregate semantics + Overview/Detail redesign
 
 ## Kontext
-Máme schválené:
-- `ANALYTICS_THEORY.md`
-- `ANALYTICS_IMPLEMENTATION_PLAN.md`
+Máme hotové hlavní analytické slices:
+- selection-first signal analytics
+- trend + basic stats
+- subtree aggregation
+- power analytics:
+  - near-base
+  - near-peak
+  - peak-base ratio
+  - load duration curve
+  - on-hour duration
+  - after-hours load
+  - base vs peak over time
+- daily weather-aware baseline
+- temperature vs load scatter
+- EUI MVP
+- mixed-sign aggregate hardening pro scatter a power analytics
 
-Tyto dokumenty definují cílový analytický model aplikace:
-- selection-first
-- active exact signal code
-- signal family
-- MVP scope pro power / energy / weather-aware analytics
-- metodickou oporu v literatuře
+Po dosavadním vývoji je hlavní problém už spíš produktový a UX:
+- Overview je přehlcený textem a hodnotami
+- detailní analytika a hlavní přehled jsou promíchané
+- pro aggregate whole-facility / area scope se často pracuje s mixed-sign agregací, což je v hlavním přehledu normální a užitečné, ale pro detailní analytiky metodicky nevhodné
+- chceme jasně oddělit:
+  - elegantní přehled
+  - detailní analytický tool
 
-Zároveň v aplikaci už existují starší nebo rozpracované analytické funkce a UI panely, zejména v tabech:
-- Overview
-- Breakdown
-- Performance
-- Compare
-- Diagnostics
+Teoretický a implementační základ:
+- pokud selected scope obsahuje zároveň consumption a production, aplikace může nabídnout pohledy:
+  - consumption
+  - production
+  - net
+  a net view je užitečný, ale nemá být jediným hlavním pohledem
+- detailní load-shape / weather-aware / EUI analytiky mají být počítány nad metodicky interpretovatelným basis
+- starý detailní plán říká, že:
+  - Overview má být jednoduchý a hlavní
+  - Performance má být kompaktní
+  - cílový směr je jeden hlavní chart area a méně scrollu
 
-Požadavek:
-Neimplementovat teď další feature naslepo, ale nejdřív zjistit, co už v aplikaci existuje, jak to funguje, a rozhodnout:
-- co ponechat
-- co použít jako základ
-- co předělat
-- co odstranit
+## Produktové rozhodnutí pro tento krok
+### Overview
+Overview má pracovat s těmito aggregate semantics pohledy:
+- `Net`
+- `Consumption`
+- `Production`
+
+### Detail analytics / tool
+Detailní analytiky mají pracovat **jen nad `Consumption` basis**.
+
+To znamená:
+- v detailním toolu nechci přepínač `Net / Consumption / Production`
+- net a production jsou přehledové pohledy v Overview
+- detailní výpočty (baseline, scatter, power analytics, EUI, signal analytics) se mají řídit consumption-oriented basis
+
+---
 
 ## Cíl
-Udělát read-only audit všech existujících analytics funkcí a porovnat je s cílovým analytickým modelem z teorie a implementačního plánu.
+Přeorganizovat FacilityWorkbench tak, aby:
+1. Overview byl přehledný, kompaktní a elegantní
+2. Overview uměl ukázat `Net / Consumption / Production`
+3. detailní analytika byla jasně oddělená jako tool vrstva
+4. detailní analytiky běžely jen nad `Consumption` basis
+5. mixed-sign whole-facility scope přestal být produktově problém v hlavním přehledu
 
 ---
 
-## Co přesně chci zjistit
+## Scope tohoto kroku
 
-### 1. Inventura existujících analytics funkcí
-Projdi kód a zjisti, jaké konkrétní analytics / KPI / panely dnes existují v těchto oblastech:
-- Overview
-- Breakdown
-- Performance
-- Compare
-- Diagnostics
+### Ano
+- aggregate semantics pro Overview:
+  - Net
+  - Consumption
+  - Production
+- redesign / přeuspořádání Overview a navazující detailní analytics části
+- consumption-only basis pro detailní analytiky
+- zmenšení textového a vizuálního chaosu
+- lepší oddělení headline overview vs detail tool
 
-U každé položky napiš:
-- název funkce / panelu
-- kde v kódu žije
-- co zhruba dělá
-- jaké vstupy / signály používá
-- jestli je to single-node / aggregate / compare / forecast / baseline / heuristic feature
-
----
-
-### 2. Metodické posouzení vůči teorii
-Porovnej každou funkci s `ANALYTICS_THEORY.md` a `ANALYTICS_IMPLEMENTATION_PLAN.md`.
-
-U každé funkce napiš:
-- je metodicky v souladu s cílovým modelem?
-- má oporu v naší literatuře / plánovaném MVP?
-- nebo je to spíš ad hoc heuristika / legacy experiment / interní utility panel?
+### Ne
+- nové KPI
+- nové matematické metriky
+- compare redesign jako samostatný feature slice
+- forecast redesign
+- další nové analytické funkce mimo přeuspořádání a semantics
+- změna schválených vzorců u již implementovaných metrik
 
 ---
 
-### 3. Rozhodnutí keep / rework / remove
-U každé nalezené funkce rozhodni:
-- **KEEP** = má zůstat a dává smysl
-- **REWORK** = má smysl, ale metodika / UX / datový model potřebují přepsat
-- **REMOVE** = je lepší to odstranit nebo nebrat dál v potaz
-- **UNCLEAR** = vyžaduje lidské rozhodnutí
+## Semantický kontrakt
 
-U `REWORK` a `REMOVE` vysvětli proč.
+### 1. Overview aggregate semantics
+Overview má umět zobrazit tři pohledy nad aggregate scope:
 
----
+#### a) Net
+- čistá signed aggregate bilance
+- vhodná pro facility-level přehled
 
-### 4. Speciální pozornost věnuj těmto oblastem
-Zkontroluj obzvlášť:
-- Headline KPI
-- Deviation / Baseline detail
-- Main Time Series
-- Disaggregation / Top Contributors
-- Role Breakdown
-- Operational Health
-- Source Map
-- Peak Demand
-- Load Factor
-- After-hours Load
-- Peak Analysis
-- Load Duration Curve
-- Compare setup / compare chart
-- Forecast vs Actual
-- Forecast diagnostics
+#### b) Consumption
+- aggregate spotřebovávaná energie / výkon
+- production contribution se sem nemá míchat jako záporná část
+
+#### c) Production
+- aggregate výroba
+- vhodná pro přehled a kontext
+
+#### Důležité
+Tyto tři pohledy jsou **overview semantics**, ne nový detail analytics mode.
 
 ---
 
-### 5. Doporučený další implementační krok
-Na konci navrhni:
-- co je nejlepší další implementační slice po tomto auditu
-- co má být další feature prompt
-- co má být případně nejdřív odstraněno / schováno / odloženo
+### 2. Detail analytics semantics
+Detailní analytiky se mají počítat **jen nad Consumption basis**.
+
+To platí pro:
+- Signal Analytics detail trend / stats
+- weather-aware baseline
+- temperature vs load scatter
+- power analytics:
+  - near-base
+  - near-peak
+  - peak-base ratio
+  - LDC
+  - on-hour duration
+  - after-hours load
+  - base vs peak over time
+- EUI
+
+#### Důležité
+- nepočítej tyto metriky nad raw mixed-sign net aggregate
+- neukazuj v detailním toolu přepínač `Net / Consumption / Production`
+- detailní tool se má opírat o **consumption-only basis**
+- žádné silent fallbacky na jiný nesouvisející signal
+
+---
+
+## Co přesně chci implementovat
+
+### 1. Overview redesign
+Přepracuj Overview tak, aby byl výrazně přehlednější.
+
+#### Chci
+- kompaktní headline KPI vrstvu
+- jeden hlavní chart area
+- přehledový semantics switch / přepínač:
+  - `Net`
+  - `Consumption`
+  - `Production`
+- méně permanentních textových vysvětlení v hlavním pohledu
+- méně “debug-like” detailů v Overview
+
+#### Headline KPI směr
+V Overview chci vidět hlavně:
+- hlavní energetický headline pro aktuální semantics mode
+- kompaktní supporting context
+- ne detailní metodické texty
+
+---
+
+### 2. Main chart area
+Hlavní chart area v Overview má být jedna hlavní grafická plocha.
+
+#### Chci
+- chart reaguje na:
+  - selected interval
+  - selected scope
+  - overview semantics mode (`Net / Consumption / Production`)
+- chart area nemá být obklopená zbytečně mnoha textovými bloky
+
+#### Důležité
+Nechci v tomto kroku rozkopat chart runtime.
+Jde o produktové přeuspořádání a napojení na správnou semantics vrstvu.
+
+---
+
+### 3. Detail analytics / tool separation
+Detailní analytiky odděl tak, aby bylo zřejmé:
+- tohle je „tool / analysis layer“
+- ne hlavní overview dashboard
+
+#### Chci
+- zřetelnou sekci pro detailní analytiky
+- consumption-only basis pro výpočty
+- signal selector a detailní metriky mohou zůstat, ale nemají dominovat hlavnímu přehledu
+
+#### Důležité
+- detail analytics nemají běžet nad `Net`
+- detail analytics nemají běžet nad `Production`, pokud to není výslovně metodicky schválené
+- pro tento krok používáme **Consumption-only**
+
+---
+
+### 4. Existing panel cleanup
+Bez zavádění nových funkcí:
+- zredukuj textový šum
+- schovej nebo zkompaktni nadbytečné explanatory texty
+- zachovej důležité unavailable states
+- zachovej metodickou korektnost
+- ale přestaň zobrazovat vše jako stejně důležité
+
+---
+
+### 5. Minimal semantics explanations
+Přidej krátké, ale velmi stručné vysvětlení semantics:
+
+#### Overview
+- Net = balance of consumption and production
+- Consumption = consumption-only view
+- Production = production-only view
+
+#### Detail analytics
+- detail calculations use consumption basis
+
+Nechci dlouhé bloky metodického textu v hlavním Overview.
 
 ---
 
 ## Důležitá pravidla
-- read-only
-- nic neimplementuj
-- neopravuj kód
-- jen analyzuj a rozhoduj
-- opírej se o konkrétní soubory a symboly
-- pokud něco není jasné, napiš to explicitně
+
+### 1. Detail analytics = consumption-only
+Tohle je klíčové rozhodnutí tohoto kroku.
+Neimplementuj přepínač `Net / Consumption / Production` pro detailní analytiky.
+
+### 2. Overview = jediná vrstva pro net/consumption/production switch
+Net je přehledová semantics vrstva, ne detailní výpočetní basis.
+
+### 3. Bez nových výpočetních metrik
+Nepřidávej nové KPI ani nové výpočty.
+Přeorganizuj a přesměruj již existující logiku.
+
+### 4. Bez tichých fallbacků
+Kde detailní analytika nemá consumption basis, musí to být stále explicitně unavailable.
+
+### 5. Respektovat stávající selection-first architekturu
+Použij:
+- current selection scope
+- current active signal model
+- current aggregate logic
+- current binding model
+
+Nestav paralelní nový data world bokem.
 
 ---
 
-## Output format
-1. Executive summary
-2. Inventory of existing analytics features
-3. Method alignment vs theory/plan
-4. Keep / Rework / Remove matrix
-5. Riskiest legacy heuristics
-6. Recommended next implementation step
-7. Open questions for human decision
+## Co je mimo scope
+Neimplementuj:
+- nové KPI
+- forecast redesign
+- compare redesign jako samostatný feature
+- další matematické modely
+- change of formulas
+- phase auto-summing
+- production-specific detail analytics
+
+---
+
+## Pravidla práce
+- nejdřív stručně napiš plán
+- pak implementuj
+- drž se scope tohoto kroku
+- po dokončení napiš:
+  - co bylo změněno v Overview
+  - jak funguje semantics přepínač
+  - jak je oddělená detail analytics vrstva
+  - jak je zajištěno, že detailní analytiky používají consumption basis
+- proveď build
+- aktualizuj `AI/WORKLOG.md`
+
+---
+
+## Akceptační kritéria
+Krok je hotový, pokud:
+1. Overview má přehledový semantics switch `Net / Consumption / Production`
+2. hlavní chart area reaguje na tento switch
+3. detailní analytiky jsou vizuálně oddělené od hlavního Overview
+4. detailní analytiky používají consumption-only basis
+5. mixed-sign aggregate whole-facility scope už není problém v hlavním přehledu
+6. textový a vizuální chaos je menší než předtím
+7. build projde

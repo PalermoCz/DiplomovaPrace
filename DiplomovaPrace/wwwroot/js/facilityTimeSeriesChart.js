@@ -553,6 +553,109 @@ window.facilityTimeSeriesChart = (function () {
         chart.resize();
     }
 
+    function renderTemperatureLoadScatter(containerId, model) {
+        var chart = getInstance(containerId);
+        if (!chart || !model || !Array.isArray(model.points)) {
+            return;
+        }
+
+        var seriesData = model.points
+            .map(function (point) {
+                return [point.outdoorTemperatureC, point.loadValue, point.timestampUtc];
+            })
+            .filter(function (point) {
+                return Number.isFinite(point[0]) && Number.isFinite(point[1]);
+            });
+
+        if (seriesData.length === 0) {
+            chart.clear();
+            return;
+        }
+
+        var denseSeries = seriesData.length >= 400;
+
+        chart.setOption({
+            animation: seriesData.length < 1200,
+            grid: {
+                left: 58,
+                right: 20,
+                top: 24,
+                bottom: 42,
+                containLabel: false
+            },
+            tooltip: {
+                trigger: 'item',
+                confine: true,
+                formatter: function (param) {
+                    if (!param || !Array.isArray(param.value)) {
+                        return '';
+                    }
+
+                    var temperature = Number(param.value[0]);
+                    var loadValue = Number(param.value[1]);
+                    var timestampUtc = param.value[2];
+                    var temperatureText = Number.isFinite(temperature)
+                        ? temperature.toLocaleString('cs-CZ', { maximumFractionDigits: 2 })
+                        : '-';
+                    var loadText = Number.isFinite(loadValue)
+                        ? loadValue.toLocaleString('cs-CZ', { maximumFractionDigits: 2 })
+                        : '-';
+                    var unitSuffix = model.unit ? ' ' + model.unit : '';
+                    var lines = [];
+
+                    if (timestampUtc) {
+                        lines.push(toTooltipDate(timestampUtc));
+                    }
+
+                    lines.push('Ta: ' + temperatureText + ' C');
+                    lines.push((param.marker || '') + (model.title || 'Load') + ': ' + loadText + unitSuffix);
+                    return lines.join('<br/>');
+                }
+            },
+            xAxis: {
+                type: 'value',
+                name: model.xAxisLabel || 'Outdoor temperature Ta (C)',
+                nameGap: 24,
+                axisLabel: {
+                    margin: 10
+                },
+                splitLine: {
+                    lineStyle: { color: '#e2e8f0' }
+                }
+            },
+            yAxis: {
+                type: 'value',
+                name: model.yAxisLabel || 'Load',
+                nameGap: 28,
+                axisLabel: {
+                    margin: 10
+                },
+                splitLine: {
+                    lineStyle: { color: '#e2e8f0' }
+                }
+            },
+            series: [
+                {
+                    type: 'scatter',
+                    name: model.title || 'Temperature vs load',
+                    data: seriesData,
+                    symbolSize: denseSeries ? 6 : 8,
+                    itemStyle: {
+                        color: '#0ea5e9',
+                        opacity: denseSeries ? 0.72 : 0.84
+                    },
+                    emphasis: {
+                        itemStyle: {
+                            color: '#0369a1'
+                        }
+                    }
+                }
+            ]
+        }, true);
+
+        chart.resize();
+    }
+
     function dispose(containerId) {
         var element = document.getElementById(containerId);
 
@@ -588,6 +691,7 @@ window.facilityTimeSeriesChart = (function () {
         render: render,
         renderCompare: renderCompare,
         renderLoadDuration: renderLoadDuration,
+        renderTemperatureLoadScatter: renderTemperatureLoadScatter,
         dispose: dispose,
         resize: resize
     };

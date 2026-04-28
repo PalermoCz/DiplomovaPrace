@@ -167,11 +167,154 @@ public sealed class SelectionSignalBasicStats
     public string Unit { get; init; } = string.Empty;
 }
 
+public sealed class SelectionPowerMetricSummary
+{
+    public bool IsAvailable { get; init; }
+    public CuratedPerformanceKpiState State { get; init; } = CuratedPerformanceKpiState.Unavailable;
+    public double? Value { get; init; }
+    public string Unit { get; init; } = string.Empty;
+    public string Summary { get; init; } = string.Empty;
+    public string StateReason { get; init; } = string.Empty;
+}
+
+public sealed class SelectionPowerDurationSummary
+{
+    public bool IsAvailable { get; init; }
+    public CuratedPerformanceKpiState State { get; init; } = CuratedPerformanceKpiState.Unavailable;
+    public double? DurationHours { get; init; }
+    public double? ShareRatio { get; init; }
+    public double? ThresholdValue { get; init; }
+    public string ThresholdUnit { get; init; } = string.Empty;
+    public int MatchingBucketCount { get; init; }
+    public int TotalBucketCount { get; init; }
+    public string Summary { get; init; } = string.Empty;
+    public string StateReason { get; init; } = string.Empty;
+}
+
+public sealed class SelectionPowerBasePeakDaySummary
+{
+    public DateTime DayUtc { get; init; }
+    public int SampleCount { get; init; }
+    public double BaseValue { get; init; }
+    public double PeakValue { get; init; }
+}
+
+public sealed class SelectionPowerBasePeakOverTimeResult
+{
+    public bool IsAvailable { get; init; }
+    public CuratedPerformanceKpiState State { get; init; } = CuratedPerformanceKpiState.Unavailable;
+    public int UsableDayCount { get; init; }
+    public int TotalDayCount { get; init; }
+    public string SignalCode { get; init; } = string.Empty;
+    public string Unit { get; init; } = string.Empty;
+    public string GranularityLabel { get; init; } = string.Empty;
+    public string EvaluationBasis { get; init; } = string.Empty;
+    public string Summary { get; init; } = "Base vs Peak Over Time waits for an active exact power signal.";
+    public string StateReason { get; init; } = string.Empty;
+    public string Methodology { get; init; } = "Base over time = daily 5th percentile of the active power series. Peak over time = daily 95th percentile of the same series. Each usable day requires sub-daily power samples; no fallback signal is used.";
+    public IReadOnlyList<SelectionPowerBasePeakDaySummary> Days { get; init; } = [];
+    public CuratedNodeCompareTimeSeriesResult Chart { get; init; } = new();
+}
+
+public sealed class SelectionPowerAnalyticsResult
+{
+    public bool IsPowerSignal { get; init; }
+    public bool IsAvailable { get; init; }
+    public bool IsMixedSignAggregateUnavailable { get; init; }
+    public int PointCount { get; init; }
+    public string Unit { get; init; } = string.Empty;
+    public string EvaluationBasis { get; init; } = string.Empty;
+    public string Summary { get; init; } = "Power Analytics wait for an active exact signal code.";
+    public string Methodology { get; init; } = "Near-base = 5th percentile of the active power series. Near-peak = 95th percentile of the same series. Peak-base ratio = near-peak / near-base when near-base is numerically safe. On-hour duration counts buckets at or above the midpoint between near-base and near-peak. After-hours Load reuses that same threshold only for fixed after-hours buckets (weekday outside 07:00-19:00 UTC plus weekends). Load duration curve sorts the same active power series in descending order without falling back to another signal.";
+    public string DistinctionNote { get; init; } = "On-hour duration shows how long the active power series stays in its higher-load mode across the whole interval. After-hours Load uses the same threshold, but only inside fixed after-hours windows, so it reads as after-hours persistence rather than total runtime.";
+    public SelectionPowerMetricSummary NearBase { get; init; } = new();
+    public SelectionPowerMetricSummary NearPeak { get; init; } = new();
+    public SelectionPowerMetricSummary PeakBaseRatio { get; init; } = new();
+    public SelectionPowerDurationSummary OnHourDuration { get; init; } = new();
+    public SelectionPowerDurationSummary AfterHoursLoad { get; init; } = new();
+    public SelectionPowerBasePeakOverTimeResult BasePeakOverTime { get; init; } = new();
+    public CuratedSelectionLoadDurationCurveSummary LoadDurationCurve { get; init; } = new();
+}
+
+public sealed class SelectionWeatherAwareBaselineResult
+{
+    public bool IsApplicable { get; init; }
+    public bool IsAvailable { get; init; }
+    public NodeDeviationSeverity? Severity { get; init; }
+    public double? ActualValue { get; init; }
+    public double? BaselineExpectedValue { get; init; }
+    public double? DeltaAbsolute { get; init; }
+    public double? DeltaPercent { get; init; }
+    public double? CvRmsePercent { get; init; }
+    public double? NmbePercent { get; init; }
+    public int FitDayCount { get; init; }
+    public int PredictionDayCount { get; init; }
+    public int ContributingNodeCount { get; init; }
+    public string Unit { get; init; } = "kWh";
+    public string EvaluationBasis { get; init; } = string.Empty;
+    public string Summary { get; init; } = "Weather-aware baseline waits for an active energy or power signal.";
+    public string Methodology { get; init; } = "Daily weather-aware baseline uses daily energy with facility outdoor-air temperature Ta and an HDD/CDD linear model. Diagnostics report CV(RMSE) and NMBE on the fit period.";
+    public string? Message { get; init; }
+    public string? WeatherNodeKey { get; init; }
+}
+
+public sealed class SelectionEuiResult
+{
+    public bool IsApplicable { get; init; }
+    public bool IsAvailable { get; init; }
+    public double? EnergyKwh { get; init; }
+    public double? FloorAreaM2 { get; init; }
+    public double? EuiKwhPerM2 { get; init; }
+    public int ContributingNodeCount { get; init; }
+    public string SignalCode { get; init; } = string.Empty;
+    public string EnergyUnit { get; init; } = "kWh";
+    public string FloorAreaUnit { get; init; } = "m²";
+    public string EuiUnit { get; init; } = "kWh/m²";
+    public string Summary { get; init; } = "EUI waits for an active exact energy or power signal and explicit floor area metadata.";
+    public string Methodology { get; init; } = "EUI = Energy / Floor area. This MVP reports period EUI over the selected interval, not an annualized EUI. Floor area must be explicitly entered on an area node, and power-derived energy is integrated over actual timestamp spacing before normalization to kWh.";
+    public string EvaluationBasis { get; init; } = string.Empty;
+    public string StateReason { get; init; } = string.Empty;
+    public string? Message { get; init; }
+    public string? FloorAreaNodeKey { get; init; }
+}
+
+public sealed class SelectionTemperatureLoadScatterPoint
+{
+    public DateTime TimestampUtc { get; init; }
+    public double OutdoorTemperatureC { get; init; }
+    public double LoadValue { get; init; }
+}
+
+public sealed class SelectionTemperatureLoadScatterResult
+{
+    public bool IsApplicable { get; init; }
+    public bool IsAvailable { get; init; }
+    public bool UsesEnergyDerivedLoad { get; init; }
+    public int PointCount { get; init; }
+    public int ContributingNodeCount { get; init; }
+    public string SignalCode { get; init; } = string.Empty;
+    public string Unit { get; init; } = string.Empty;
+    public string GranularityLabel { get; init; } = "Hourly pairing";
+    public string XAxisLabel { get; init; } = "Outdoor temperature Ta (C)";
+    public string YAxisLabel { get; init; } = "Load";
+    public string LoadBasisLabel { get; init; } = string.Empty;
+    public string EvaluationBasis { get; init; } = string.Empty;
+    public string Summary { get; init; } = "Temperature vs load scatter waits for an active energy or power signal.";
+    public string Methodology { get; init; } = "Temperature vs load scatter uses complete UTC hours only. X axis = facility outdoor-air temperature Ta. Y axis = hourly average power for power signals, or hourly energy-derived load for energy signals. No fallback signal is used.";
+    public string? Message { get; init; }
+    public string? WeatherNodeKey { get; init; }
+    public IReadOnlyList<SelectionTemperatureLoadScatterPoint> Points { get; init; } = [];
+}
+
 public sealed class SelectionSignalAnalyticsResult
 {
     public SelectionSignalAvailabilityItem? SelectionSignal { get; init; }
     public CuratedNodeTimeSeriesResult? TimeSeries { get; init; }
     public SelectionSignalBasicStats? BasicStats { get; init; }
+    public SelectionPowerAnalyticsResult PowerAnalytics { get; init; } = new();
+    public SelectionEuiResult Eui { get; init; } = new();
+    public SelectionWeatherAwareBaselineResult WeatherAwareBaseline { get; init; } = new();
+    public SelectionTemperatureLoadScatterResult TemperatureLoadScatter { get; init; } = new();
     public bool IsAvailable { get; init; }
     public bool IsAggregate { get; init; }
     public string Message { get; init; } = string.Empty;
@@ -379,6 +522,8 @@ public sealed class CuratedSelectionLoadDurationCurveSummary
     public bool IsAvailable { get; init; }
     public bool HasMixedSigns { get; init; }
     public CuratedPerformanceKpiState State { get; init; } = CuratedPerformanceKpiState.Unavailable;
+    public string Unit { get; init; } = "kW";
+    public string YAxisLabel { get; init; } = "Demand (kW)";
     public string StateReason { get; init; } = string.Empty;
     public string EvaluationBasis { get; init; } = string.Empty;
     public IReadOnlyList<string> Notes { get; init; } = [];
@@ -617,25 +762,46 @@ public sealed class WeatherExplanationSummary
 public class NodeAnalyticsPreviewService
 {
     private const string BaselineMethodology = "The analysis window is always the user-selected interval. Baseline strategy is determined separately: priority goes to the same period in prior years, with fallback to previous comparable windows of the same length. For series with a P suffix, power is converted to energy before summation using the inferred time step, with a 15 min fallback.";
+    private const string WeatherAwareBaselineMethodology = "Daily weather-aware baseline uses full UTC days only. Daily energy is taken directly from energy counters or derived from power by interval integration, then fitted against facility weather Ta with E_d = beta0 + betaH * HDD(18 C) + betaC * CDD(22 C). Diagnostics report CV(RMSE) and NMBE on the fit days used by the model.";
+    private const string EuiMethodology = "EUI = Energy / Floor area. This MVP reports period EUI over the selected interval, not an annualized EUI. Floor area must be explicitly entered on an area node, and power-derived energy is integrated over actual timestamp spacing before normalization to kWh.";
+    private const string TemperatureLoadScatterMethodology = "Temperature vs load scatter uses complete UTC hours only. X axis = facility outdoor-air temperature Ta. Y axis = hourly average power for power signals, or hourly energy-derived load for energy signals. Energy counters use the existing derived interval semantics instead of raw counter values. No fallback signal is used.";
     private const double DefaultPowerSampleStepHours = 0.25;
     private const int MaxHistoricalYearsForBaseline = 3;
     private const int RecentComparableWindowsForBaseline = 4;
     private const double MinimumReferenceCoverageRatio = 0.60;
     private const double WeatherExplanationDeltaThresholdC = 0.8;
+    private const double WeatherAwareHeatingBalanceTemperatureC = 18.0;
+    private const double WeatherAwareCoolingBalanceTemperatureC = 22.0;
+    private const int WeatherAwareBaselineFitLookbackDays = 365;
+    private const int WeatherAwareBaselineMinimumFitDays = 21;
+    private const double WeatherAwareBaselineMinimumDailyCoverageRatio = 0.75;
+    private const double TemperatureLoadScatterMinimumHourlyCoverageRatio = 0.75;
     private static readonly TimeSpan RawTimeSeriesThreshold = TimeSpan.FromDays(7);
     private static readonly TimeSpan HourlyTimeSeriesThreshold = TimeSpan.FromDays(45);
 
     private readonly IKpiService _kpiService;
     private readonly IWebHostEnvironment _env;
     private readonly FacilityDataBindingRegistry _bindingRegistry;
+    private readonly FacilityEditorStateService _facilityEditorStateService;
+    private readonly FacilityQueryService _facilityQueryService;
+    private readonly FacilityWeatherSourceResolver _weatherSourceResolver;
     private readonly ConcurrentDictionary<string, DateTime> _maxTimestampCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, (DateTime MinUtc, DateTime MaxUtc)> _timeDomainCache = new(StringComparer.OrdinalIgnoreCase);
 
-    public NodeAnalyticsPreviewService(IKpiService kpiService, IWebHostEnvironment env, FacilityDataBindingRegistry bindingRegistry)
+    public NodeAnalyticsPreviewService(
+        IKpiService kpiService,
+        IWebHostEnvironment env,
+        FacilityDataBindingRegistry bindingRegistry,
+        FacilityEditorStateService facilityEditorStateService,
+        FacilityQueryService facilityQueryService,
+        FacilityWeatherSourceResolver weatherSourceResolver)
     {
         _kpiService = kpiService;
         _env = env;
         _bindingRegistry = bindingRegistry;
+        _facilityEditorStateService = facilityEditorStateService;
+        _facilityQueryService = facilityQueryService;
+        _weatherSourceResolver = weatherSourceResolver;
     }
 
     public async Task<MeterKpiResult?> GetPreviewDataAsync(string meterUrn, DateTime from, DateTime to, CancellationToken ct = default)
@@ -723,6 +889,7 @@ public class NodeAnalyticsPreviewService
         DateTime from,
         DateTime to,
         CuratedNodeTimeSeriesMode mode = CuratedNodeTimeSeriesMode.Auto,
+        string? scopeAnchorNodeKey = null,
         CancellationToken ct = default)
     {
         if (exactSignalCode.IsEmpty)
@@ -733,7 +900,12 @@ public class NodeAnalyticsPreviewService
             };
         }
 
-        var availability = GetSelectionSignalAvailability(nodeKeys);
+        var scopeNodeKeys = nodeKeys?
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList() ?? [];
+
+        var availability = GetSelectionSignalAvailability(scopeNodeKeys);
         var option = availability.Options.FirstOrDefault(item => FacilitySignalTaxonomy.MatchesExactCode(item.ExactSignalCode, exactSignalCode));
 
         if (option is null)
@@ -756,6 +928,9 @@ public class NodeAnalyticsPreviewService
                 };
             }
 
+            var euiTask = BuildSelectionEuiAsync(option, scopeNodeKeys, scopeAnchorNodeKey, from, to, ct);
+            var baselineTask = BuildSelectionWeatherAwareBaselineAsync(option, from, to, ct);
+            var scatterTask = BuildSelectionTemperatureLoadScatterAsync(option, from, to, ct);
             var timeSeries = await GetCuratedTimeSeriesAsync(
                 nodeKey,
                 exactSignalCode,
@@ -764,12 +939,19 @@ public class NodeAnalyticsPreviewService
                 mode,
                 includeBaselineOverlay: false,
                 ct);
+            var eui = await euiTask;
+            var weatherAwareBaseline = await baselineTask;
+            var temperatureLoadScatter = await scatterTask;
 
             return new SelectionSignalAnalyticsResult
             {
                 SelectionSignal = option,
                 TimeSeries = timeSeries,
                 BasicStats = BuildSelectionSignalBasicStats(timeSeries),
+                PowerAnalytics = BuildSelectionPowerAnalytics(option, timeSeries),
+                Eui = eui,
+                WeatherAwareBaseline = weatherAwareBaseline,
+                TemperatureLoadScatter = temperatureLoadScatter,
                 IsAvailable = timeSeries is not null && timeSeries.Points.Count > 0,
                 IsAggregate = false,
                 Message = timeSeries is null
@@ -783,9 +965,17 @@ public class NodeAnalyticsPreviewService
 
         if (!option.CanAggregate)
         {
+            var eui = await BuildSelectionEuiAsync(option, scopeNodeKeys, scopeAnchorNodeKey, from, to, ct);
+            var weatherAwareBaseline = await BuildSelectionWeatherAwareBaselineAsync(option, from, to, ct);
+            var temperatureLoadScatter = await BuildSelectionTemperatureLoadScatterAsync(option, from, to, ct);
+
             return new SelectionSignalAnalyticsResult
             {
                 SelectionSignal = option,
+                PowerAnalytics = BuildSelectionPowerAnalytics(option, null),
+                Eui = eui,
+                WeatherAwareBaseline = weatherAwareBaseline,
+                TemperatureLoadScatter = temperatureLoadScatter,
                 IsAvailable = false,
                 IsAggregate = true,
                 Message = option.AvailabilityMessage,
@@ -793,13 +983,23 @@ public class NodeAnalyticsPreviewService
             };
         }
 
+        var euiTaskForAggregate = BuildSelectionEuiAsync(option, scopeNodeKeys, scopeAnchorNodeKey, from, to, ct);
+        var baselineTaskForAggregate = BuildSelectionWeatherAwareBaselineAsync(option, from, to, ct);
+        var scatterTaskForAggregate = BuildSelectionTemperatureLoadScatterAsync(option, from, to, ct);
         var aggregateTimeSeries = await GetSelectionSignalAggregateTimeSeriesAsync(option, from, to, mode, ct);
+        var aggregateEui = await euiTaskForAggregate;
+        var aggregateWeatherAwareBaseline = await baselineTaskForAggregate;
+        var aggregateTemperatureLoadScatter = await scatterTaskForAggregate;
 
         return new SelectionSignalAnalyticsResult
         {
             SelectionSignal = option,
             TimeSeries = aggregateTimeSeries,
             BasicStats = BuildSelectionSignalBasicStats(aggregateTimeSeries),
+            PowerAnalytics = BuildSelectionPowerAnalytics(option, aggregateTimeSeries),
+            Eui = aggregateEui,
+            WeatherAwareBaseline = aggregateWeatherAwareBaseline,
+            TemperatureLoadScatter = aggregateTemperatureLoadScatter,
             IsAvailable = aggregateTimeSeries is not null && aggregateTimeSeries.Points.Count > 0,
             IsAggregate = true,
             Message = aggregateTimeSeries is null
@@ -3777,6 +3977,51 @@ public class NodeAnalyticsPreviewService
         string StrategyDescription,
         IReadOnlyList<BaselineCandidate> ReferenceCandidates);
 
+    private sealed record WeatherAwareDailyEnergySeries(
+        IReadOnlyDictionary<DateTime, double> DailyEnergyByDay,
+        IReadOnlyList<string> ContributingNodeKeys,
+        int MatchingNodeCount,
+        string Unit,
+        string EvaluationBasis);
+
+    private sealed record WeatherAwareDailyTemperatureSeries(
+        IReadOnlyDictionary<DateTime, double> DailyAverageTemperatureByDay,
+        string WeatherNodeKey,
+        string EvaluationBasis);
+
+    private sealed record DailyWeatherAwareObservation(
+        DateTime DayStartUtc,
+        double Energy,
+        double AverageOutdoorTemperatureC);
+
+    private sealed record WeatherAwareBaselineModel(
+        double Intercept,
+        double HeatingSlope,
+        double CoolingSlope)
+    {
+        public double Predict(double averageOutdoorTemperatureC)
+        {
+            var heating = Math.Max(0, WeatherAwareHeatingBalanceTemperatureC - averageOutdoorTemperatureC);
+            var cooling = Math.Max(0, averageOutdoorTemperatureC - WeatherAwareCoolingBalanceTemperatureC);
+            return Math.Max(0, Intercept + (HeatingSlope * heating) + (CoolingSlope * cooling));
+        }
+    }
+
+    private sealed record HourlyLoadScatterSeries(
+        IReadOnlyDictionary<DateTime, double> LoadByHour,
+        IReadOnlyList<string> ContributingNodeKeys,
+        int MatchingNodeCount,
+        string Unit,
+        string YAxisLabel,
+        string LoadBasisLabel,
+        string EvaluationBasis,
+        bool UsesEnergyDerivedLoad);
+
+    private sealed record HourlyTemperatureScatterSeries(
+        IReadOnlyDictionary<DateTime, double> TemperatureByHour,
+        string WeatherNodeKey,
+        string EvaluationBasis);
+
     private sealed record TimeSeriesGranularityDecision(
         CuratedNodeTimeSeriesGranularity Granularity,
         string Label,
@@ -3907,7 +4152,7 @@ public class NodeAnalyticsPreviewService
             summaryLabel = "Interval energy";
             statsUnit = "kW";
             statsLabel = "Power";
-            powerToKilowattFactor = ResolvePowerToKilowattFactor(binding.Unit);
+            powerToKilowattFactor = ResolvePowerToKilowattFactor(ResolveImplicitPowerUnit(binding));
         }
         else if (signalFamily == FacilitySignalFamily.Energy)
         {
@@ -4194,6 +4439,2668 @@ public class NodeAnalyticsPreviewService
             Unit = timeSeries.Unit
         };
     }
+
+    private static SelectionPowerAnalyticsResult BuildSelectionPowerAnalytics(
+        SelectionSignalAvailabilityItem? selectionSignal,
+        CuratedNodeTimeSeriesResult? timeSeries)
+    {
+        const string methodology = "Near-base = 5th percentile of the active power series. Near-peak = 95th percentile of the same series. Peak-base ratio = near-peak / near-base when near-base is numerically safe. On-hour duration counts buckets at or above the midpoint between near-base and near-peak. After-hours Load reuses that same threshold only for fixed after-hours buckets (weekday outside 07:00-19:00 UTC plus weekends). Base vs Peak Over Time applies the same 5th/95th percentile basis per UTC day and requires sub-daily power samples. Load duration curve sorts the same active power series in descending order without falling back to another signal.";
+        const string distinctionNote = "On-hour duration shows how long the active power series stays in its higher-load mode across the whole interval. After-hours Load uses the same threshold, but only inside fixed after-hours windows, so it reads as after-hours persistence rather than total runtime.";
+
+        if (selectionSignal is null)
+        {
+            return new SelectionPowerAnalyticsResult
+            {
+                Summary = "Power Analytics wait for an active exact signal code.",
+                Methodology = methodology,
+                DistinctionNote = distinctionNote
+            };
+        }
+
+        if (selectionSignal.SignalFamily != FacilitySignalFamily.Power)
+        {
+            return new SelectionPowerAnalyticsResult
+            {
+                Summary = $"Power Analytics are available only for the power family (P, P1, P2, P3). The current active signal {selectionSignal.ExactSignalCode.Value} belongs to {selectionSignal.SignalFamily}.",
+                Methodology = methodology,
+                DistinctionNote = distinctionNote
+            };
+        }
+
+        var loadDurationCurve = BuildSelectionPowerLoadDurationCurveSummary(timeSeries, selectionSignal);
+        if (timeSeries is null)
+        {
+            return new SelectionPowerAnalyticsResult
+            {
+                IsPowerSignal = true,
+                Summary = "Power Analytics are unavailable because the active power series could not be resolved.",
+                Methodology = methodology,
+                DistinctionNote = distinctionNote,
+                LoadDurationCurve = loadDurationCurve
+            };
+        }
+
+        var unit = ResolveSelectionPowerUnit(timeSeries);
+        var evaluationBasis = DescribeSelectionPowerEvaluationBasis(timeSeries, selectionSignal);
+
+        if (timeSeries.Points.Count == 0)
+        {
+            return new SelectionPowerAnalyticsResult
+            {
+                IsPowerSignal = true,
+                Unit = unit,
+                EvaluationBasis = evaluationBasis,
+                Summary = timeSeries.NoDataMessage ?? "Power Analytics are unavailable because the active power series has no points in the current interval.",
+                Methodology = methodology,
+                DistinctionNote = distinctionNote,
+                LoadDurationCurve = loadDurationCurve
+            };
+        }
+
+        var values = timeSeries.Points
+            .Select(point => point.Value)
+            .ToArray();
+        if (IsMixedSignAggregateSelectionPowerSeries(selectionSignal, values))
+        {
+            var mixedSignSummary = "Power Analytics are intentionally unavailable because the current active aggregate P series is mixed-sign.";
+            var mixedSignReason = "Load-shape power analytics assume a consumption-oriented, non-mixed-sign power basis. Choose a non-mixed-sign signal or narrower scope instead of silently switching signals.";
+            var mixedSignEvaluationBasis = $"{evaluationBasis} Current aggregate P contains both positive and negative values.";
+
+            return new SelectionPowerAnalyticsResult
+            {
+                IsPowerSignal = true,
+                IsMixedSignAggregateUnavailable = true,
+                PointCount = values.Length,
+                Unit = unit,
+                EvaluationBasis = mixedSignEvaluationBasis,
+                Summary = mixedSignSummary,
+                Methodology = methodology,
+                DistinctionNote = distinctionNote,
+                NearBase = BuildUnavailableSelectionPowerMetric(unit, mixedSignSummary, mixedSignReason),
+                NearPeak = BuildUnavailableSelectionPowerMetric(unit, mixedSignSummary, mixedSignReason),
+                PeakBaseRatio = BuildUnavailableSelectionPowerMetric("x", mixedSignSummary, mixedSignReason),
+                OnHourDuration = BuildUnavailableSelectionPowerDuration(mixedSignSummary, mixedSignReason),
+                AfterHoursLoad = BuildUnavailableSelectionPowerDuration(mixedSignSummary, mixedSignReason),
+                BasePeakOverTime = BuildUnavailableSelectionPowerBasePeakOverTime(
+                    selectionSignal.ExactSignalCode.Value,
+                    unit,
+                    timeSeries.GranularityLabel,
+                    mixedSignEvaluationBasis,
+                    values.Select(static point => point).Count(),
+                    mixedSignSummary,
+                    mixedSignReason),
+                LoadDurationCurve = BuildUnavailableSelectionPowerLoadDurationCurve(
+                    unit,
+                    timeSeries,
+                    mixedSignEvaluationBasis,
+                    mixedSignSummary,
+                    mixedSignReason)
+            };
+        }
+
+        var nearBase = Percentile(values, 0.05);
+        var nearPeak = Percentile(values, 0.95);
+        var threshold = (nearBase + nearPeak) / 2d;
+        var safeRatioFloor = GetMinimumSafePowerRatioDenominator(values);
+        var canComputeRatio = Math.Abs(nearBase) > safeRatioFloor;
+        var unitSuffix = string.IsNullOrWhiteSpace(unit)
+            ? string.Empty
+            : $" {unit}";
+        var onHourDuration = BuildSelectionOnHourDurationSummary(timeSeries, threshold, unit);
+        var afterHoursLoad = BuildSelectionPowerAfterHoursLoadSummary(timeSeries, threshold, unit);
+        var basePeakOverTime = BuildSelectionPowerBasePeakOverTimeSummary(timeSeries, selectionSignal, unit, evaluationBasis);
+
+        return new SelectionPowerAnalyticsResult
+        {
+            IsPowerSignal = true,
+            IsAvailable = true,
+            PointCount = values.Length,
+            Unit = unit,
+            EvaluationBasis = evaluationBasis,
+            Summary = $"Power Analytics are computed from the same {values.Length}-point {selectionSignal.ExactSignalCode.Value} series used by Signal Analytics.",
+            Methodology = methodology,
+            DistinctionNote = distinctionNote,
+            NearBase = new SelectionPowerMetricSummary
+            {
+                IsAvailable = true,
+                State = CuratedPerformanceKpiState.Available,
+                Value = nearBase,
+                Unit = unit,
+                Summary = "Near-base = 5th percentile of the current active power series.",
+                StateReason = "Robust lower-load estimate from the exact active signal."
+            },
+            NearPeak = new SelectionPowerMetricSummary
+            {
+                IsAvailable = true,
+                State = CuratedPerformanceKpiState.Available,
+                Value = nearPeak,
+                Unit = unit,
+                Summary = "Near-peak = 95th percentile of the current active power series.",
+                StateReason = "Robust upper-load estimate from the exact active signal."
+            },
+            PeakBaseRatio = canComputeRatio
+                ? new SelectionPowerMetricSummary
+                {
+                    IsAvailable = true,
+                    State = CuratedPerformanceKpiState.Available,
+                    Value = nearPeak / nearBase,
+                    Unit = "x",
+                    Summary = "Peak-base ratio = near-peak / near-base over the same active power series.",
+                    StateReason = "Computed without fallback from the exact active signal."
+                }
+                : new SelectionPowerMetricSummary
+                {
+                    IsAvailable = false,
+                    State = CuratedPerformanceKpiState.Unavailable,
+                    Unit = "x",
+                    Summary = "Peak-base ratio cannot be computed safely because near-base is too close to zero.",
+                    StateReason = $"Near-base {nearBase.ToString("N2", CultureInfo.InvariantCulture)}{unitSuffix} is below the safe division floor for this series."
+                },
+            OnHourDuration = onHourDuration,
+            AfterHoursLoad = afterHoursLoad,
+                BasePeakOverTime = basePeakOverTime,
+            LoadDurationCurve = loadDurationCurve
+        };
+    }
+
+    private static SelectionPowerMetricSummary BuildUnavailableSelectionPowerMetric(
+        string unit,
+        string summary,
+        string stateReason)
+        => new()
+        {
+            IsAvailable = false,
+            State = CuratedPerformanceKpiState.Unavailable,
+            Unit = unit,
+            Summary = summary,
+            StateReason = stateReason
+        };
+
+    private static SelectionPowerDurationSummary BuildUnavailableSelectionPowerDuration(
+        string summary,
+        string stateReason)
+        => new()
+        {
+            IsAvailable = false,
+            State = CuratedPerformanceKpiState.Unavailable,
+            Summary = summary,
+            StateReason = stateReason
+        };
+
+    private static SelectionPowerBasePeakOverTimeResult BuildUnavailableSelectionPowerBasePeakOverTime(
+        string signalCode,
+        string unit,
+        string granularityLabel,
+        string evaluationBasis,
+        int totalDayCount,
+        string summary,
+        string stateReason)
+        => new()
+        {
+            IsAvailable = false,
+            State = CuratedPerformanceKpiState.Unavailable,
+            SignalCode = signalCode,
+            Unit = unit,
+            GranularityLabel = granularityLabel,
+            TotalDayCount = totalDayCount,
+            EvaluationBasis = evaluationBasis,
+            Summary = summary,
+            StateReason = stateReason,
+            Chart = new CuratedNodeCompareTimeSeriesResult
+            {
+                PrimaryNodeKey = "selection_power_base_peak",
+                Title = "Base vs Peak Over Time",
+                Unit = unit,
+                YAxisLabel = string.IsNullOrWhiteSpace(unit)
+                    ? "Power"
+                    : $"Power ({unit})",
+                Granularity = CuratedNodeTimeSeriesGranularity.DailyAverage,
+                GranularityLabel = "Daily 5th/95th percentiles",
+                AggregationMethod = "Unavailable",
+                InterpretationNote = stateReason,
+                NoDataMessage = summary
+            }
+        };
+
+    private static CuratedSelectionLoadDurationCurveSummary BuildUnavailableSelectionPowerLoadDurationCurve(
+        string unit,
+        CuratedNodeTimeSeriesResult timeSeries,
+        string evaluationBasis,
+        string summary,
+        string stateReason)
+        => new()
+        {
+            IsAvailable = false,
+            State = CuratedPerformanceKpiState.Unavailable,
+            Unit = unit,
+            YAxisLabel = string.IsNullOrWhiteSpace(timeSeries.YAxisLabel)
+                ? (string.IsNullOrWhiteSpace(unit) ? "Power" : $"Power ({unit})")
+                : timeSeries.YAxisLabel,
+            EvaluationBasis = evaluationBasis,
+            Summary = summary,
+            StateReason = stateReason,
+            Methodology = "Load duration curve is hidden for mixed-sign aggregate P because this load-shape block does not silently project net power to demand-positive values or switch to another signal."
+        };
+
+    private static bool IsMixedSignAggregateSelectionPowerSeries(
+        SelectionSignalAvailabilityItem selectionSignal,
+        IReadOnlyList<double> values)
+        => selectionSignal.CanAggregate
+            && selectionSignal.ExactSignalCode == FacilitySignalCode.P
+            && values.Any(value => value > 0d)
+            && values.Any(value => value < 0d);
+
+    private static SelectionPowerDurationSummary BuildSelectionOnHourDurationSummary(
+        CuratedNodeTimeSeriesResult timeSeries,
+        double threshold,
+        string unit)
+    {
+        var bucketDurationHours = ResolveSelectionPowerBucketDurationHours(timeSeries);
+        var matchingBucketCount = timeSeries.Points.Count(point => point.Value >= threshold);
+        var totalBucketCount = timeSeries.Points.Count;
+        var shareRatio = totalBucketCount == 0
+            ? (double?)null
+            : matchingBucketCount / (double)totalBucketCount;
+
+        return new SelectionPowerDurationSummary
+        {
+            IsAvailable = true,
+            State = CuratedPerformanceKpiState.Available,
+            DurationHours = matchingBucketCount * bucketDurationHours,
+            ShareRatio = shareRatio,
+            ThresholdValue = threshold,
+            ThresholdUnit = unit,
+            MatchingBucketCount = matchingBucketCount,
+            TotalBucketCount = totalBucketCount,
+            Summary = $"On-hour duration counts buckets at or above the midpoint threshold between near-base and near-peak. {matchingBucketCount} of {totalBucketCount} buckets are in the higher-load mode.",
+            StateReason = $"Threshold = midpoint(near-base, near-peak) = {threshold.ToString("N2", CultureInfo.InvariantCulture)}{FormatSelectionPowerUnitSuffix(unit)}."
+        };
+    }
+
+    private static SelectionPowerDurationSummary BuildSelectionPowerAfterHoursLoadSummary(
+        CuratedNodeTimeSeriesResult timeSeries,
+        double threshold,
+        string unit)
+    {
+        if (timeSeries.Granularity == CuratedNodeTimeSeriesGranularity.DailyAverage)
+        {
+            return new SelectionPowerDurationSummary
+            {
+                IsAvailable = false,
+                State = CuratedPerformanceKpiState.Unavailable,
+                ThresholdValue = threshold,
+                ThresholdUnit = unit,
+                Summary = "After-hours Load is unavailable because the current active power series is only available as daily buckets.",
+                StateReason = "This metric keeps fixed after-hours windows (weekday outside 07:00-19:00 UTC plus weekends), so it requires sub-daily timestamps."
+            };
+        }
+
+        var afterHoursPoints = timeSeries.Points
+            .Where(point => IsSelectionPowerAfterHoursBucket(point.TimestampUtc))
+            .ToList();
+
+        if (afterHoursPoints.Count == 0)
+        {
+            return new SelectionPowerDurationSummary
+            {
+                IsAvailable = false,
+                State = CuratedPerformanceKpiState.Unavailable,
+                ThresholdValue = threshold,
+                ThresholdUnit = unit,
+                Summary = "After-hours Load is unavailable because the current interval does not contain any fixed after-hours buckets.",
+                StateReason = "After-hours windows use weekday timestamps outside 07:00-19:00 UTC plus all weekend timestamps."
+            };
+        }
+
+        var bucketDurationHours = ResolveSelectionPowerBucketDurationHours(timeSeries);
+        var matchingBucketCount = afterHoursPoints.Count(point => point.Value >= threshold);
+
+        return new SelectionPowerDurationSummary
+        {
+            IsAvailable = true,
+            State = CuratedPerformanceKpiState.Available,
+            DurationHours = matchingBucketCount * bucketDurationHours,
+            ShareRatio = matchingBucketCount / (double)afterHoursPoints.Count,
+            ThresholdValue = threshold,
+            ThresholdUnit = unit,
+            MatchingBucketCount = matchingBucketCount,
+            TotalBucketCount = afterHoursPoints.Count,
+            Summary = $"After-hours Load reuses the on-hour threshold, but only for fixed after-hours windows. {matchingBucketCount} of {afterHoursPoints.Count} after-hours buckets stay at or above that threshold.",
+            StateReason = "After-hours windows = weekday outside 07:00-19:00 UTC plus weekends; this is a persistence metric, not a separate heuristic baseline."
+        };
+    }
+
+    private static bool IsSelectionPowerAfterHoursBucket(DateTime timestampUtc)
+        => timestampUtc.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday
+            || timestampUtc.Hour < 7
+            || timestampUtc.Hour >= 19;
+
+    private static SelectionPowerBasePeakOverTimeResult BuildSelectionPowerBasePeakOverTimeSummary(
+        CuratedNodeTimeSeriesResult timeSeries,
+        SelectionSignalAvailabilityItem selectionSignal,
+        string unit,
+        string evaluationBasis)
+    {
+        const int minimumUsableDayCount = 3;
+        const string methodology = "Base over time = daily 5th percentile of the active power series. Peak over time = daily 95th percentile of the same series. Each usable day requires sub-daily power samples; no fallback signal is used.";
+
+        var signalCode = selectionSignal.ExactSignalCode.Value;
+        var totalDayCount = timeSeries.Points
+            .Select(point => DateTime.SpecifyKind(point.TimestampUtc.Date, DateTimeKind.Utc))
+            .Distinct()
+            .Count();
+
+        if (timeSeries.Granularity == CuratedNodeTimeSeriesGranularity.DailyAverage)
+        {
+            return BuildUnavailableSelectionPowerBasePeakOverTime(
+                signalCode,
+                unit,
+                timeSeries.GranularityLabel,
+                evaluationBasis,
+                totalDayCount,
+                "Base vs Peak Over Time is unavailable because the current active power series is only available as daily buckets.",
+                "This chart requires sub-daily power samples for each usable UTC day, so daily-only buckets cannot preserve the daily 5th and 95th percentiles.");
+        }
+
+        var usableDays = timeSeries.Points
+            .GroupBy(point => DateTime.SpecifyKind(point.TimestampUtc.Date, DateTimeKind.Utc))
+            .OrderBy(group => group.Key)
+            .Select(group =>
+            {
+                var dayValues = group
+                    .Select(point => point.Value)
+                    .ToArray();
+
+                return new SelectionPowerBasePeakDaySummary
+                {
+                    DayUtc = group.Key,
+                    SampleCount = dayValues.Length,
+                    BaseValue = Percentile(dayValues, 0.05),
+                    PeakValue = Percentile(dayValues, 0.95)
+                };
+            })
+            .ToList();
+
+        if (usableDays.Count < minimumUsableDayCount)
+        {
+            return BuildUnavailableSelectionPowerBasePeakOverTime(
+                signalCode,
+                unit,
+                timeSeries.GranularityLabel,
+                $"{evaluationBasis} Daily percentiles need at least {minimumUsableDayCount} usable UTC days.",
+                totalDayCount,
+                $"Base vs Peak Over Time is unavailable because the current interval contains only {usableDays.Count} usable day(s).",
+                "At least 3 usable UTC days with sub-daily power samples are required for this MVP chart.");
+        }
+
+        var yAxisLabel = string.IsNullOrWhiteSpace(timeSeries.YAxisLabel)
+            ? (string.IsNullOrWhiteSpace(unit) ? "Power" : $"Power ({unit})")
+            : timeSeries.YAxisLabel;
+
+        return new SelectionPowerBasePeakOverTimeResult
+        {
+            IsAvailable = true,
+            State = CuratedPerformanceKpiState.Available,
+            UsableDayCount = usableDays.Count,
+            TotalDayCount = totalDayCount,
+            SignalCode = signalCode,
+            Unit = unit,
+            GranularityLabel = timeSeries.GranularityLabel,
+            EvaluationBasis = $"{evaluationBasis} Daily Base_d and Peak_d are built per UTC day from sub-daily samples of the same active signal.",
+            Summary = $"Base vs Peak Over Time tracks daily 5th and 95th percentiles across {usableDays.Count} usable UTC day(s) of the active {signalCode} power series.",
+            StateReason = "Daily percentiles are computed directly from the active exact signal without silently switching to another basis.",
+            Methodology = methodology,
+            Days = usableDays,
+            Chart = new CuratedNodeCompareTimeSeriesResult
+            {
+                PrimaryNodeKey = "selection_power_base_peak",
+                Title = "Base vs Peak Over Time",
+                Unit = unit,
+                YAxisLabel = yAxisLabel,
+                Granularity = CuratedNodeTimeSeriesGranularity.DailyAverage,
+                GranularityLabel = "Daily 5th/95th percentiles",
+                AggregationMethod = "Each UTC day is reduced to Base_d = 5th percentile and Peak_d = 95th percentile over the active power series.",
+                InterpretationNote = "Base over time = daily 5th percentile of the active power series. Peak over time = daily 95th percentile of the same series.",
+                RequestedMode = timeSeries.RequestedMode,
+                RequestedModeLabel = timeSeries.RequestedModeLabel,
+                Series =
+                [
+                    new CuratedNodeCompareSeries
+                    {
+                        NodeKey = "base_over_time",
+                        Label = "Base over time",
+                        IsPrimary = true,
+                        Points = usableDays
+                            .Select(day => new CuratedNodeTimeSeriesPoint
+                            {
+                                TimestampUtc = day.DayUtc,
+                                Value = day.BaseValue
+                            })
+                            .ToArray()
+                    },
+                    new CuratedNodeCompareSeries
+                    {
+                        NodeKey = "peak_over_time",
+                        Label = "Peak over time",
+                        Points = usableDays
+                            .Select(day => new CuratedNodeTimeSeriesPoint
+                            {
+                                TimestampUtc = day.DayUtc,
+                                Value = day.PeakValue
+                            })
+                            .ToArray()
+                    }
+                ]
+            }
+        };
+    }
+
+    private static double ResolveSelectionPowerBucketDurationHours(CuratedNodeTimeSeriesResult timeSeries)
+    {
+        if (timeSeries.Points.Count >= 2)
+        {
+            var intervalsInHours = timeSeries.Points
+                .Zip(timeSeries.Points.Skip(1), (current, next) => (next.TimestampUtc - current.TimestampUtc).TotalHours)
+                .Where(interval => interval > 0d)
+                .OrderBy(interval => interval)
+                .ToList();
+
+            if (intervalsInHours.Count > 0)
+            {
+                return intervalsInHours[intervalsInHours.Count / 2];
+            }
+        }
+
+        return timeSeries.Granularity switch
+        {
+            CuratedNodeTimeSeriesGranularity.Raw15Min => 0.25d,
+            CuratedNodeTimeSeriesGranularity.HourlyAverage => 1d,
+            CuratedNodeTimeSeriesGranularity.DailyAverage => 24d,
+            _ => 1d
+        };
+    }
+
+    private static string FormatSelectionPowerUnitSuffix(string unit)
+        => string.IsNullOrWhiteSpace(unit)
+            ? string.Empty
+            : $" {unit}";
+
+    private static CuratedSelectionLoadDurationCurveSummary BuildSelectionPowerLoadDurationCurveSummary(
+        CuratedNodeTimeSeriesResult? timeSeries,
+        SelectionSignalAvailabilityItem selectionSignal)
+    {
+        if (timeSeries is null)
+        {
+            return new CuratedSelectionLoadDurationCurveSummary
+            {
+                IsAvailable = false,
+                State = CuratedPerformanceKpiState.Unavailable,
+                StateReason = "The active power series could not be resolved.",
+                EvaluationBasis = $"Active exact signal: {selectionSignal.ExactSignalCode.Value}.",
+                Summary = "Load duration curve is unavailable because the active power series is missing.",
+                Methodology = "Load duration curve sorts the exact active power series values in descending order over the current interval. No fallback signal is used."
+            };
+        }
+
+        var unit = ResolveSelectionPowerUnit(timeSeries);
+        var yAxisLabel = string.IsNullOrWhiteSpace(timeSeries.YAxisLabel)
+            ? (string.IsNullOrWhiteSpace(unit) ? "Power" : $"Power ({unit})")
+            : timeSeries.YAxisLabel;
+        var evaluationBasis = DescribeSelectionPowerEvaluationBasis(timeSeries, selectionSignal);
+
+        if (timeSeries.Points.Count == 0)
+        {
+            return new CuratedSelectionLoadDurationCurveSummary
+            {
+                IsAvailable = false,
+                State = CuratedPerformanceKpiState.Unavailable,
+                Unit = unit,
+                YAxisLabel = yAxisLabel,
+                StateReason = "The active power series does not contain any points in the current interval.",
+                EvaluationBasis = evaluationBasis,
+                Summary = timeSeries.NoDataMessage ?? "Load duration curve is unavailable because the active power series has no points.",
+                Methodology = "Load duration curve sorts the exact active power series values in descending order over the current interval. No fallback signal is used."
+            };
+        }
+
+        var orderedValues = timeSeries.Points
+            .Select(point => point.Value)
+            .OrderByDescending(value => value)
+            .ToList();
+        var curvePoints = new List<CuratedSelectionLoadDurationCurvePoint>(orderedValues.Count);
+
+        for (int index = 0; index < orderedValues.Count; index++)
+        {
+            var durationPercent = orderedValues.Count == 1
+                ? 0d
+                : (index / (double)(orderedValues.Count - 1)) * 100d;
+
+            curvePoints.Add(new CuratedSelectionLoadDurationCurvePoint
+            {
+                DurationPercent = durationPercent,
+                DemandKw = orderedValues[index]
+            });
+        }
+
+        return new CuratedSelectionLoadDurationCurveSummary
+        {
+            IsAvailable = true,
+            State = CuratedPerformanceKpiState.Available,
+            Unit = unit,
+            YAxisLabel = yAxisLabel,
+            StateReason = "Load duration curve is computed from the same active power series used for near-base and near-peak.",
+            EvaluationBasis = evaluationBasis,
+            PointCount = orderedValues.Count,
+            PeakDemandKw = orderedValues[0],
+            AverageDemandKw = orderedValues.Average(),
+            Summary = $"Load duration curve ranks {orderedValues.Count} values from the active {selectionSignal.ExactSignalCode.Value} series in descending order.",
+            Methodology = "Load duration curve sorts the exact active power series values in descending order over the current interval. No demand-positive projection or fallback signal is applied.",
+            Points = curvePoints
+        };
+    }
+
+    private static string DescribeSelectionPowerEvaluationBasis(
+        CuratedNodeTimeSeriesResult timeSeries,
+        SelectionSignalAvailabilityItem selectionSignal)
+    {
+        var scopeLabel = selectionSignal.CanAggregate
+            ? $"aggregate sum across {selectionSignal.MatchingNodeCount} matching nodes"
+            : "single-node exact-signal series";
+
+        return $"Evaluation basis: {timeSeries.GranularityLabel} from the active {selectionSignal.ExactSignalCode.Value} power series ({scopeLabel}).";
+    }
+
+    private static string ResolveSelectionPowerUnit(CuratedNodeTimeSeriesResult timeSeries)
+        => string.IsNullOrWhiteSpace(timeSeries.Unit)
+            ? "kW"
+            : timeSeries.Unit;
+
+    private enum IntervalEnergyBasisKind
+    {
+        DirectEnergy,
+        CumulativeEnergyCounter,
+        IntegratedPower
+    }
+
+    private enum IntervalEnergyBasisFailureKind
+    {
+        MissingUsableEnergyBasis,
+        CannotIntegrateSafely
+    }
+
+    private sealed record ScopeFloorAreaResolution(
+        bool IsResolved,
+        double? FloorAreaM2,
+        string Summary,
+        string StateReason,
+        string EvaluationBasis,
+        string? Message,
+        string? FloorAreaNodeKey);
+
+    private sealed record IntervalEnergyNodeResult(
+        bool IsAvailable,
+        double EnergyKwh,
+        IntervalEnergyBasisKind? BasisKind,
+        IntervalEnergyBasisFailureKind? FailureKind,
+        string? FailureMessage);
+
+    private sealed record IntervalEnergyBasisResolution(
+        bool IsResolved,
+        double EnergyKwh,
+        int ContributingNodeCount,
+        string EvaluationBasis,
+        IntervalEnergyBasisFailureKind? FailureKind,
+        string? FailureMessage);
+
+    private async Task<SelectionEuiResult> BuildSelectionEuiAsync(
+        SelectionSignalAvailabilityItem? selectionSignal,
+        IReadOnlyList<string> scopeNodeKeys,
+        string? scopeAnchorNodeKey,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        if (selectionSignal is null)
+        {
+            return new SelectionEuiResult
+            {
+                Summary = "EUI waits for an active exact signal code.",
+                Methodology = EuiMethodology
+            };
+        }
+
+        if (selectionSignal.SignalFamily is not (FacilitySignalFamily.Energy or FacilitySignalFamily.Power))
+        {
+            return new SelectionEuiResult
+            {
+                IsApplicable = false,
+                SignalCode = selectionSignal.ExactSignalCode.Value,
+                Summary = $"EUI requires an energy or power signal. The active signal {selectionSignal.ExactSignalCode.Value} belongs to {selectionSignal.SignalFamily}.",
+                Methodology = EuiMethodology
+            };
+        }
+
+        var floorAreaResolution = await ResolveSelectionScopeFloorAreaAsync(scopeAnchorNodeKey, scopeNodeKeys, ct);
+        if (!floorAreaResolution.IsResolved)
+        {
+            return new SelectionEuiResult
+            {
+                IsApplicable = true,
+                SignalCode = selectionSignal.ExactSignalCode.Value,
+                FloorAreaM2 = floorAreaResolution.FloorAreaM2,
+                Summary = floorAreaResolution.Summary,
+                StateReason = floorAreaResolution.StateReason,
+                EvaluationBasis = floorAreaResolution.EvaluationBasis,
+                Methodology = EuiMethodology,
+                Message = floorAreaResolution.Message,
+                FloorAreaNodeKey = floorAreaResolution.FloorAreaNodeKey
+            };
+        }
+
+        if (!selectionSignal.CanAggregate && !selectionSignal.CanRenderSingleNodeSeries)
+        {
+            return new SelectionEuiResult
+            {
+                IsApplicable = true,
+                SignalCode = selectionSignal.ExactSignalCode.Value,
+                FloorAreaM2 = floorAreaResolution.FloorAreaM2,
+                FloorAreaNodeKey = floorAreaResolution.FloorAreaNodeKey,
+                Summary = "EUI is unavailable because the active signal has no usable energy basis in the current scope.",
+                StateReason = "missing usable energy basis",
+                EvaluationBasis = floorAreaResolution.EvaluationBasis,
+                Methodology = EuiMethodology,
+                Message = selectionSignal.AvailabilityMessage
+            };
+        }
+
+        var intervalEnergy = await BuildSelectionIntervalEnergyBasisAsync(selectionSignal, from, to, ct);
+        if (!intervalEnergy.IsResolved)
+        {
+            var stateReason = intervalEnergy.FailureKind == IntervalEnergyBasisFailureKind.CannotIntegrateSafely
+                ? "unsafe integration"
+                : "missing usable energy basis";
+            var summary = intervalEnergy.FailureKind == IntervalEnergyBasisFailureKind.CannotIntegrateSafely
+                ? "EUI is unavailable because interval energy cannot be integrated safely from the active signal basis."
+                : "EUI is unavailable because the active signal does not expose a usable energy basis in the selected interval.";
+
+            return new SelectionEuiResult
+            {
+                IsApplicable = true,
+                SignalCode = selectionSignal.ExactSignalCode.Value,
+                FloorAreaM2 = floorAreaResolution.FloorAreaM2,
+                FloorAreaNodeKey = floorAreaResolution.FloorAreaNodeKey,
+                Summary = summary,
+                StateReason = stateReason,
+                EvaluationBasis = JoinEvaluationBasis(intervalEnergy.EvaluationBasis, floorAreaResolution.EvaluationBasis),
+                Methodology = EuiMethodology,
+                Message = intervalEnergy.FailureMessage
+            };
+        }
+
+        var floorArea = floorAreaResolution.FloorAreaM2.GetValueOrDefault();
+        return new SelectionEuiResult
+        {
+            IsApplicable = true,
+            IsAvailable = true,
+            EnergyKwh = intervalEnergy.EnergyKwh,
+            FloorAreaM2 = floorArea,
+            EuiKwhPerM2 = intervalEnergy.EnergyKwh / floorArea,
+            ContributingNodeCount = intervalEnergy.ContributingNodeCount,
+            SignalCode = selectionSignal.ExactSignalCode.Value,
+            Summary = $"Period EUI over the selected interval is computed from {intervalEnergy.ContributingNodeCount} contributing node(s) using the active {selectionSignal.ExactSignalCode.Value} signal.",
+            Methodology = EuiMethodology,
+            EvaluationBasis = JoinEvaluationBasis(intervalEnergy.EvaluationBasis, floorAreaResolution.EvaluationBasis),
+            StateReason = "period EUI over selected interval",
+            FloorAreaNodeKey = floorAreaResolution.FloorAreaNodeKey
+        };
+    }
+
+    private async Task<ScopeFloorAreaResolution> ResolveSelectionScopeFloorAreaAsync(
+        string? scopeAnchorNodeKey,
+        IReadOnlyList<string> scopeNodeKeys,
+        CancellationToken ct)
+    {
+        var nodeStates = await _facilityEditorStateService.GetNodeStatesByKeyAsync(ct);
+        var facility = await _facilityQueryService.GetMainFacilityAsync(ct);
+        var facilityNodesByKey = facility?.Nodes?
+            .ToDictionary(node => node.NodeKey, StringComparer.OrdinalIgnoreCase)
+            ?? new Dictionary<string, DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity>(StringComparer.OrdinalIgnoreCase);
+
+        var candidateKeys = new List<string>();
+        if (!string.IsNullOrWhiteSpace(scopeAnchorNodeKey))
+        {
+            candidateKeys.Add(scopeAnchorNodeKey.Trim());
+        }
+
+        foreach (var nodeKey in scopeNodeKeys)
+        {
+            if (string.IsNullOrWhiteSpace(nodeKey) || candidateKeys.Contains(nodeKey, StringComparer.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            candidateKeys.Add(nodeKey);
+        }
+
+        var areaCandidates = candidateKeys
+            .Where(nodeKey => IsAreaNodeType(ResolveEffectiveNodeType(nodeKey, facilityNodesByKey, nodeStates)))
+            .Select(nodeKey =>
+            {
+                nodeStates.TryGetValue(nodeKey, out var nodeState);
+                return new
+                {
+                    NodeKey = nodeKey,
+                    FloorAreaM2 = nodeState?.FloorAreaM2
+                };
+            })
+            .ToList();
+
+        if (!string.IsNullOrWhiteSpace(scopeAnchorNodeKey)
+            && areaCandidates.FirstOrDefault(candidate => candidate.NodeKey.Equals(scopeAnchorNodeKey, StringComparison.OrdinalIgnoreCase)) is { } anchorAreaCandidate)
+        {
+            if (!anchorAreaCandidate.FloorAreaM2.HasValue)
+            {
+                return new ScopeFloorAreaResolution(
+                    false,
+                    null,
+                    "EUI is unavailable because the selected scope is missing floor area metadata.",
+                    "missing floor area",
+                    $"Floor area scope: selected area node {anchorAreaCandidate.NodeKey} has no explicit Floor area [m²] metadata.",
+                    "Enter Floor area [m²] on the selected area node to enable Energy / FloorArea.",
+                    anchorAreaCandidate.NodeKey);
+            }
+
+            if (anchorAreaCandidate.FloorAreaM2.Value <= 0d)
+            {
+                return new ScopeFloorAreaResolution(
+                    false,
+                    anchorAreaCandidate.FloorAreaM2,
+                    "EUI is unavailable because floor area must be greater than 0 m².",
+                    "invalid floor area",
+                    $"Floor area scope: selected area node {anchorAreaCandidate.NodeKey} is set to {anchorAreaCandidate.FloorAreaM2.Value:N2} m².",
+                    "Update Floor area [m²] to a value greater than 0 on the selected area node.",
+                    anchorAreaCandidate.NodeKey);
+            }
+
+            return new ScopeFloorAreaResolution(
+                true,
+                anchorAreaCandidate.FloorAreaM2,
+                string.Empty,
+                string.Empty,
+                $"Floor area scope: {anchorAreaCandidate.FloorAreaM2.Value:N2} m² from area node {anchorAreaCandidate.NodeKey}.",
+                null,
+                anchorAreaCandidate.NodeKey);
+        }
+
+        var validAreaCandidates = areaCandidates
+            .Where(candidate => candidate.FloorAreaM2 is double floorAreaM2 && floorAreaM2 > 0d)
+            .ToList();
+
+        if (validAreaCandidates.Count == 1)
+        {
+            var candidate = validAreaCandidates[0];
+            var floorAreaM2 = candidate.FloorAreaM2.GetValueOrDefault();
+            return new ScopeFloorAreaResolution(
+                true,
+                floorAreaM2,
+                string.Empty,
+                string.Empty,
+                $"Floor area scope: {floorAreaM2:N2} m² from area node {candidate.NodeKey}.",
+                null,
+                candidate.NodeKey);
+        }
+
+        if (validAreaCandidates.Count > 1)
+        {
+            return new ScopeFloorAreaResolution(
+                false,
+                null,
+                "EUI is unavailable because the selected scope exposes multiple floor area candidates.",
+                "multiple floor area candidates",
+                $"Floor area scope: {validAreaCandidates.Count} area nodes in the current scope contain explicit Floor area [m²] metadata.",
+                "Refine the selection to one area scope or keep the intended area node focused before evaluating EUI.",
+                null);
+        }
+
+        if (areaCandidates.Any(candidate => candidate.FloorAreaM2 is double floorAreaM2 && floorAreaM2 <= 0d))
+        {
+            var invalidAreaCandidate = areaCandidates.First(candidate => candidate.FloorAreaM2 is double floorAreaM2 && floorAreaM2 <= 0d);
+            var floorAreaM2 = invalidAreaCandidate.FloorAreaM2.GetValueOrDefault();
+            return new ScopeFloorAreaResolution(
+                false,
+                floorAreaM2,
+                "EUI is unavailable because floor area must be greater than 0 m².",
+                "invalid floor area",
+                $"Floor area scope: area node {invalidAreaCandidate.NodeKey} is set to {floorAreaM2:N2} m².",
+                "Update Floor area [m²] to a value greater than 0 on the intended area node.",
+                invalidAreaCandidate.NodeKey);
+        }
+
+        return new ScopeFloorAreaResolution(
+            false,
+            null,
+            "EUI is unavailable because the selected scope is missing floor area metadata.",
+            "missing floor area",
+            areaCandidates.Count > 0
+                ? "Floor area scope: area nodes are present in the current scope, but none has explicit Floor area [m²] metadata."
+                : "Floor area scope: the current selection does not expose an area node with explicit Floor area [m²] metadata.",
+            "EUI requires explicit Floor area [m²] metadata on the selected area scope. No default or inferred area is used.",
+            null);
+    }
+
+    private async Task<IntervalEnergyBasisResolution> BuildSelectionIntervalEnergyBasisAsync(
+        SelectionSignalAvailabilityItem selectionSignal,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        var candidateNodeResults = new List<(string NodeKey, IntervalEnergyNodeResult Result)>();
+        var missingBasisCount = 0;
+        var unsafeIntegrationCount = 0;
+
+        foreach (var nodeKey in selectionSignal.MatchingNodeKeys)
+        {
+            var source = ResolveCuratedNodeSource(nodeKey, selectionSignal.ExactSignalCode);
+            if (source is null)
+            {
+                missingBasisCount++;
+                continue;
+            }
+
+            var filePath = ResolveCuratedFilePath(source);
+            if (filePath is null)
+            {
+                missingBasisCount++;
+                continue;
+            }
+
+            var intervalEnergy = await LoadIntervalEnergyForSourceAsync(filePath, source, from, to, ct);
+            if (!intervalEnergy.IsAvailable)
+            {
+                if (intervalEnergy.FailureKind == IntervalEnergyBasisFailureKind.CannotIntegrateSafely)
+                {
+                    unsafeIntegrationCount++;
+                }
+                else
+                {
+                    missingBasisCount++;
+                }
+
+                continue;
+            }
+
+            candidateNodeResults.Add((nodeKey, intervalEnergy));
+        }
+
+        if (candidateNodeResults.Count == 0)
+        {
+            var failureKind = unsafeIntegrationCount > 0
+                ? IntervalEnergyBasisFailureKind.CannotIntegrateSafely
+                : IntervalEnergyBasisFailureKind.MissingUsableEnergyBasis;
+            var failureMessage = failureKind == IntervalEnergyBasisFailureKind.CannotIntegrateSafely
+                ? "The active signal exists, but interval energy cannot be derived safely from the available timestamp spacing in the selected interval."
+                : "No matching node exposes a usable energy basis in the selected interval.";
+
+            return new IntervalEnergyBasisResolution(
+                false,
+                0d,
+                0,
+                string.Empty,
+                failureKind,
+                failureMessage);
+        }
+
+        var basisKinds = candidateNodeResults
+            .Select(result => result.Result.BasisKind)
+            .Where(kind => kind.HasValue)
+            .Select(kind => kind!.Value)
+            .Distinct()
+            .ToList();
+
+        var basisDescription = DescribeIntervalEnergyBasis(basisKinds);
+        var evaluationBasis = selectionSignal.CanAggregate
+            ? $"Energy basis: {basisDescription} aggregated across {candidateNodeResults.Count} of {selectionSignal.MatchingNodeCount} matching nodes for {selectionSignal.ExactSignalCode.Value}."
+            : $"Energy basis: {basisDescription} from the active exact signal {selectionSignal.ExactSignalCode.Value} on the current scope node.";
+
+        if (candidateNodeResults.Count < selectionSignal.MatchingNodeCount)
+        {
+            evaluationBasis = $"{evaluationBasis} {selectionSignal.MatchingNodeCount - candidateNodeResults.Count} matching node(s) were skipped because no safe interval energy basis was available in the selected interval.";
+        }
+
+        return new IntervalEnergyBasisResolution(
+            true,
+            candidateNodeResults.Sum(result => result.Result.EnergyKwh),
+            candidateNodeResults.Count,
+            evaluationBasis,
+            null,
+            null);
+    }
+
+    private async Task<IntervalEnergyNodeResult> LoadIntervalEnergyForSourceAsync(
+        string filePath,
+        CuratedNodeSource source,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        if (source.SeriesSemantics == FacilitySignalSeriesSemantics.CumulativeCounter)
+        {
+            return await LoadIntervalEnergyFromCounterSourceAsync(filePath, source, from, to, ct);
+        }
+
+        if (source.IsPowerSignal)
+        {
+            return await LoadIntervalEnergyFromPowerSourceAsync(filePath, source, from, to, ct);
+        }
+
+        return await LoadIntervalEnergyFromDirectEnergySourceAsync(filePath, source, from, to, ct);
+    }
+
+    private async Task<IntervalEnergyNodeResult> LoadIntervalEnergyFromPowerSourceAsync(
+        string filePath,
+        CuratedNodeSource source,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        var samples = await LoadRawSamplesWithContextAsync(filePath, source.ColumnName, from, to, ct);
+        var totalEnergyKwh = 0d;
+        var integratedSegmentCount = 0;
+
+        for (var index = 0; index < samples.Count - 1; index++)
+        {
+            var current = samples[index];
+            var next = samples[index + 1];
+            if (next.TimestampUtc <= current.TimestampUtc)
+            {
+                continue;
+            }
+
+            var segmentStart = MaxDateTime(current.TimestampUtc, from);
+            var segmentEnd = MinDateTime(next.TimestampUtc, to);
+            if (segmentEnd <= segmentStart)
+            {
+                continue;
+            }
+
+            var powerKw = NormalizeValueForStats(current.Value, source);
+            if (!double.IsFinite(powerKw))
+            {
+                continue;
+            }
+
+            totalEnergyKwh += powerKw * (segmentEnd - segmentStart).TotalHours;
+            integratedSegmentCount++;
+        }
+
+        return integratedSegmentCount > 0
+            ? new IntervalEnergyNodeResult(true, totalEnergyKwh, IntervalEnergyBasisKind.IntegratedPower, null, null)
+            : new IntervalEnergyNodeResult(false, 0d, null, IntervalEnergyBasisFailureKind.CannotIntegrateSafely, "The active power series does not contain enough ordered samples to integrate energy safely over the selected interval.");
+    }
+
+    private async Task<IntervalEnergyNodeResult> LoadIntervalEnergyFromCounterSourceAsync(
+        string filePath,
+        CuratedNodeSource source,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        var samples = await LoadRawSamplesWithContextAsync(filePath, source.ColumnName, from, to, ct);
+        var energyToKwhFactor = ResolveEnergyToKilowattHourFactor(source.Unit);
+        var totalEnergyKwh = 0d;
+        var integratedSegmentCount = 0;
+
+        for (var index = 0; index < samples.Count - 1; index++)
+        {
+            var current = samples[index];
+            var next = samples[index + 1];
+            if (next.TimestampUtc <= current.TimestampUtc)
+            {
+                continue;
+            }
+
+            var delta = next.Value - current.Value;
+            if (!double.IsFinite(delta) || delta < 0d)
+            {
+                continue;
+            }
+
+            var segmentStart = MaxDateTime(current.TimestampUtc, from);
+            var segmentEnd = MinDateTime(next.TimestampUtc, to);
+            if (segmentEnd <= segmentStart)
+            {
+                continue;
+            }
+
+            var segmentDurationHours = (next.TimestampUtc - current.TimestampUtc).TotalHours;
+            if (segmentDurationHours <= 0d)
+            {
+                continue;
+            }
+
+            totalEnergyKwh += delta * (segmentEnd - segmentStart).TotalHours / segmentDurationHours * energyToKwhFactor;
+            integratedSegmentCount++;
+        }
+
+        return integratedSegmentCount > 0
+            ? new IntervalEnergyNodeResult(true, totalEnergyKwh, IntervalEnergyBasisKind.CumulativeEnergyCounter, null, null)
+            : new IntervalEnergyNodeResult(false, 0d, null, IntervalEnergyBasisFailureKind.CannotIntegrateSafely, "The active cumulative energy series does not contain enough ordered counter samples to derive interval energy safely.");
+    }
+
+    private async Task<IntervalEnergyNodeResult> LoadIntervalEnergyFromDirectEnergySourceAsync(
+        string filePath,
+        CuratedNodeSource source,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        try
+        {
+            using var reader = OpenCsvReader(filePath);
+            var headerLine = await reader.ReadLineAsync(ct);
+            if (string.IsNullOrEmpty(headerLine))
+            {
+                return new IntervalEnergyNodeResult(false, 0d, null, IntervalEnergyBasisFailureKind.MissingUsableEnergyBasis, "The active energy series is empty in the selected interval.");
+            }
+
+            if (!TryResolveCsvColumns(headerLine, source.ColumnName, out var timeColIndex, out var valueColIndex))
+            {
+                return new IntervalEnergyNodeResult(false, 0d, null, IntervalEnergyBasisFailureKind.MissingUsableEnergyBasis, "The active energy series does not expose the expected value column.");
+            }
+
+            var energyToKwhFactor = ResolveEnergyToKilowattHourFactor(source.Unit);
+            var totalEnergyKwh = 0d;
+            var sampleCount = 0;
+            string? line;
+
+            while ((line = await reader.ReadLineAsync(ct)) is not null)
+            {
+                var cols = line.Split(',');
+                if (cols.Length <= Math.Max(timeColIndex, valueColIndex))
+                {
+                    continue;
+                }
+
+                if (!TryParseTimestamp(cols[timeColIndex], out var timestamp) || timestamp < from || timestamp >= to)
+                {
+                    continue;
+                }
+
+                if (!double.TryParse(cols[valueColIndex], NumberStyles.Any, CultureInfo.InvariantCulture, out var value)
+                    || !double.IsFinite(value))
+                {
+                    continue;
+                }
+
+                totalEnergyKwh += value * energyToKwhFactor;
+                sampleCount++;
+            }
+
+            return sampleCount > 0
+                ? new IntervalEnergyNodeResult(true, totalEnergyKwh, IntervalEnergyBasisKind.DirectEnergy, null, null)
+                : new IntervalEnergyNodeResult(false, 0d, null, IntervalEnergyBasisFailureKind.MissingUsableEnergyBasis, "The active energy series has no usable samples in the selected interval.");
+        }
+        catch
+        {
+            return new IntervalEnergyNodeResult(false, 0d, null, IntervalEnergyBasisFailureKind.MissingUsableEnergyBasis, "The active energy series could not be read for the selected interval.");
+        }
+    }
+
+    private static string DescribeIntervalEnergyBasis(IReadOnlyCollection<IntervalEnergyBasisKind> basisKinds)
+    {
+        if (basisKinds.Count == 0)
+        {
+            return "a usable energy basis";
+        }
+
+        if (basisKinds.Count == 1)
+        {
+            return basisKinds.First() switch
+            {
+                IntervalEnergyBasisKind.DirectEnergy => "direct energy samples normalized to kWh",
+                IntervalEnergyBasisKind.CumulativeEnergyCounter => "cumulative energy counters converted to interval energy in kWh",
+                IntervalEnergyBasisKind.IntegratedPower => "power integrated over actual timestamp spacing into kWh",
+                _ => "a usable energy basis"
+            };
+        }
+
+        return "a mixed usable energy basis normalized to kWh without switching signals";
+    }
+
+    private static string JoinEvaluationBasis(string left, string right)
+    {
+        if (string.IsNullOrWhiteSpace(left))
+        {
+            return right;
+        }
+
+        if (string.IsNullOrWhiteSpace(right))
+        {
+            return left;
+        }
+
+        return $"{left} {right}";
+    }
+
+    private static bool IsAreaNodeType(string? nodeType)
+        => string.Equals(nodeType?.Trim(), FacilityBuiltInNodeTypes.AreaNodeType, StringComparison.OrdinalIgnoreCase);
+
+    private static string? ResolveEffectiveNodeType(
+        string nodeKey,
+        IReadOnlyDictionary<string, DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity> facilityNodesByKey,
+        IReadOnlyDictionary<string, FacilityNodeEditorState> nodeStates)
+    {
+        if (nodeStates.TryGetValue(nodeKey, out var nodeState) && !string.IsNullOrWhiteSpace(nodeState.NodeType))
+        {
+            return nodeState.NodeType;
+        }
+
+        return facilityNodesByKey.TryGetValue(nodeKey, out var facilityNode)
+            ? facilityNode.NodeType
+            : null;
+    }
+
+    private async Task<SelectionTemperatureLoadScatterResult> BuildSelectionTemperatureLoadScatterAsync(
+        SelectionSignalAvailabilityItem? selectionSignal,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        if (selectionSignal is null)
+        {
+            return new SelectionTemperatureLoadScatterResult
+            {
+                Summary = "Temperature vs load scatter waits for an active exact signal code.",
+                Methodology = TemperatureLoadScatterMethodology
+            };
+        }
+
+        if (selectionSignal.SignalFamily is not (FacilitySignalFamily.Energy or FacilitySignalFamily.Power))
+        {
+            return new SelectionTemperatureLoadScatterResult
+            {
+                IsApplicable = false,
+                SignalCode = selectionSignal.ExactSignalCode.Value,
+                Summary = $"Temperature vs load scatter requires an energy or power signal. The active signal {selectionSignal.ExactSignalCode.Value} belongs to {selectionSignal.SignalFamily}.",
+                Methodology = TemperatureLoadScatterMethodology
+            };
+        }
+
+        if (!selectionSignal.CanAggregate && !selectionSignal.CanRenderSingleNodeSeries)
+        {
+            return new SelectionTemperatureLoadScatterResult
+            {
+                IsApplicable = true,
+                SignalCode = selectionSignal.ExactSignalCode.Value,
+                Summary = "Temperature vs load scatter is unavailable for the active signal in the current scope.",
+                Methodology = TemperatureLoadScatterMethodology,
+                Message = selectionSignal.AvailabilityMessage,
+                Unit = selectionSignal.SignalFamily == FacilitySignalFamily.Power
+                    ? (string.IsNullOrWhiteSpace(selectionSignal.Unit) ? "kW" : selectionSignal.Unit)
+                    : ResolveEnergyDerivedLoadUnit(selectionSignal.Unit)
+            };
+        }
+
+        var pairingHours = GetCompleteUtcHourStarts(from, to);
+        if (pairingHours.Count == 0)
+        {
+            return new SelectionTemperatureLoadScatterResult
+            {
+                IsApplicable = true,
+                SignalCode = selectionSignal.ExactSignalCode.Value,
+                Summary = "Temperature vs load scatter needs at least one complete UTC hour in the selected interval.",
+                Methodology = TemperatureLoadScatterMethodology,
+                Message = "The scatter uses explicit hourly pairing, so the selected interval must contain at least one full UTC hour."
+            };
+        }
+
+        var facility = await _facilityQueryService.GetMainFacilityAsync(ct);
+        var weatherResolution = _weatherSourceResolver.Resolve(facility);
+        if (weatherResolution?.HasTemperatureBinding != true)
+        {
+            return new SelectionTemperatureLoadScatterResult
+            {
+                IsApplicable = true,
+                SignalCode = selectionSignal.ExactSignalCode.Value,
+                Summary = "Temperature vs load scatter is unavailable because no facility weather Ta source is resolved.",
+                Methodology = TemperatureLoadScatterMethodology,
+                Message = "The current facility does not expose a usable Ta weather binding for hourly pairing."
+            };
+        }
+
+        var scatterWindowStart = pairingHours[0];
+        var scatterWindowEndExclusive = pairingHours[^1].AddHours(1);
+
+        var loadSeries = await BuildSelectionHourlyLoadScatterSeriesAsync(selectionSignal, scatterWindowStart, scatterWindowEndExclusive, ct);
+        if (loadSeries is null)
+        {
+            var unit = selectionSignal.SignalFamily == FacilitySignalFamily.Power
+                ? (string.IsNullOrWhiteSpace(selectionSignal.Unit) ? "kW" : selectionSignal.Unit)
+                : ResolveEnergyDerivedLoadUnit(selectionSignal.Unit);
+
+            return new SelectionTemperatureLoadScatterResult
+            {
+                IsApplicable = true,
+                SignalCode = selectionSignal.ExactSignalCode.Value,
+                Unit = unit,
+                UsesEnergyDerivedLoad = selectionSignal.SignalFamily == FacilitySignalFamily.Energy,
+                Summary = "Temperature vs load scatter is unavailable because a valid hourly load basis could not be prepared safely.",
+                Methodology = TemperatureLoadScatterMethodology,
+                Message = selectionSignal.SignalFamily == FacilitySignalFamily.Power
+                    ? "The active power signal does not provide enough hourly load values in the selected interval."
+                    : "The active energy signal does not provide a safe hourly energy-derived load basis in the selected interval."
+            };
+        }
+
+        if (IsMixedSignAggregateSelectionPowerSeries(selectionSignal, loadSeries.LoadByHour.Values.ToArray()))
+        {
+            return new SelectionTemperatureLoadScatterResult
+            {
+                IsApplicable = true,
+                SignalCode = selectionSignal.ExactSignalCode.Value,
+                Unit = loadSeries.Unit,
+                YAxisLabel = loadSeries.YAxisLabel,
+                LoadBasisLabel = loadSeries.LoadBasisLabel,
+                UsesEnergyDerivedLoad = loadSeries.UsesEnergyDerivedLoad,
+                Summary = "Temperature vs load scatter is unavailable because the active aggregate P load basis is mixed-sign.",
+                Methodology = TemperatureLoadScatterMethodology,
+                Message = "Weather-aware scatter requires a consumption-oriented, non-mixed-sign load basis. Choose a non-mixed-sign signal or narrower scope instead of silently switching signals.",
+                EvaluationBasis = $"{loadSeries.EvaluationBasis} Current aggregate P contains both positive and negative hourly load values."
+            };
+        }
+
+        var temperatureSeries = await BuildHourlyTemperatureScatterSeriesAsync(weatherResolution, scatterWindowStart, scatterWindowEndExclusive, ct);
+        if (temperatureSeries is null)
+        {
+            return new SelectionTemperatureLoadScatterResult
+            {
+                IsApplicable = true,
+                SignalCode = selectionSignal.ExactSignalCode.Value,
+                Unit = loadSeries.Unit,
+                YAxisLabel = loadSeries.YAxisLabel,
+                LoadBasisLabel = loadSeries.LoadBasisLabel,
+                UsesEnergyDerivedLoad = loadSeries.UsesEnergyDerivedLoad,
+                Summary = "Temperature vs load scatter is unavailable because facility Ta could not be prepared as an hourly weather input.",
+                Methodology = TemperatureLoadScatterMethodology,
+                Message = "The resolved facility weather source does not provide enough hourly Ta coverage for the selected interval.",
+                EvaluationBasis = loadSeries.EvaluationBasis
+            };
+        }
+
+        var points = pairingHours
+            .Where(hour => loadSeries.LoadByHour.ContainsKey(hour) && temperatureSeries.TemperatureByHour.ContainsKey(hour))
+            .Select(hour => new SelectionTemperatureLoadScatterPoint
+            {
+                TimestampUtc = hour,
+                OutdoorTemperatureC = temperatureSeries.TemperatureByHour[hour],
+                LoadValue = loadSeries.LoadByHour[hour]
+            })
+            .ToList();
+
+        if (points.Count == 0)
+        {
+            return new SelectionTemperatureLoadScatterResult
+            {
+                IsApplicable = true,
+                SignalCode = selectionSignal.ExactSignalCode.Value,
+                Unit = loadSeries.Unit,
+                YAxisLabel = loadSeries.YAxisLabel,
+                LoadBasisLabel = loadSeries.LoadBasisLabel,
+                UsesEnergyDerivedLoad = loadSeries.UsesEnergyDerivedLoad,
+                Summary = "Temperature vs load scatter is unavailable because no complete-hour Ta/load pairs overlap in the selected interval.",
+                Methodology = TemperatureLoadScatterMethodology,
+                Message = $"Usable hourly load basis was prepared for {loadSeries.LoadByHour.Count} complete hours and facility Ta for {temperatureSeries.TemperatureByHour.Count} complete hours.",
+                EvaluationBasis = loadSeries.EvaluationBasis
+            };
+        }
+
+        var weatherBasis = string.IsNullOrWhiteSpace(temperatureSeries.EvaluationBasis)
+            ? string.Empty
+            : $" {temperatureSeries.EvaluationBasis}";
+
+        return new SelectionTemperatureLoadScatterResult
+        {
+            IsApplicable = true,
+            IsAvailable = true,
+            UsesEnergyDerivedLoad = loadSeries.UsesEnergyDerivedLoad,
+            PointCount = points.Count,
+            ContributingNodeCount = loadSeries.ContributingNodeKeys.Count,
+            SignalCode = selectionSignal.ExactSignalCode.Value,
+            Unit = loadSeries.Unit,
+            GranularityLabel = "Hourly pairing",
+            XAxisLabel = "Outdoor temperature Ta (C)",
+            YAxisLabel = loadSeries.YAxisLabel,
+            LoadBasisLabel = loadSeries.LoadBasisLabel,
+            EvaluationBasis = $"{loadSeries.EvaluationBasis}{weatherBasis}".Trim(),
+            Summary = $"Temperature vs load scatter pairs facility Ta with {points.Count} hourly points from the active {selectionSignal.ExactSignalCode.Value} signal.",
+            Methodology = TemperatureLoadScatterMethodology,
+            WeatherNodeKey = temperatureSeries.WeatherNodeKey,
+            Points = points
+        };
+    }
+
+    private async Task<HourlyLoadScatterSeries?> BuildSelectionHourlyLoadScatterSeriesAsync(
+        SelectionSignalAvailabilityItem selectionSignal,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        var candidateNodeResults = new List<(string NodeKey, IReadOnlyDictionary<DateTime, double> LoadByHour)>();
+
+        foreach (var nodeKey in selectionSignal.MatchingNodeKeys)
+        {
+            var source = ResolveCuratedNodeSource(nodeKey, selectionSignal.ExactSignalCode);
+            if (source is null)
+            {
+                continue;
+            }
+
+            var filePath = ResolveCuratedFilePath(source);
+            if (filePath is null)
+            {
+                continue;
+            }
+
+            var hourlyLoad = await LoadHourlyLoadBasisForSourceAsync(filePath, source, from, to, ct);
+            if (hourlyLoad.Count == 0)
+            {
+                continue;
+            }
+
+            candidateNodeResults.Add((nodeKey, hourlyLoad));
+        }
+
+        if (candidateNodeResults.Count == 0)
+        {
+            return null;
+        }
+
+        var aggregateLoadByHour = new Dictionary<DateTime, double>();
+        foreach (var result in candidateNodeResults)
+        {
+            foreach (var (hourStart, value) in result.LoadByHour)
+            {
+                if (aggregateLoadByHour.TryGetValue(hourStart, out var existingValue))
+                {
+                    aggregateLoadByHour[hourStart] = existingValue + value;
+                }
+                else
+                {
+                    aggregateLoadByHour[hourStart] = value;
+                }
+            }
+        }
+
+        if (aggregateLoadByHour.Count == 0)
+        {
+            return null;
+        }
+
+        var usesEnergyDerivedLoad = selectionSignal.SignalFamily == FacilitySignalFamily.Energy;
+        var unit = usesEnergyDerivedLoad
+            ? ResolveEnergyDerivedLoadUnit(selectionSignal.Unit)
+            : (string.IsNullOrWhiteSpace(selectionSignal.Unit) ? "kW" : selectionSignal.Unit);
+        var yAxisLabel = string.IsNullOrWhiteSpace(unit)
+            ? (usesEnergyDerivedLoad ? "Energy-derived load" : "Load")
+            : $"{(usesEnergyDerivedLoad ? "Energy-derived load" : "Load")} ({unit})";
+        var loadBasisLabel = usesEnergyDerivedLoad
+            ? "hourly energy-derived load"
+            : "hourly average power";
+        var evaluationBasis = selectionSignal.CanAggregate
+            ? $"Evaluation basis: {loadBasisLabel} aggregated across {candidateNodeResults.Count} of {selectionSignal.MatchingNodeCount} matching nodes for {selectionSignal.ExactSignalCode.Value}; each paired hour sums nodes with a valid load basis in that hour."
+            : $"Evaluation basis: {loadBasisLabel} from the active {selectionSignal.ExactSignalCode.Value} signal on the current scope node.";
+
+        return new HourlyLoadScatterSeries(
+            aggregateLoadByHour,
+            candidateNodeResults.Select(result => result.NodeKey).ToList(),
+            selectionSignal.MatchingNodeCount,
+            unit,
+            yAxisLabel,
+            loadBasisLabel,
+            evaluationBasis,
+            usesEnergyDerivedLoad);
+    }
+
+    private async Task<HourlyTemperatureScatterSeries?> BuildHourlyTemperatureScatterSeriesAsync(
+        FacilityWeatherSourceResolution weatherResolution,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        if (weatherResolution.TemperatureBinding is null)
+        {
+            return null;
+        }
+
+        var weatherSource = BuildBindingCuratedNodeSource(weatherResolution.NodeKey, weatherResolution.TemperatureBinding);
+        var weatherFilePath = ResolveCuratedFilePath(weatherSource);
+        if (weatherFilePath is null)
+        {
+            return null;
+        }
+
+        var hourlyWeather = await LoadHourlyAverageTemperatureForSourceAsync(weatherFilePath, weatherSource, from, to, ct);
+        if (hourlyWeather.Count == 0)
+        {
+            return null;
+        }
+
+        var basis = $"Weather input: hourly average facility Ta from weather node {weatherResolution.NodeKey}.";
+        return new HourlyTemperatureScatterSeries(hourlyWeather, weatherResolution.NodeKey, basis);
+    }
+
+    private async Task<IReadOnlyDictionary<DateTime, double>> LoadHourlyLoadBasisForSourceAsync(
+        string filePath,
+        CuratedNodeSource source,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        if (source.IsPowerSignal)
+        {
+            return await LoadHourlyAveragePowerForSourceAsync(filePath, source, from, to, ct);
+        }
+
+        if (source.SeriesSemantics == FacilitySignalSeriesSemantics.CumulativeCounter)
+        {
+            return await LoadHourlyAverageLoadFromCounterSourceAsync(filePath, source, from, to, ct);
+        }
+
+        return await LoadHourlyAverageLoadFromDirectEnergySourceAsync(filePath, source, from, to, ct);
+    }
+
+    private async Task<IReadOnlyDictionary<DateTime, double>> LoadHourlyAveragePowerForSourceAsync(
+        string filePath,
+        CuratedNodeSource source,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        var samples = await LoadRawSamplesWithContextAsync(filePath, source.ColumnName, from, to, ct);
+        var weightedLoadByHour = InitializeHourlyAccumulatorMap(from, to);
+        var coverageByHour = InitializeHourlyAccumulatorMap(from, to);
+
+        for (var index = 0; index < samples.Count - 1; index++)
+        {
+            var current = samples[index];
+            var next = samples[index + 1];
+            if (next.TimestampUtc <= current.TimestampUtc)
+            {
+                continue;
+            }
+
+            var segmentStart = MaxDateTime(current.TimestampUtc, from);
+            var segmentEnd = MinDateTime(next.TimestampUtc, to);
+            if (segmentEnd <= segmentStart)
+            {
+                continue;
+            }
+
+            var powerKw = NormalizeValueForStats(current.Value, source);
+            if (!double.IsFinite(powerKw))
+            {
+                continue;
+            }
+
+            AccumulateSegmentByHour(
+                segmentStart,
+                segmentEnd,
+                overlapHours => powerKw * overlapHours,
+                weightedLoadByHour,
+                coverageByHour);
+        }
+
+        return FinalizeHourlyAverageMap(weightedLoadByHour, coverageByHour, TemperatureLoadScatterMinimumHourlyCoverageRatio);
+    }
+
+    private async Task<IReadOnlyDictionary<DateTime, double>> LoadHourlyAverageLoadFromCounterSourceAsync(
+        string filePath,
+        CuratedNodeSource source,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        var samples = await LoadRawSamplesWithContextAsync(filePath, source.ColumnName, from, to, ct);
+        var weightedLoadByHour = InitializeHourlyAccumulatorMap(from, to);
+        var coverageByHour = InitializeHourlyAccumulatorMap(from, to);
+
+        for (var index = 0; index < samples.Count - 1; index++)
+        {
+            var current = samples[index];
+            var next = samples[index + 1];
+            if (next.TimestampUtc <= current.TimestampUtc)
+            {
+                continue;
+            }
+
+            var delta = next.Value - current.Value;
+            if (!double.IsFinite(delta) || delta < 0)
+            {
+                continue;
+            }
+
+            var segmentStart = MaxDateTime(current.TimestampUtc, from);
+            var segmentEnd = MinDateTime(next.TimestampUtc, to);
+            if (segmentEnd <= segmentStart)
+            {
+                continue;
+            }
+
+            var segmentDurationHours = (next.TimestampUtc - current.TimestampUtc).TotalHours;
+            if (segmentDurationHours <= 0)
+            {
+                continue;
+            }
+
+            var averageLoad = delta / segmentDurationHours;
+            if (!double.IsFinite(averageLoad))
+            {
+                continue;
+            }
+
+            AccumulateSegmentByHour(
+                segmentStart,
+                segmentEnd,
+                overlapHours => averageLoad * overlapHours,
+                weightedLoadByHour,
+                coverageByHour);
+        }
+
+        return FinalizeHourlyAverageMap(weightedLoadByHour, coverageByHour, TemperatureLoadScatterMinimumHourlyCoverageRatio);
+    }
+
+    private async Task<IReadOnlyDictionary<DateTime, double>> LoadHourlyAverageLoadFromDirectEnergySourceAsync(
+        string filePath,
+        CuratedNodeSource source,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        var samples = await LoadRawSamplesWithContextAsync(filePath, source.ColumnName, from, to, ct);
+        var weightedLoadByHour = InitializeHourlyAccumulatorMap(from, to);
+        var coverageByHour = InitializeHourlyAccumulatorMap(from, to);
+
+        for (var index = 0; index < samples.Count - 1; index++)
+        {
+            var current = samples[index];
+            var next = samples[index + 1];
+            if (next.TimestampUtc <= current.TimestampUtc)
+            {
+                continue;
+            }
+
+            var segmentStart = MaxDateTime(current.TimestampUtc, from);
+            var segmentEnd = MinDateTime(next.TimestampUtc, to);
+            if (segmentEnd <= segmentStart)
+            {
+                continue;
+            }
+
+            var segmentDurationHours = (next.TimestampUtc - current.TimestampUtc).TotalHours;
+            if (segmentDurationHours <= 0)
+            {
+                continue;
+            }
+
+            var intervalEnergy = NormalizeValueForStats(current.Value, source);
+            if (!double.IsFinite(intervalEnergy))
+            {
+                continue;
+            }
+
+            var averageLoad = intervalEnergy / segmentDurationHours;
+            if (!double.IsFinite(averageLoad))
+            {
+                continue;
+            }
+
+            AccumulateSegmentByHour(
+                segmentStart,
+                segmentEnd,
+                overlapHours => averageLoad * overlapHours,
+                weightedLoadByHour,
+                coverageByHour);
+        }
+
+        return FinalizeHourlyAverageMap(weightedLoadByHour, coverageByHour, TemperatureLoadScatterMinimumHourlyCoverageRatio);
+    }
+
+    private async Task<IReadOnlyDictionary<DateTime, double>> LoadHourlyAverageTemperatureForSourceAsync(
+        string filePath,
+        CuratedNodeSource source,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        var samples = await LoadRawSamplesWithContextAsync(filePath, source.ColumnName, from, to, ct);
+        var weightedTemperatureByHour = InitializeHourlyAccumulatorMap(from, to);
+        var coverageByHour = InitializeHourlyAccumulatorMap(from, to);
+
+        for (var index = 0; index < samples.Count - 1; index++)
+        {
+            var current = samples[index];
+            var next = samples[index + 1];
+            if (next.TimestampUtc <= current.TimestampUtc)
+            {
+                continue;
+            }
+
+            var segmentStart = MaxDateTime(current.TimestampUtc, from);
+            var segmentEnd = MinDateTime(next.TimestampUtc, to);
+            if (segmentEnd <= segmentStart)
+            {
+                continue;
+            }
+
+            if (!double.IsFinite(current.Value))
+            {
+                continue;
+            }
+
+            AccumulateSegmentByHour(
+                segmentStart,
+                segmentEnd,
+                overlapHours => current.Value * overlapHours,
+                weightedTemperatureByHour,
+                coverageByHour);
+        }
+
+        return FinalizeHourlyAverageMap(weightedTemperatureByHour, coverageByHour, TemperatureLoadScatterMinimumHourlyCoverageRatio);
+    }
+
+    private static string ResolveEnergyDerivedLoadUnit(string energyUnit)
+    {
+        if (string.IsNullOrWhiteSpace(energyUnit))
+        {
+            return "kW";
+        }
+
+        return energyUnit.Trim().ToLowerInvariant() switch
+        {
+            "wh" => "W",
+            "kwh" => "kW",
+            "mwh" => "MW",
+            "gwh" => "GW",
+            _ => $"{energyUnit}/h"
+        };
+    }
+
+    private async Task<SelectionWeatherAwareBaselineResult> BuildSelectionWeatherAwareBaselineAsync(
+        SelectionSignalAvailabilityItem? selectionSignal,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        if (selectionSignal is null)
+        {
+            return new SelectionWeatherAwareBaselineResult
+            {
+                Summary = "Weather-aware baseline waits for an active exact signal code.",
+                Methodology = WeatherAwareBaselineMethodology
+            };
+        }
+
+        if (selectionSignal.SignalFamily is not (FacilitySignalFamily.Energy or FacilitySignalFamily.Power))
+        {
+            return new SelectionWeatherAwareBaselineResult
+            {
+                IsApplicable = false,
+                Summary = $"Weather-aware baseline requires an energy or power signal. The active signal {selectionSignal.ExactSignalCode.Value} belongs to {selectionSignal.SignalFamily}.",
+                Methodology = WeatherAwareBaselineMethodology
+            };
+        }
+
+        if (!selectionSignal.CanAggregate && !selectionSignal.CanRenderSingleNodeSeries)
+        {
+            return new SelectionWeatherAwareBaselineResult
+            {
+                IsApplicable = true,
+                Summary = "Weather-aware baseline is unavailable for the active signal in the current scope.",
+                Methodology = WeatherAwareBaselineMethodology,
+                Message = selectionSignal.AvailabilityMessage
+            };
+        }
+
+        var predictionDays = GetCompleteUtcDayStarts(from, to);
+        if (predictionDays.Count == 0)
+        {
+            return new SelectionWeatherAwareBaselineResult
+            {
+                IsApplicable = true,
+                Summary = "Weather-aware baseline needs at least one complete UTC day in the selected interval.",
+                Methodology = WeatherAwareBaselineMethodology,
+                Message = "Daily baseline is computed only from complete UTC days. The current interval does not contain any complete day."
+            };
+        }
+
+        var fitEndExclusive = predictionDays[0];
+        var fitStartInclusive = fitEndExclusive.AddDays(-WeatherAwareBaselineFitLookbackDays);
+        var windowEndExclusive = predictionDays[^1].AddDays(1);
+
+        var facility = await _facilityQueryService.GetMainFacilityAsync(ct);
+        var weatherResolution = _weatherSourceResolver.Resolve(facility);
+        if (weatherResolution?.HasTemperatureBinding != true)
+        {
+            return new SelectionWeatherAwareBaselineResult
+            {
+                IsApplicable = true,
+                Summary = "Weather-aware baseline is unavailable because no facility weather Ta source is resolved.",
+                Methodology = WeatherAwareBaselineMethodology,
+                Message = "The current facility does not expose a usable Ta weather binding outside the selected scope."
+            };
+        }
+
+        var dailyEnergySeries = await BuildWeatherAwareDailyEnergySeriesAsync(
+            selectionSignal,
+            fitStartInclusive,
+            fitEndExclusive,
+            predictionDays,
+            windowEndExclusive,
+            ct);
+
+        if (dailyEnergySeries is null)
+        {
+            return new SelectionWeatherAwareBaselineResult
+            {
+                IsApplicable = true,
+                Summary = "Weather-aware baseline is unavailable because daily energy could not be prepared safely.",
+                Methodology = WeatherAwareBaselineMethodology,
+                Message = "The active signal does not provide a usable daily energy series for the selected scope.",
+                Unit = selectionSignal.SignalFamily == FacilitySignalFamily.Power
+                    ? "kWh"
+                    : (string.IsNullOrWhiteSpace(selectionSignal.Unit) ? "kWh" : selectionSignal.Unit)
+            };
+        }
+
+        var dailyWeatherSeries = await BuildWeatherAwareDailyTemperatureSeriesAsync(
+            weatherResolution,
+            fitStartInclusive,
+            windowEndExclusive,
+            ct);
+
+        if (dailyWeatherSeries is null)
+        {
+            return new SelectionWeatherAwareBaselineResult
+            {
+                IsApplicable = true,
+                Summary = "Weather-aware baseline is unavailable because facility Ta could not be prepared as daily weather input.",
+                Methodology = WeatherAwareBaselineMethodology,
+                Message = "The resolved facility weather source does not provide enough daily Ta coverage for the fit and evaluation window.",
+                Unit = dailyEnergySeries.Unit
+            };
+        }
+
+        var fitDays = GetCompleteUtcDayStarts(fitStartInclusive, fitEndExclusive);
+        var fitObservations = fitDays
+            .Where(day => dailyEnergySeries.DailyEnergyByDay.ContainsKey(day) && dailyWeatherSeries.DailyAverageTemperatureByDay.ContainsKey(day))
+            .Select(day => new DailyWeatherAwareObservation(
+                day,
+                dailyEnergySeries.DailyEnergyByDay[day],
+                dailyWeatherSeries.DailyAverageTemperatureByDay[day]))
+            .ToList();
+
+        if (fitObservations.Count < WeatherAwareBaselineMinimumFitDays)
+        {
+            return new SelectionWeatherAwareBaselineResult
+            {
+                IsApplicable = true,
+                Summary = "Weather-aware baseline is unavailable because the fit period does not contain enough valid daily points.",
+                Methodology = WeatherAwareBaselineMethodology,
+                Message = $"Only {fitObservations.Count} fit days contain both daily energy and facility Ta. At least {WeatherAwareBaselineMinimumFitDays} valid fit days are required.",
+                Unit = dailyEnergySeries.Unit,
+                EvaluationBasis = dailyEnergySeries.EvaluationBasis
+            };
+        }
+
+        if (!TryFitWeatherAwareBaselineModel(fitObservations, out var model))
+        {
+            return new SelectionWeatherAwareBaselineResult
+            {
+                IsApplicable = true,
+                Summary = "Weather-aware baseline is unavailable because the daily HDD/CDD model is numerically unstable for the current fit period.",
+                Methodology = WeatherAwareBaselineMethodology,
+                Message = "The fit-period daily points do not span a stable enough temperature-response pattern for a 3-parameter HDD/CDD regression.",
+                Unit = dailyEnergySeries.Unit,
+                EvaluationBasis = dailyEnergySeries.EvaluationBasis
+            };
+        }
+
+        if (!TryComputeWeatherAwareBaselineDiagnostics(fitObservations, model, out var cvRmsePercent, out var nmbePercent))
+        {
+            return new SelectionWeatherAwareBaselineResult
+            {
+                IsApplicable = true,
+                Summary = "Weather-aware baseline is unavailable because CV(RMSE) and NMBE cannot be computed safely for the fit period.",
+                Methodology = WeatherAwareBaselineMethodology,
+                Message = "The fit period does not support stable diagnostics because the average daily energy is too small or there are too few degrees of freedom.",
+                Unit = dailyEnergySeries.Unit,
+                EvaluationBasis = dailyEnergySeries.EvaluationBasis
+            };
+        }
+
+        var predictionObservations = predictionDays
+            .Where(day => dailyEnergySeries.DailyEnergyByDay.ContainsKey(day) && dailyWeatherSeries.DailyAverageTemperatureByDay.ContainsKey(day))
+            .Select(day => new DailyWeatherAwareObservation(
+                day,
+                dailyEnergySeries.DailyEnergyByDay[day],
+                dailyWeatherSeries.DailyAverageTemperatureByDay[day]))
+            .ToList();
+
+        if (predictionObservations.Count != predictionDays.Count)
+        {
+            return new SelectionWeatherAwareBaselineResult
+            {
+                IsApplicable = true,
+                Summary = "Weather-aware baseline is unavailable because the selected interval does not have full daily energy and Ta coverage for every complete day.",
+                Methodology = WeatherAwareBaselineMethodology,
+                Message = $"Usable daily baseline inputs were prepared for {predictionObservations.Count} of {predictionDays.Count} complete days in the selected interval.",
+                Unit = dailyEnergySeries.Unit,
+                EvaluationBasis = dailyEnergySeries.EvaluationBasis
+            };
+        }
+
+        var actualValue = predictionObservations.Sum(observation => observation.Energy);
+        var baselineExpectedValue = predictionObservations.Sum(observation => model.Predict(observation.AverageOutdoorTemperatureC));
+        var minimumMeaningfulBaseline = Math.Max(1.0, predictionObservations.Count * 0.5);
+        if (Math.Abs(baselineExpectedValue) < minimumMeaningfulBaseline)
+        {
+            return new SelectionWeatherAwareBaselineResult
+            {
+                IsApplicable = true,
+                Summary = "Weather-aware baseline is unavailable because the modelled daily baseline is too small for stable percentage interpretation.",
+                Methodology = WeatherAwareBaselineMethodology,
+                Message = "The baseline-expected energy over the selected full days is too close to zero for a meaningful delta-percent evaluation.",
+                Unit = dailyEnergySeries.Unit,
+                EvaluationBasis = dailyEnergySeries.EvaluationBasis
+            };
+        }
+
+        var deltaAbsolute = actualValue - baselineExpectedValue;
+        var deltaPercent = (deltaAbsolute / baselineExpectedValue) * 100.0;
+        var weatherBasis = string.IsNullOrWhiteSpace(dailyWeatherSeries.EvaluationBasis)
+            ? string.Empty
+            : $" {dailyWeatherSeries.EvaluationBasis}";
+
+        return new SelectionWeatherAwareBaselineResult
+        {
+            IsApplicable = true,
+            IsAvailable = true,
+            Severity = ClassifySeverity(deltaPercent),
+            ActualValue = actualValue,
+            BaselineExpectedValue = baselineExpectedValue,
+            DeltaAbsolute = deltaAbsolute,
+            DeltaPercent = deltaPercent,
+            CvRmsePercent = cvRmsePercent,
+            NmbePercent = nmbePercent,
+            FitDayCount = fitObservations.Count,
+            PredictionDayCount = predictionObservations.Count,
+            ContributingNodeCount = dailyEnergySeries.ContributingNodeKeys.Count,
+            Unit = dailyEnergySeries.Unit,
+            EvaluationBasis = $"{dailyEnergySeries.EvaluationBasis}{weatherBasis}".Trim(),
+            Summary = $"Weather-aware baseline uses {fitObservations.Count} fit days and {predictionObservations.Count} selected full days from the active {selectionSignal.ExactSignalCode.Value} signal.",
+            Methodology = WeatherAwareBaselineMethodology,
+            WeatherNodeKey = dailyWeatherSeries.WeatherNodeKey
+        };
+    }
+
+    private async Task<WeatherAwareDailyEnergySeries?> BuildWeatherAwareDailyEnergySeriesAsync(
+        SelectionSignalAvailabilityItem selectionSignal,
+        DateTime fitStartInclusive,
+        DateTime fitEndExclusive,
+        IReadOnlyList<DateTime> predictionDays,
+        DateTime windowEndExclusive,
+        CancellationToken ct)
+    {
+        var candidateNodeResults = new List<(string NodeKey, IReadOnlyDictionary<DateTime, double> DailyEnergyByDay)>();
+
+        foreach (var nodeKey in selectionSignal.MatchingNodeKeys)
+        {
+            var source = ResolveCuratedNodeSource(nodeKey, selectionSignal.ExactSignalCode);
+            if (source is null)
+            {
+                continue;
+            }
+
+            var filePath = ResolveCuratedFilePath(source);
+            if (filePath is null)
+            {
+                continue;
+            }
+
+            var nodeDailyEnergy = await LoadDailyEnergyForSourceAsync(filePath, source, fitStartInclusive, windowEndExclusive, ct);
+            if (nodeDailyEnergy.Count == 0)
+            {
+                continue;
+            }
+
+            candidateNodeResults.Add((nodeKey, nodeDailyEnergy));
+        }
+
+        if (candidateNodeResults.Count == 0)
+        {
+            return null;
+        }
+
+        var contributingNodeResults = candidateNodeResults
+            .Where(result => predictionDays.All(day => result.DailyEnergyByDay.ContainsKey(day)))
+            .ToList();
+
+        if (contributingNodeResults.Count == 0)
+        {
+            return null;
+        }
+
+        var aggregateDays = GetCompleteUtcDayStarts(fitStartInclusive, windowEndExclusive);
+        var aggregateDailyEnergy = aggregateDays
+            .Where(day => contributingNodeResults.All(result => result.DailyEnergyByDay.ContainsKey(day)))
+            .ToDictionary(
+                day => day,
+                day => contributingNodeResults.Sum(result => result.DailyEnergyByDay[day]));
+
+        if (aggregateDailyEnergy.Count == 0)
+        {
+            return null;
+        }
+
+        var evaluationScope = selectionSignal.CanAggregate
+            ? $"Evaluation basis: daily energy aggregated across {contributingNodeResults.Count} of {selectionSignal.MatchingNodeCount} matching nodes for {selectionSignal.ExactSignalCode.Value}."
+            : $"Evaluation basis: daily energy from the active exact signal {selectionSignal.ExactSignalCode.Value} on the current scope node.";
+
+        var unit = selectionSignal.SignalFamily == FacilitySignalFamily.Power
+            ? "kWh"
+            : string.IsNullOrWhiteSpace(selectionSignal.Unit)
+                ? "kWh"
+                : selectionSignal.Unit;
+
+        return new WeatherAwareDailyEnergySeries(
+            aggregateDailyEnergy,
+            contributingNodeResults.Select(result => result.NodeKey).ToList(),
+            selectionSignal.MatchingNodeCount,
+            unit,
+            evaluationScope);
+    }
+
+    private async Task<WeatherAwareDailyTemperatureSeries?> BuildWeatherAwareDailyTemperatureSeriesAsync(
+        FacilityWeatherSourceResolution weatherResolution,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        if (weatherResolution.TemperatureBinding is null)
+        {
+            return null;
+        }
+
+        var weatherSource = BuildBindingCuratedNodeSource(weatherResolution.NodeKey, weatherResolution.TemperatureBinding);
+        var weatherFilePath = ResolveCuratedFilePath(weatherSource);
+        if (weatherFilePath is null)
+        {
+            return null;
+        }
+
+        var dailyWeather = await LoadDailyAverageTemperatureForSourceAsync(weatherFilePath, weatherSource, from, to, ct);
+        if (dailyWeather.Count == 0)
+        {
+            return null;
+        }
+
+        var basis = $"Weather input: facility Ta from weather node {weatherResolution.NodeKey}.";
+        return new WeatherAwareDailyTemperatureSeries(dailyWeather, weatherResolution.NodeKey, basis);
+    }
+
+    private async Task<IReadOnlyDictionary<DateTime, double>> LoadDailyEnergyForSourceAsync(
+        string filePath,
+        CuratedNodeSource source,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        if (source.SeriesSemantics == FacilitySignalSeriesSemantics.CumulativeCounter)
+        {
+            return await LoadDailyEnergyFromCounterSourceAsync(filePath, source, from, to, ct);
+        }
+
+        if (source.IsPowerSignal)
+        {
+            return await LoadDailyEnergyFromPowerSourceAsync(filePath, source, from, to, ct);
+        }
+
+        return await LoadDailyEnergyFromDirectEnergySourceAsync(filePath, source, from, to, ct);
+    }
+
+    private async Task<IReadOnlyDictionary<DateTime, double>> LoadDailyEnergyFromPowerSourceAsync(
+        string filePath,
+        CuratedNodeSource source,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        var samples = await LoadRawSamplesWithContextAsync(filePath, source.ColumnName, from, to, ct);
+        var energyByDay = InitializeDailyAccumulatorMap(from, to);
+        var coverageByDay = InitializeDailyAccumulatorMap(from, to);
+
+        for (var index = 0; index < samples.Count - 1; index++)
+        {
+            var current = samples[index];
+            var next = samples[index + 1];
+            if (next.TimestampUtc <= current.TimestampUtc)
+            {
+                continue;
+            }
+
+            var segmentStart = MaxDateTime(current.TimestampUtc, from);
+            var segmentEnd = MinDateTime(next.TimestampUtc, to);
+            if (segmentEnd <= segmentStart)
+            {
+                continue;
+            }
+
+            var powerKw = NormalizeValueForStats(current.Value, source);
+            if (!double.IsFinite(powerKw))
+            {
+                continue;
+            }
+
+            AccumulateSegmentByDay(
+                segmentStart,
+                segmentEnd,
+                overlapHours => powerKw * overlapHours,
+                energyByDay,
+                coverageByDay);
+        }
+
+        return FinalizeDailyValueMap(energyByDay, coverageByDay, 24.0, WeatherAwareBaselineMinimumDailyCoverageRatio);
+    }
+
+    private async Task<IReadOnlyDictionary<DateTime, double>> LoadDailyEnergyFromCounterSourceAsync(
+        string filePath,
+        CuratedNodeSource source,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        var samples = await LoadRawSamplesWithContextAsync(filePath, source.ColumnName, from, to, ct);
+        var energyByDay = InitializeDailyAccumulatorMap(from, to);
+        var coverageByDay = InitializeDailyAccumulatorMap(from, to);
+
+        for (var index = 0; index < samples.Count - 1; index++)
+        {
+            var current = samples[index];
+            var next = samples[index + 1];
+            if (next.TimestampUtc <= current.TimestampUtc)
+            {
+                continue;
+            }
+
+            var delta = next.Value - current.Value;
+            if (!double.IsFinite(delta) || delta < 0)
+            {
+                continue;
+            }
+
+            var segmentStart = MaxDateTime(current.TimestampUtc, from);
+            var segmentEnd = MinDateTime(next.TimestampUtc, to);
+            if (segmentEnd <= segmentStart)
+            {
+                continue;
+            }
+
+            var segmentDurationHours = (next.TimestampUtc - current.TimestampUtc).TotalHours;
+            if (segmentDurationHours <= 0)
+            {
+                continue;
+            }
+
+            AccumulateSegmentByDay(
+                segmentStart,
+                segmentEnd,
+                overlapHours => delta * (overlapHours / segmentDurationHours),
+                energyByDay,
+                coverageByDay);
+        }
+
+        return FinalizeDailyValueMap(energyByDay, coverageByDay, 24.0, WeatherAwareBaselineMinimumDailyCoverageRatio);
+    }
+
+    private async Task<IReadOnlyDictionary<DateTime, double>> LoadDailyEnergyFromDirectEnergySourceAsync(
+        string filePath,
+        CuratedNodeSource source,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        try
+        {
+            using var reader = OpenCsvReader(filePath);
+            var headerLine = await reader.ReadLineAsync(ct);
+            if (string.IsNullOrEmpty(headerLine))
+            {
+                return new Dictionary<DateTime, double>();
+            }
+
+            if (!TryResolveCsvColumns(headerLine, source.ColumnName, out var timeColIndex, out var valueColIndex))
+            {
+                return new Dictionary<DateTime, double>();
+            }
+
+            var energyByDay = InitializeDailyAccumulatorMap(from, to);
+            string? line;
+            while ((line = await reader.ReadLineAsync(ct)) is not null)
+            {
+                var cols = line.Split(',');
+                if (cols.Length <= Math.Max(timeColIndex, valueColIndex))
+                {
+                    continue;
+                }
+
+                if (!TryParseTimestamp(cols[timeColIndex], out var timestamp))
+                {
+                    continue;
+                }
+
+                if (timestamp < from || timestamp >= to)
+                {
+                    continue;
+                }
+
+                if (!double.TryParse(cols[valueColIndex], NumberStyles.Any, CultureInfo.InvariantCulture, out var value)
+                    || !double.IsFinite(value))
+                {
+                    continue;
+                }
+
+                var dayStart = DateTime.SpecifyKind(timestamp.Date, DateTimeKind.Utc);
+                if (energyByDay.TryGetValue(dayStart, out var existing))
+                {
+                    energyByDay[dayStart] = existing + value;
+                }
+                else
+                {
+                    energyByDay[dayStart] = value;
+                }
+            }
+
+            return energyByDay;
+        }
+        catch
+        {
+            return new Dictionary<DateTime, double>();
+        }
+    }
+
+    private async Task<IReadOnlyDictionary<DateTime, double>> LoadDailyAverageTemperatureForSourceAsync(
+        string filePath,
+        CuratedNodeSource source,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        var samples = await LoadRawSamplesWithContextAsync(filePath, source.ColumnName, from, to, ct);
+        var weightedTemperatureByDay = InitializeDailyAccumulatorMap(from, to);
+        var coverageByDay = InitializeDailyAccumulatorMap(from, to);
+
+        for (var index = 0; index < samples.Count - 1; index++)
+        {
+            var current = samples[index];
+            var next = samples[index + 1];
+            if (next.TimestampUtc <= current.TimestampUtc)
+            {
+                continue;
+            }
+
+            var segmentStart = MaxDateTime(current.TimestampUtc, from);
+            var segmentEnd = MinDateTime(next.TimestampUtc, to);
+            if (segmentEnd <= segmentStart)
+            {
+                continue;
+            }
+
+            if (!double.IsFinite(current.Value))
+            {
+                continue;
+            }
+
+            AccumulateSegmentByDay(
+                segmentStart,
+                segmentEnd,
+                overlapHours => current.Value * overlapHours,
+                weightedTemperatureByDay,
+                coverageByDay);
+        }
+
+        var result = new Dictionary<DateTime, double>();
+        foreach (var (dayStart, weightedTemperatureHours) in weightedTemperatureByDay)
+        {
+            if (!coverageByDay.TryGetValue(dayStart, out var coveredHours)
+                || coveredHours < 24.0 * WeatherAwareBaselineMinimumDailyCoverageRatio)
+            {
+                continue;
+            }
+
+            result[dayStart] = weightedTemperatureHours / coveredHours;
+        }
+
+        return result;
+    }
+
+    private async Task<List<(DateTime TimestampUtc, double Value)>> LoadRawSamplesWithContextAsync(
+        string filePath,
+        string columnName,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct)
+    {
+        var samples = new List<(DateTime TimestampUtc, double Value)>();
+
+        try
+        {
+            using var reader = OpenCsvReader(filePath);
+            var headerLine = await reader.ReadLineAsync(ct);
+            if (string.IsNullOrEmpty(headerLine))
+            {
+                return samples;
+            }
+
+            if (!TryResolveCsvColumns(headerLine, columnName, out var timeColIndex, out var valueColIndex))
+            {
+                return samples;
+            }
+
+            (DateTime TimestampUtc, double Value)? previousSample = null;
+            var addedContextSample = false;
+            string? line;
+
+            while ((line = await reader.ReadLineAsync(ct)) is not null)
+            {
+                var cols = line.Split(',');
+                if (cols.Length <= Math.Max(timeColIndex, valueColIndex))
+                {
+                    continue;
+                }
+
+                if (!TryParseTimestamp(cols[timeColIndex], out var timestamp))
+                {
+                    continue;
+                }
+
+                if (!double.TryParse(cols[valueColIndex], NumberStyles.Any, CultureInfo.InvariantCulture, out var value)
+                    || !double.IsFinite(value))
+                {
+                    continue;
+                }
+
+                if (timestamp < from)
+                {
+                    previousSample = (timestamp, value);
+                    continue;
+                }
+
+                if (!addedContextSample && previousSample.HasValue)
+                {
+                    samples.Add(previousSample.Value);
+                    addedContextSample = true;
+                }
+
+                samples.Add((timestamp, value));
+
+                if (timestamp > to)
+                {
+                    break;
+                }
+            }
+        }
+        catch
+        {
+            return new List<(DateTime TimestampUtc, double Value)>();
+        }
+
+        return samples;
+    }
+
+    private static bool TryResolveCsvColumns(
+        string headerLine,
+        string valueColumnName,
+        out int timeColIndex,
+        out int valueColIndex)
+    {
+        var headers = headerLine.Split(',');
+        valueColIndex = Array.FindIndex(headers, header => header.Trim().Equals(valueColumnName, StringComparison.OrdinalIgnoreCase));
+        timeColIndex = Array.FindIndex(headers, header =>
+            header.Trim().Equals("datetime_utc", StringComparison.OrdinalIgnoreCase) ||
+            header.Trim().Equals("timestamp", StringComparison.OrdinalIgnoreCase) ||
+            header.Trim().Equals("time", StringComparison.OrdinalIgnoreCase));
+
+        if (timeColIndex == -1)
+        {
+            timeColIndex = 0;
+        }
+
+        return valueColIndex >= 0;
+    }
+
+    private static Dictionary<DateTime, double> InitializeHourlyAccumulatorMap(DateTime from, DateTime to)
+    {
+        return GetCompleteUtcHourStarts(from, to)
+            .ToDictionary(hourStart => hourStart, _ => 0d);
+    }
+
+    private static IReadOnlyDictionary<DateTime, double> FinalizeHourlyAverageMap(
+        IReadOnlyDictionary<DateTime, double> weightedValueByHour,
+        IReadOnlyDictionary<DateTime, double> coverageByHour,
+        double minimumCoverageRatio)
+    {
+        var result = new Dictionary<DateTime, double>();
+
+        foreach (var (hourStart, weightedValue) in weightedValueByHour)
+        {
+            if (!coverageByHour.TryGetValue(hourStart, out var coveredHours) || coveredHours < minimumCoverageRatio)
+            {
+                continue;
+            }
+
+            result[hourStart] = weightedValue / coveredHours;
+        }
+
+        return result;
+    }
+
+    private static void AccumulateSegmentByHour(
+        DateTime segmentStart,
+        DateTime segmentEnd,
+        Func<double, double> valueFromOverlapHours,
+        IDictionary<DateTime, double> valueByHour,
+        IDictionary<DateTime, double> coverageByHour)
+    {
+        var cursor = segmentStart;
+
+        while (cursor < segmentEnd)
+        {
+            var hourStart = new DateTime(cursor.Year, cursor.Month, cursor.Day, cursor.Hour, 0, 0, DateTimeKind.Utc);
+            var hourEnd = hourStart.AddHours(1);
+            var chunkEnd = MinDateTime(segmentEnd, hourEnd);
+            var overlapHours = (chunkEnd - cursor).TotalHours;
+            if (overlapHours > 0 && valueByHour.TryGetValue(hourStart, out var value))
+            {
+                valueByHour[hourStart] = value + valueFromOverlapHours(overlapHours);
+                coverageByHour[hourStart] = coverageByHour[hourStart] + overlapHours;
+            }
+
+            cursor = chunkEnd;
+        }
+    }
+
+    private static IReadOnlyList<DateTime> GetCompleteUtcHourStarts(DateTime from, DateTime to)
+    {
+        var hours = new List<DateTime>();
+        var cursor = new DateTime(from.Year, from.Month, from.Day, from.Hour, 0, 0, DateTimeKind.Utc);
+        if (cursor < from)
+        {
+            cursor = cursor.AddHours(1);
+        }
+
+        while (cursor.AddHours(1) <= to)
+        {
+            hours.Add(cursor);
+            cursor = cursor.AddHours(1);
+        }
+
+        return hours;
+    }
+
+    private static Dictionary<DateTime, double> InitializeDailyAccumulatorMap(DateTime from, DateTime to)
+    {
+        return GetCompleteUtcDayStarts(from, to)
+            .ToDictionary(dayStart => dayStart, _ => 0d);
+    }
+
+    private static IReadOnlyDictionary<DateTime, double> FinalizeDailyValueMap(
+        IReadOnlyDictionary<DateTime, double> valuesByDay,
+        IReadOnlyDictionary<DateTime, double> coverageByDay,
+        double fullDayHours,
+        double minimumCoverageRatio)
+    {
+        var result = new Dictionary<DateTime, double>();
+        var requiredHours = fullDayHours * minimumCoverageRatio;
+
+        foreach (var (dayStart, value) in valuesByDay)
+        {
+            if (!coverageByDay.TryGetValue(dayStart, out var coveredHours) || coveredHours < requiredHours)
+            {
+                continue;
+            }
+
+            result[dayStart] = value;
+        }
+
+        return result;
+    }
+
+    private static void AccumulateSegmentByDay(
+        DateTime segmentStart,
+        DateTime segmentEnd,
+        Func<double, double> valueFromOverlapHours,
+        IDictionary<DateTime, double> valueByDay,
+        IDictionary<DateTime, double> coverageByDay)
+    {
+        var cursor = segmentStart;
+
+        while (cursor < segmentEnd)
+        {
+            var dayStart = DateTime.SpecifyKind(cursor.Date, DateTimeKind.Utc);
+            var dayEnd = dayStart.AddDays(1);
+            var chunkEnd = MinDateTime(segmentEnd, dayEnd);
+            var overlapHours = (chunkEnd - cursor).TotalHours;
+            if (overlapHours > 0)
+            {
+                if (valueByDay.TryGetValue(dayStart, out var value))
+                {
+                    valueByDay[dayStart] = value + valueFromOverlapHours(overlapHours);
+                    coverageByDay[dayStart] = coverageByDay[dayStart] + overlapHours;
+                }
+            }
+
+            cursor = chunkEnd;
+        }
+    }
+
+    private static IReadOnlyList<DateTime> GetCompleteUtcDayStarts(DateTime from, DateTime to)
+    {
+        var days = new List<DateTime>();
+        var cursor = DateTime.SpecifyKind(from.Date, DateTimeKind.Utc);
+
+        while (cursor < to)
+        {
+            var dayEnd = cursor.AddDays(1);
+            if (cursor >= from && dayEnd <= to)
+            {
+                days.Add(cursor);
+            }
+
+            cursor = dayEnd;
+        }
+
+        return days;
+    }
+
+    private static bool TryFitWeatherAwareBaselineModel(
+        IReadOnlyList<DailyWeatherAwareObservation> observations,
+        out WeatherAwareBaselineModel model)
+    {
+        model = new WeatherAwareBaselineModel(0, 0, 0);
+        if (observations.Count < WeatherAwareBaselineMinimumFitDays)
+        {
+            return false;
+        }
+
+        var xtx = new double[3, 3];
+        var xty = new double[3];
+
+        foreach (var observation in observations)
+        {
+            var heating = Math.Max(0, WeatherAwareHeatingBalanceTemperatureC - observation.AverageOutdoorTemperatureC);
+            var cooling = Math.Max(0, observation.AverageOutdoorTemperatureC - WeatherAwareCoolingBalanceTemperatureC);
+            var x0 = 1d;
+            var x1 = heating;
+            var x2 = cooling;
+            var y = observation.Energy;
+
+            xtx[0, 0] += x0 * x0;
+            xtx[0, 1] += x0 * x1;
+            xtx[0, 2] += x0 * x2;
+            xtx[1, 0] += x1 * x0;
+            xtx[1, 1] += x1 * x1;
+            xtx[1, 2] += x1 * x2;
+            xtx[2, 0] += x2 * x0;
+            xtx[2, 1] += x2 * x1;
+            xtx[2, 2] += x2 * x2;
+
+            xty[0] += x0 * y;
+            xty[1] += x1 * y;
+            xty[2] += x2 * y;
+        }
+
+        if (!TrySolveLinearSystem3x3(xtx, xty, out var coefficients))
+        {
+            return false;
+        }
+
+        if (coefficients.Any(coefficient => !double.IsFinite(coefficient)))
+        {
+            return false;
+        }
+
+        model = new WeatherAwareBaselineModel(coefficients[0], coefficients[1], coefficients[2]);
+        return true;
+    }
+
+    private static bool TryComputeWeatherAwareBaselineDiagnostics(
+        IReadOnlyList<DailyWeatherAwareObservation> fitObservations,
+        WeatherAwareBaselineModel model,
+        out double cvRmsePercent,
+        out double nmbePercent)
+    {
+        cvRmsePercent = 0;
+        nmbePercent = 0;
+
+        const int parameterCount = 3;
+        if (fitObservations.Count <= parameterCount)
+        {
+            return false;
+        }
+
+        var meanActual = fitObservations.Average(observation => observation.Energy);
+        if (!double.IsFinite(meanActual) || Math.Abs(meanActual) < 0.000001)
+        {
+            return false;
+        }
+
+        var squaredErrorSum = 0d;
+        var biasSum = 0d;
+
+        foreach (var observation in fitObservations)
+        {
+            var predicted = model.Predict(observation.AverageOutdoorTemperatureC);
+            var residual = observation.Energy - predicted;
+            squaredErrorSum += residual * residual;
+            biasSum += residual;
+        }
+
+        var degreesOfFreedom = fitObservations.Count - parameterCount;
+        if (degreesOfFreedom <= 0)
+        {
+            return false;
+        }
+
+        var rmse = Math.Sqrt(squaredErrorSum / degreesOfFreedom);
+        if (!double.IsFinite(rmse))
+        {
+            return false;
+        }
+
+        cvRmsePercent = (rmse / meanActual) * 100.0;
+        nmbePercent = (biasSum / (degreesOfFreedom * meanActual)) * 100.0;
+        return double.IsFinite(cvRmsePercent) && double.IsFinite(nmbePercent);
+    }
+
+    private static bool TrySolveLinearSystem3x3(double[,] matrix, double[] rhs, out double[] solution)
+    {
+        solution = new double[3];
+        var augmented = new double[3, 4];
+
+        for (var row = 0; row < 3; row++)
+        {
+            for (var column = 0; column < 3; column++)
+            {
+                augmented[row, column] = matrix[row, column];
+            }
+
+            augmented[row, 3] = rhs[row];
+        }
+
+        for (var pivotIndex = 0; pivotIndex < 3; pivotIndex++)
+        {
+            var pivotRow = pivotIndex;
+            var pivotMagnitude = Math.Abs(augmented[pivotIndex, pivotIndex]);
+            for (var candidateRow = pivotIndex + 1; candidateRow < 3; candidateRow++)
+            {
+                var candidateMagnitude = Math.Abs(augmented[candidateRow, pivotIndex]);
+                if (candidateMagnitude > pivotMagnitude)
+                {
+                    pivotMagnitude = candidateMagnitude;
+                    pivotRow = candidateRow;
+                }
+            }
+
+            if (pivotMagnitude < 1e-9)
+            {
+                return false;
+            }
+
+            if (pivotRow != pivotIndex)
+            {
+                for (var column = pivotIndex; column < 4; column++)
+                {
+                    (augmented[pivotIndex, column], augmented[pivotRow, column]) = (augmented[pivotRow, column], augmented[pivotIndex, column]);
+                }
+            }
+
+            var pivot = augmented[pivotIndex, pivotIndex];
+            for (var column = pivotIndex; column < 4; column++)
+            {
+                augmented[pivotIndex, column] /= pivot;
+            }
+
+            for (var row = 0; row < 3; row++)
+            {
+                if (row == pivotIndex)
+                {
+                    continue;
+                }
+
+                var factor = augmented[row, pivotIndex];
+                if (Math.Abs(factor) < 1e-12)
+                {
+                    continue;
+                }
+
+                for (var column = pivotIndex; column < 4; column++)
+                {
+                    augmented[row, column] -= factor * augmented[pivotIndex, column];
+                }
+            }
+        }
+
+        solution[0] = augmented[0, 3];
+        solution[1] = augmented[1, 3];
+        solution[2] = augmented[2, 3];
+        return solution.All(value => double.IsFinite(value));
+    }
+
+    private static DateTime MaxDateTime(DateTime left, DateTime right)
+        => left >= right ? left : right;
+
+    private static DateTime MinDateTime(DateTime left, DateTime right)
+        => left <= right ? left : right;
 
     private async Task<(DateTime? MinUtc, DateTime? MaxUtc)> GetTimeDomainUtcForSourcesAsync(
         IEnumerable<CuratedNodeSource> sources,
@@ -4726,6 +7633,17 @@ public class NodeAnalyticsPreviewService
         return ordered[lowerIndex] + (ordered[upperIndex] - ordered[lowerIndex]) * weight;
     }
 
+    private static double GetMinimumSafePowerRatioDenominator(IReadOnlyList<double> values)
+    {
+        if (values.Count == 0)
+        {
+            return 0.000001d;
+        }
+
+        var maxMagnitude = values.Max(value => Math.Abs(value));
+        return Math.Max(0.000001d, maxMagnitude * 0.000001d);
+    }
+
     private static double StandardDeviation(IReadOnlyList<double> values)
     {
         if (values.Count == 0)
@@ -5139,6 +8057,16 @@ public class NodeAnalyticsPreviewService
         return rawValue * source.PowerToKilowattFactor;
     }
 
+    private static string? ResolveImplicitPowerUnit(FacilityDataBindingRegistry.BindingRecord binding)
+    {
+        if (!string.IsNullOrWhiteSpace(binding.Unit))
+        {
+            return binding.Unit;
+        }
+
+        return binding.UsesFixedCsvSeriesFormat ? null : "W";
+    }
+
     private static double ResolvePowerToKilowattFactor(string? rawUnit)
     {
         return rawUnit?.Trim().ToLowerInvariant() switch
@@ -5146,6 +8074,18 @@ public class NodeAnalyticsPreviewService
             "w" => 0.001,
             "kw" => 1.0,
             "mw" => 1000.0,
+            _ => 1.0,
+        };
+    }
+
+    private static double ResolveEnergyToKilowattHourFactor(string? rawUnit)
+    {
+        return rawUnit?.Trim().ToLowerInvariant() switch
+        {
+            "wh" => 0.001,
+            "kwh" => 1.0,
+            "mwh" => 1000.0,
+            "gwh" => 1000000.0,
             _ => 1.0,
         };
     }

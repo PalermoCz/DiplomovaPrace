@@ -1,5 +1,6 @@
 ﻿@page "/"
 @page "/facility"
+@using System.Globalization
 @using Microsoft.AspNetCore.Components.Forms
 @using DiplomovaPrace.Services
 @using DiplomovaPrace.Persistence.Schematic
@@ -343,6 +344,23 @@
                                     <input class="form-control form-control-sm" @bind="_editorZoneInput" maxlength="100" placeholder="optional" />
                                 </div>
                             </div>
+                            @if (ShouldShowEditorFloorAreaField)
+                            {
+                                <div class="ep-field">
+                                    <label>Floor area [m²]</label>
+                                    <input class="form-control form-control-sm"
+                                           @bind="_editorFloorAreaInput"
+                                           @bind:event="oninput"
+                                           inputmode="decimal"
+                                           maxlength="32"
+                                           placeholder="optional, > 0" />
+                                    <div class="ep-hint">Explicit area metadata for EUI. Leave empty or enter a value greater than 0. Decimal values are allowed.</div>
+                                    @if (!string.IsNullOrWhiteSpace(_editorFloorAreaValidationMessage))
+                                    {
+                                        <div class="text-danger small mt-1">@_editorFloorAreaValidationMessage</div>
+                                    }
+                                </div>
+                            }
                             @if (!string.IsNullOrWhiteSpace(_selectedFacilityNode!.MeterUrn))
                             {
                                 <div class="ep-field">
@@ -1757,6 +1775,400 @@
                             {
                                 <div class="alert alert-secondary py-2 mb-0 border-0">@(_selectionSignalAnalyticsResult?.Message ?? ActiveSelectionSignalAvailability.AvailabilityMessage)</div>
                             }
+
+                            <div class="mt-3">
+                                @{ var weatherAwareBaseline = SelectionWeatherAwareBaseline; }
+
+                                <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-2">
+                                    <div>
+                                        <h6>Deviation / Baseline Detail</h6>
+                                        <div class="small text-muted">Daily weather-aware baseline over daily energy and facility weather Ta for the active exact signal.</div>
+                                    </div>
+
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <span class="badge @(weatherAwareBaseline.IsAvailable ? GetDeviationBadgeClass(weatherAwareBaseline.Severity) : "bg-light text-secondary border")">
+                                            @(weatherAwareBaseline.IsAvailable ? GetDeviationBadgeText(weatherAwareBaseline.Severity) : "not evaluated")
+                                        </span>
+                                        <span class="badge bg-light text-secondary border">Signal: @ActiveSelectionSignalAvailability.ExactSignalCode.Value</span>
+                                        @if (weatherAwareBaseline.PredictionDayCount > 0)
+                                        {
+                                            <span class="badge bg-light text-secondary border">Days: @weatherAwareBaseline.PredictionDayCount</span>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(weatherAwareBaseline.WeatherNodeKey))
+                                        {
+                                            <span class="badge bg-light text-secondary border">Weather: Ta</span>
+                                        }
+                                    </div>
+                                </div>
+
+                                @if (!weatherAwareBaseline.IsApplicable)
+                                {
+                                    <div class="analytics-sparse-card">
+                                        <div class="analytics-sparse-title">Energy or power signal required</div>
+                                        <div class="analytics-sparse-copy">@weatherAwareBaseline.Summary</div>
+                                    </div>
+                                }
+                                else if (!weatherAwareBaseline.IsAvailable)
+                                {
+                                    <div class="analytics-sparse-card analytics-sparse-card-emphasis">
+                                        <div class="analytics-sparse-title">Baseline unavailable</div>
+                                        <div class="analytics-sparse-copy">@weatherAwareBaseline.Summary</div>
+                                        @if (!string.IsNullOrWhiteSpace(weatherAwareBaseline.Message))
+                                        {
+                                            <div class="analytics-sparse-meta">@weatherAwareBaseline.Message</div>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(weatherAwareBaseline.EvaluationBasis))
+                                        {
+                                            <div class="analytics-sparse-meta">@weatherAwareBaseline.EvaluationBasis</div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="small text-muted mb-2">@weatherAwareBaseline.Summary</div>
+                                    @if (!string.IsNullOrWhiteSpace(weatherAwareBaseline.EvaluationBasis))
+                                    {
+                                        <div class="small text-muted mb-3">@weatherAwareBaseline.EvaluationBasis</div>
+                                    }
+
+                                    <div class="micro-grid mb-3">
+                                        <div class="micro-kpi"><div class="metric-caption">Actual</div><div class="fw-semibold">@FormatSelectionBaselineValue(weatherAwareBaseline.ActualValue, weatherAwareBaseline.Unit)</div></div>
+                                        <div class="micro-kpi"><div class="metric-caption">Baseline expected</div><div class="fw-semibold">@FormatSelectionBaselineValue(weatherAwareBaseline.BaselineExpectedValue, weatherAwareBaseline.Unit)</div></div>
+                                        <div class="micro-kpi"><div class="metric-caption">Delta abs</div><div class="fw-semibold">@FormatSelectionBaselineSignedValue(weatherAwareBaseline.DeltaAbsolute, weatherAwareBaseline.Unit)</div></div>
+                                        <div class="micro-kpi"><div class="metric-caption">Delta %</div><div class="fw-semibold">@FormatSelectionBaselinePercent(weatherAwareBaseline.DeltaPercent)</div></div>
+                                    </div>
+
+                                    <div class="micro-grid">
+                                        <div class="micro-kpi"><div class="metric-caption">CV(RMSE)</div><div class="fw-semibold">@FormatSelectionBaselinePercent(weatherAwareBaseline.CvRmsePercent)</div></div>
+                                        <div class="micro-kpi"><div class="metric-caption">NMBE</div><div class="fw-semibold">@FormatSelectionBaselinePercent(weatherAwareBaseline.NmbePercent)</div></div>
+                                        <div class="micro-kpi"><div class="metric-caption">Fit days</div><div class="fw-semibold">@weatherAwareBaseline.FitDayCount.ToString("N0")</div></div>
+                                        <div class="micro-kpi"><div class="metric-caption">Scope nodes</div><div class="fw-semibold">@weatherAwareBaseline.ContributingNodeCount.ToString("N0")</div></div>
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="mt-3">
+                                @{ var eui = SelectionEui; }
+
+                                <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-2">
+                                    <div>
+                                        <h6>EUI</h6>
+                                        <div class="small text-muted">EUI = energy / floor area. This MVP reports period EUI over the selected interval and requires explicit floor area metadata on an area node.</div>
+                                    </div>
+
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <span class="badge @(eui.IsAvailable ? "bg-light text-success border" : "bg-light text-secondary border")">
+                                            @(eui.IsAvailable ? "available" : "unavailable")
+                                        </span>
+                                        <span class="badge bg-light text-secondary border">Signal: @ActiveSelectionSignalAvailability.ExactSignalCode.Value</span>
+                                        @if (eui.FloorAreaM2.HasValue)
+                                        {
+                                            <span class="badge bg-light text-secondary border">Floor area: @FormatSelectionFloorAreaValue(eui.FloorAreaM2)</span>
+                                        }
+                                    </div>
+                                </div>
+
+                                @if (!eui.IsApplicable)
+                                {
+                                    <div class="analytics-sparse-card">
+                                        <div class="analytics-sparse-title">Energy or power signal required</div>
+                                        <div class="analytics-sparse-copy">@eui.Summary</div>
+                                    </div>
+                                }
+                                else if (!eui.IsAvailable)
+                                {
+                                    <div class="analytics-sparse-card analytics-sparse-card-emphasis">
+                                        <div class="analytics-sparse-title">EUI unavailable</div>
+                                        <div class="analytics-sparse-copy">@eui.Summary</div>
+                                        @if (!string.IsNullOrWhiteSpace(eui.StateReason))
+                                        {
+                                            <div class="analytics-sparse-meta">@eui.StateReason</div>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(eui.Message))
+                                        {
+                                            <div class="analytics-sparse-meta">@eui.Message</div>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(eui.EvaluationBasis))
+                                        {
+                                            <div class="analytics-sparse-meta">@eui.EvaluationBasis</div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="small text-muted mb-2">@eui.Summary</div>
+                                    @if (!string.IsNullOrWhiteSpace(eui.EvaluationBasis))
+                                    {
+                                        <div class="small text-muted mb-3">@eui.EvaluationBasis</div>
+                                    }
+
+                                    <div class="micro-grid mb-3">
+                                        <div class="micro-kpi"><div class="metric-caption">Energy</div><div class="fw-semibold">@FormatSelectionEnergyValue(eui.EnergyKwh)</div></div>
+                                        <div class="micro-kpi"><div class="metric-caption">Floor area</div><div class="fw-semibold">@FormatSelectionFloorAreaValue(eui.FloorAreaM2)</div></div>
+                                        <div class="micro-kpi"><div class="metric-caption">EUI</div><div class="fw-semibold">@FormatSelectionEuiValue(eui.EuiKwhPerM2)</div></div>
+                                    </div>
+
+                                    <div class="small text-muted">@eui.Methodology</div>
+                                }
+                            </div>
+
+                            <div class="mt-3">
+                                @{ var temperatureLoadScatter = SelectionTemperatureLoadScatter; }
+
+                                <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-2">
+                                    <div>
+                                        <h6>Temperature vs Load Scatter</h6>
+                                        <div class="small text-muted">Weather-aware hourly scatter of facility Ta against the current active signal load basis.</div>
+                                    </div>
+
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <span class="badge @(temperatureLoadScatter.IsAvailable ? "bg-light text-success border" : "bg-light text-secondary border")">
+                                            @(temperatureLoadScatter.IsAvailable ? "available" : "unavailable")
+                                        </span>
+                                        <span class="badge bg-light text-secondary border">Signal: @ActiveSelectionSignalAvailability.ExactSignalCode.Value</span>
+                                        @if (temperatureLoadScatter.PointCount > 0)
+                                        {
+                                            <span class="badge bg-light text-secondary border">Points: @temperatureLoadScatter.PointCount</span>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(temperatureLoadScatter.WeatherNodeKey))
+                                        {
+                                            <span class="badge bg-light text-secondary border">Weather: Ta</span>
+                                        }
+                                    </div>
+                                </div>
+
+                                @if (!temperatureLoadScatter.IsApplicable)
+                                {
+                                    <div class="analytics-sparse-card">
+                                        <div class="analytics-sparse-title">Energy or power signal required</div>
+                                        <div class="analytics-sparse-copy">@temperatureLoadScatter.Summary</div>
+                                    </div>
+                                }
+                                else if (!temperatureLoadScatter.IsAvailable)
+                                {
+                                    <div class="analytics-sparse-card analytics-sparse-card-emphasis">
+                                        <div class="analytics-sparse-title">Scatter unavailable</div>
+                                        <div class="analytics-sparse-copy">@temperatureLoadScatter.Summary</div>
+                                        @if (!string.IsNullOrWhiteSpace(temperatureLoadScatter.Message))
+                                        {
+                                            <div class="analytics-sparse-meta">@temperatureLoadScatter.Message</div>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(temperatureLoadScatter.EvaluationBasis))
+                                        {
+                                            <div class="analytics-sparse-meta">@temperatureLoadScatter.EvaluationBasis</div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="small text-muted mb-2">@temperatureLoadScatter.Summary</div>
+                                    <div class="small text-muted mb-2">Granularity: @temperatureLoadScatter.GranularityLabel. Y basis: @temperatureLoadScatter.LoadBasisLabel. Signal: @temperatureLoadScatter.SignalCode. This is a weather-aware exploratory scatter, not a final baseline fit.</div>
+                                    @if (!string.IsNullOrWhiteSpace(temperatureLoadScatter.EvaluationBasis))
+                                    {
+                                        <div class="small text-muted mb-3">@temperatureLoadScatter.EvaluationBasis</div>
+                                    }
+                                    <FacilityTemperatureLoadScatterPanel Data="@temperatureLoadScatter" />
+                                    <div class="small text-muted mt-2">@temperatureLoadScatter.Methodology</div>
+                                }
+                            </div>
+
+                            <div class="mt-3">
+                                @{ var powerAnalytics = SelectionPowerAnalytics; }
+
+                                <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-2">
+                                    <div>
+                                        <h6>Power Analytics</h6>
+                                        <div class="small text-muted">Near-base, near-peak, peak-base ratio, on-hour duration, after-hours load, Base vs Peak Over Time, and load duration curve for the active exact power signal.</div>
+                                    </div>
+
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <span class="badge @GetPerformanceKpiStateBadgeClass(powerAnalytics.LoadDurationCurve.State)">@GetPerformanceKpiStateText(powerAnalytics.LoadDurationCurve.State)</span>
+                                        <span class="badge bg-light text-secondary border">Signal: @ActiveSelectionSignalAvailability.ExactSignalCode.Value</span>
+                                        @if (powerAnalytics.IsMixedSignAggregateUnavailable)
+                                        {
+                                            <span class="badge bg-info-subtle text-info-emphasis border">Mixed-sign aggregate P</span>
+                                        }
+                                        @if (powerAnalytics.PointCount > 0)
+                                        {
+                                            <span class="badge bg-light text-secondary border">Points: @powerAnalytics.PointCount</span>
+                                        }
+                                    </div>
+                                </div>
+
+                                @if (!powerAnalytics.IsPowerSignal)
+                                {
+                                    <div class="analytics-sparse-card">
+                                        <div class="analytics-sparse-title">Power family required</div>
+                                        <div class="analytics-sparse-copy">@powerAnalytics.Summary</div>
+                                    </div>
+                                }
+                                else if (!powerAnalytics.IsAvailable)
+                                {
+                                    <div class="analytics-sparse-card analytics-sparse-card-emphasis">
+                                        <div class="analytics-sparse-title">Power Analytics unavailable</div>
+                                        <div class="analytics-sparse-copy">@powerAnalytics.Summary</div>
+                                        @if (!string.IsNullOrWhiteSpace(powerAnalytics.EvaluationBasis))
+                                        {
+                                            <div class="analytics-sparse-meta">@powerAnalytics.EvaluationBasis</div>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(powerAnalytics.Methodology))
+                                        {
+                                            <div class="analytics-sparse-meta mt-2">@powerAnalytics.Methodology</div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="small text-muted mb-2">@powerAnalytics.Summary</div>
+                                    <div class="small text-muted mb-3">@powerAnalytics.EvaluationBasis</div>
+                                    <div class="small text-muted mb-3">@powerAnalytics.DistinctionNote</div>
+
+                                    @if (powerAnalytics.OnHourDuration.ThresholdValue.HasValue)
+                                    {
+                                        <div class="d-flex flex-wrap gap-2 mb-3">
+                                            <span class="badge bg-light text-secondary border">High-load threshold: @FormatSelectionPowerThresholdValue(powerAnalytics.OnHourDuration.ThresholdValue, powerAnalytics.OnHourDuration.ThresholdUnit)</span>
+                                            <span class="badge bg-light text-secondary border">On-hour = all buckets at or above threshold</span>
+                                            <span class="badge bg-light text-secondary border">After-hours = weekday outside 07:00-19:00 UTC + weekends</span>
+                                        </div>
+                                    }
+
+                                    <div class="performance-kpi-grid mb-3">
+                                        <div class="analytics-sparse-card analytics-sparse-card-emphasis h-100">
+                                            <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                                                <div class="performance-kpi-label mb-0">Near-base</div>
+                                                <span class="badge @GetPerformanceKpiStateBadgeClass(powerAnalytics.NearBase.State)">@GetPerformanceKpiStateText(powerAnalytics.NearBase.State)</span>
+                                            </div>
+                                            <div class="performance-kpi-value">@FormatSelectionPowerMetricValue(powerAnalytics.NearBase)</div>
+                                            <div class="analytics-sparse-copy">@powerAnalytics.NearBase.Summary</div>
+                                            @if (!string.IsNullOrWhiteSpace(powerAnalytics.NearBase.StateReason))
+                                            {
+                                                <div class="analytics-sparse-meta">@powerAnalytics.NearBase.StateReason</div>
+                                            }
+                                        </div>
+
+                                        <div class="analytics-sparse-card analytics-sparse-card-emphasis h-100">
+                                            <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                                                <div class="performance-kpi-label mb-0">Near-peak</div>
+                                                <span class="badge @GetPerformanceKpiStateBadgeClass(powerAnalytics.NearPeak.State)">@GetPerformanceKpiStateText(powerAnalytics.NearPeak.State)</span>
+                                            </div>
+                                            <div class="performance-kpi-value">@FormatSelectionPowerMetricValue(powerAnalytics.NearPeak)</div>
+                                            <div class="analytics-sparse-copy">@powerAnalytics.NearPeak.Summary</div>
+                                            @if (!string.IsNullOrWhiteSpace(powerAnalytics.NearPeak.StateReason))
+                                            {
+                                                <div class="analytics-sparse-meta">@powerAnalytics.NearPeak.StateReason</div>
+                                            }
+                                        </div>
+
+                                        <div class="analytics-sparse-card analytics-sparse-card-emphasis h-100">
+                                            <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                                                <div class="performance-kpi-label mb-0">Peak-base ratio</div>
+                                                <span class="badge @GetPerformanceKpiStateBadgeClass(powerAnalytics.PeakBaseRatio.State)">@GetPerformanceKpiStateText(powerAnalytics.PeakBaseRatio.State)</span>
+                                            </div>
+                                            <div class="performance-kpi-value">@FormatSelectionPowerMetricValue(powerAnalytics.PeakBaseRatio)</div>
+                                            <div class="analytics-sparse-copy">@powerAnalytics.PeakBaseRatio.Summary</div>
+                                            @if (!string.IsNullOrWhiteSpace(powerAnalytics.PeakBaseRatio.StateReason))
+                                            {
+                                                <div class="analytics-sparse-meta">@powerAnalytics.PeakBaseRatio.StateReason</div>
+                                            }
+                                        </div>
+
+                                        <div class="analytics-sparse-card analytics-sparse-card-emphasis h-100">
+                                            <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                                                <div class="performance-kpi-label mb-0">On-hour duration</div>
+                                                <span class="badge @GetPerformanceKpiStateBadgeClass(powerAnalytics.OnHourDuration.State)">@GetPerformanceKpiStateText(powerAnalytics.OnHourDuration.State)</span>
+                                            </div>
+                                            <div class="performance-kpi-value">@FormatSelectionPowerDurationValue(powerAnalytics.OnHourDuration)</div>
+                                            <div class="analytics-sparse-copy">@powerAnalytics.OnHourDuration.Summary</div>
+                                            @if (powerAnalytics.OnHourDuration.ShareRatio.HasValue)
+                                            {
+                                                <div class="analytics-sparse-meta">Share of interval: @FormatRatioPercent(powerAnalytics.OnHourDuration.ShareRatio, "N1")</div>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(powerAnalytics.OnHourDuration.StateReason))
+                                            {
+                                                <div class="analytics-sparse-meta">@powerAnalytics.OnHourDuration.StateReason</div>
+                                            }
+                                        </div>
+
+                                        <div class="analytics-sparse-card analytics-sparse-card-emphasis h-100">
+                                            <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                                                <div class="performance-kpi-label mb-0">After-hours Load</div>
+                                                <span class="badge @GetPerformanceKpiStateBadgeClass(powerAnalytics.AfterHoursLoad.State)">@GetPerformanceKpiStateText(powerAnalytics.AfterHoursLoad.State)</span>
+                                            </div>
+                                            <div class="performance-kpi-value">@FormatSelectionPowerDurationValue(powerAnalytics.AfterHoursLoad)</div>
+                                            <div class="analytics-sparse-copy">@powerAnalytics.AfterHoursLoad.Summary</div>
+                                            @if (powerAnalytics.AfterHoursLoad.ShareRatio.HasValue)
+                                            {
+                                                <div class="analytics-sparse-meta">Share of after-hours window: @FormatRatioPercent(powerAnalytics.AfterHoursLoad.ShareRatio, "N1")</div>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(powerAnalytics.AfterHoursLoad.StateReason))
+                                            {
+                                                <div class="analytics-sparse-meta">@powerAnalytics.AfterHoursLoad.StateReason</div>
+                                            }
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-4">
+                                        <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-2">
+                                            <div>
+                                                <h6>Base vs Peak Over Time</h6>
+                                                <div class="small text-muted">Base over time = daily 5th percentile of the active power series. Peak over time = daily 95th percentile of the same series. This chart requires sub-daily power samples.</div>
+                                            </div>
+
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <span class="badge @GetPerformanceKpiStateBadgeClass(powerAnalytics.BasePeakOverTime.State)">@GetPerformanceKpiStateText(powerAnalytics.BasePeakOverTime.State)</span>
+                                                @if (!string.IsNullOrWhiteSpace(powerAnalytics.BasePeakOverTime.SignalCode))
+                                                {
+                                                    <span class="badge bg-light text-secondary border">Signal: @powerAnalytics.BasePeakOverTime.SignalCode</span>
+                                                }
+                                                @if (powerAnalytics.BasePeakOverTime.UsableDayCount > 0)
+                                                {
+                                                    <span class="badge bg-light text-secondary border">Usable days: @powerAnalytics.BasePeakOverTime.UsableDayCount</span>
+                                                }
+                                            </div>
+                                        </div>
+
+                                        @if (!powerAnalytics.BasePeakOverTime.IsAvailable)
+                                        {
+                                            <div class="analytics-sparse-card">
+                                                <div class="analytics-sparse-title">Base vs Peak Over Time unavailable</div>
+                                                <div class="analytics-sparse-copy">@powerAnalytics.BasePeakOverTime.Summary</div>
+                                                @if (!string.IsNullOrWhiteSpace(powerAnalytics.BasePeakOverTime.StateReason))
+                                                {
+                                                    <div class="analytics-sparse-meta">@powerAnalytics.BasePeakOverTime.StateReason</div>
+                                                }
+                                                @if (!string.IsNullOrWhiteSpace(powerAnalytics.BasePeakOverTime.EvaluationBasis))
+                                                {
+                                                    <div class="analytics-sparse-meta mt-2">@powerAnalytics.BasePeakOverTime.EvaluationBasis</div>
+                                                }
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="small text-muted mb-2">@powerAnalytics.BasePeakOverTime.Summary</div>
+                                            <div class="small text-muted mb-2">@powerAnalytics.BasePeakOverTime.EvaluationBasis</div>
+                                            @if (!string.IsNullOrWhiteSpace(powerAnalytics.BasePeakOverTime.StateReason))
+                                            {
+                                                <div class="small text-muted mb-2">@powerAnalytics.BasePeakOverTime.StateReason</div>
+                                            }
+                                            <FacilityCompareTimeSeriesPanel Data="@powerAnalytics.BasePeakOverTime.Chart" />
+                                            <div class="small text-muted mt-2">@powerAnalytics.BasePeakOverTime.Methodology</div>
+                                        }
+                                    </div>
+
+                                    <div class="d-flex flex-wrap gap-2 mb-2">
+                                        <span class="badge @GetPerformanceKpiStateBadgeClass(powerAnalytics.LoadDurationCurve.State)">@GetPerformanceKpiStateText(powerAnalytics.LoadDurationCurve.State)</span>
+                                        <span class="badge bg-light text-secondary border">Unit: @powerAnalytics.LoadDurationCurve.Unit</span>
+                                    </div>
+
+                                    @if (!string.IsNullOrWhiteSpace(powerAnalytics.LoadDurationCurve.StateReason))
+                                    {
+                                        <div class="small text-muted mb-2">@powerAnalytics.LoadDurationCurve.StateReason</div>
+                                    }
+                                    <div class="small text-muted mb-2">@powerAnalytics.LoadDurationCurve.Summary</div>
+                                    <FacilityLoadDurationCurvePanel Data="@powerAnalytics.LoadDurationCurve" />
+                                    <div class="small text-muted mt-2">@powerAnalytics.Methodology</div>
+                                }
+                            </div>
                         }
                     }
                 </div>
@@ -1884,29 +2296,7 @@
                                 @if (_isCuratedNode)
                                 {
                                     <h6>Deviation / Baseline Detail</h6>
-                                    @if (_isPreviewLoading)
-                                    {
-                                        <div class="text-muted d-flex align-items-center">
-                                            <span class="spinner-border spinner-border-sm me-2" role="status"></span> Evaluating baseline...
-                                        </div>
-                                    }
-                                    else if (_curatedDeviationData?.IsAvailable == true)
-                                    {
-                                        <div class="d-flex align-items-center gap-2 mb-2">
-                                            <span class="badge @GetDeviationBadgeClass(_curatedDeviationData.Severity)">@GetDeviationBadgeText(_curatedDeviationData.Severity)</span>
-                                            <span class="small text-muted">Reference intervals: @_curatedDeviationData.ReferenceIntervalsUsed</span>
-                                        </div>
-                                        <div class="micro-grid">
-                                            <div class="micro-kpi"><div class="metric-caption">Current</div><div class="fw-semibold">@(_curatedDeviationData.CurrentValue?.ToString("N1") ?? "N/A")</div></div>
-                                            <div class="micro-kpi"><div class="metric-caption">Baseline</div><div class="fw-semibold">@(_curatedDeviationData.BaselineValue?.ToString("N1") ?? "N/A")</div></div>
-                                            <div class="micro-kpi"><div class="metric-caption">Delta abs</div><div class="fw-semibold">@FormatSigned(_curatedDeviationData.DeltaAbsolute, "N1")</div></div>
-                                            <div class="micro-kpi"><div class="metric-caption">Delta %</div><div class="fw-semibold">@FormatSigned(_curatedDeviationData.DeltaPercent, "N1") %</div></div>
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <div class="small text-muted">@(_curatedDeviationData?.Message ?? "Baseline is unavailable for the focused node.")</div>
-                                    }
+                                    <div class="small text-muted">Weather-aware baseline detail now lives in Overview &gt; Signal Analytics and follows the active exact signal plus current selection scope instead of the old focus-only comparable-window heuristic.</div>
                                 }
                                 else
                                 {
@@ -2469,6 +2859,7 @@
     ];
     private static readonly SemanticSelectionMutationMode[] SemanticSelectionMutationModeOptions = Enum.GetValues<SemanticSelectionMutationMode>();
     private static readonly IReadOnlyList<FacilitySignalCode> ImportExactSignalCodeOptions = FacilitySignalTaxonomy.GetKnownCodes().ToList();
+
     private static readonly IReadOnlyList<string> BuiltInNodeTypeSuggestions = FacilityBuiltInNodeTypes.GetKnownNodeTypes();
 
     private FacilitySchematicV2? _canvasV2;
@@ -2521,6 +2912,8 @@
     private string _editorLabelInput = string.Empty;
     private string _editorNodeTypeInput = string.Empty;
     private string _editorZoneInput = string.Empty;
+    private string _editorFloorAreaInput = string.Empty;
+    private string? _editorFloorAreaValidationMessage;
     private string _editorTagsInput = string.Empty;
     private readonly HashSet<string> _editorTagsSelected = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _editorReservedTagsHidden = new(StringComparer.OrdinalIgnoreCase);
@@ -2597,6 +2990,7 @@
     private bool CanEditFocusedNode => _selectedFacilityNode is not null && !FacilityNodeSemantics.IsWeatherContextNode(_selectedFacilityNode.NodeKey);
     private bool CanRemoveFocusedLeafNode => _selectedFacilityNode is not null && CanEditFocusedNode && !HasChildren(_selectedFacilityNode.NodeKey);
     private bool IsEditorMultiSelectActive => _isEditModeOpen && _selectionSet.Count > 1;
+    private bool ShouldShowEditorFloorAreaField => IsAreaNodeType(ResolveEffectiveEditorNodeTypeForDraft());
     
     // UI State
     private bool _isSchematicFullscreen = false;
@@ -2799,13 +3193,104 @@
             activeSignalCode,
             interval.From,
             interval.To,
-            _selectionSignalTimeSeriesMode);
+            _selectionSignalTimeSeriesMode,
+            _selectedFacilityNode?.NodeKey);
     }
 
     private static string FormatSelectionSignalStatValue(double value, string unit)
         => string.IsNullOrWhiteSpace(unit)
             ? value.ToString("N2")
             : $"{value:N2} {unit}";
+
+    private static string FormatSelectionPowerMetricValue(SelectionPowerMetricSummary metric)
+    {
+        if (!metric.Value.HasValue)
+        {
+            return "N/A";
+        }
+
+        return metric.Unit switch
+        {
+            "x" => $"{metric.Value.Value:N2}x",
+            _ when string.IsNullOrWhiteSpace(metric.Unit) => metric.Value.Value.ToString("N2"),
+            _ => $"{metric.Value.Value:N2} {metric.Unit}"
+        };
+    }
+
+    private static string FormatSelectionPowerDurationValue(SelectionPowerDurationSummary metric)
+    {
+        if (!metric.DurationHours.HasValue)
+        {
+            return "N/A";
+        }
+
+        var durationHours = metric.DurationHours.Value;
+        return durationHours >= 24d
+            ? $"{durationHours / 24d:N1} d"
+            : $"{durationHours:N1} h";
+    }
+
+    private static string FormatSelectionPowerThresholdValue(double? value, string unit)
+    {
+        if (!value.HasValue)
+        {
+            return "N/A";
+        }
+
+        return string.IsNullOrWhiteSpace(unit)
+            ? value.Value.ToString("N2")
+            : $"{value.Value:N2} {unit}";
+    }
+
+    private static string FormatSelectionBaselineValue(double? value, string unit)
+    {
+        if (!value.HasValue)
+        {
+            return "N/A";
+        }
+
+        return string.IsNullOrWhiteSpace(unit)
+            ? value.Value.ToString("N2")
+            : $"{value.Value:N2} {unit}";
+    }
+
+    private static string FormatSelectionBaselineSignedValue(double? value, string unit)
+    {
+        if (!value.HasValue)
+        {
+            return "N/A";
+        }
+
+        var number = FormatSigned(value, "N2");
+        return string.IsNullOrWhiteSpace(unit)
+            ? number
+            : $"{number} {unit}";
+    }
+
+    private static string FormatSelectionBaselinePercent(double? value)
+    {
+        if (!value.HasValue)
+        {
+            return "N/A";
+        }
+
+        return $"{FormatSigned(value, "N2")} %";
+    }
+
+    private static string FormatSelectionEnergyValue(double? value)
+        => value.HasValue
+            ? $"{value.Value:N2} kWh"
+            : "N/A";
+
+    private static string FormatSelectionFloorAreaValue(double? value)
+        => value.HasValue
+            ? $"{value.Value:N2} m²"
+            : "N/A";
+
+    private static string FormatSelectionEuiValue(double? value)
+        => value.HasValue
+            ? $"{value.Value:N3} kWh/m²"
+            : "N/A";
 
     private static string FormatSelectionSignalCoverage(SelectionSignalBasicStats stats)
     {
@@ -2875,6 +3360,10 @@
     private CuratedSelectionLoadFactorSummary SelectionLoadFactor => _selectionAggregateOverview?.LoadFactor ?? new CuratedSelectionLoadFactorSummary();
     private CuratedSelectionAfterHoursLoadSummary SelectionAfterHoursLoad => _selectionAggregateOverview?.AfterHoursLoad ?? new CuratedSelectionAfterHoursLoadSummary();
     private CuratedSelectionLoadDurationCurveSummary SelectionLoadDurationCurve => _selectionAggregateOverview?.LoadDurationCurve ?? new CuratedSelectionLoadDurationCurveSummary();
+    private SelectionPowerAnalyticsResult SelectionPowerAnalytics => _selectionSignalAnalyticsResult?.PowerAnalytics ?? new SelectionPowerAnalyticsResult();
+    private SelectionEuiResult SelectionEui => _selectionSignalAnalyticsResult?.Eui ?? new SelectionEuiResult();
+    private SelectionWeatherAwareBaselineResult SelectionWeatherAwareBaseline => _selectionSignalAnalyticsResult?.WeatherAwareBaseline ?? new SelectionWeatherAwareBaselineResult();
+    private SelectionTemperatureLoadScatterResult SelectionTemperatureLoadScatter => _selectionSignalAnalyticsResult?.TemperatureLoadScatter ?? new SelectionTemperatureLoadScatterResult();
     private CuratedSelectionOperatingRegimeSummary SelectionOperatingRegime => _selectionAggregateOverview?.OperatingRegime ?? new CuratedSelectionOperatingRegimeSummary();
     private CuratedSelectionEmsEvaluationSummary SelectionEmsEvaluation => _selectionAggregateOverview?.EmsEvaluation ?? new CuratedSelectionEmsEvaluationSummary();
     private IReadOnlyList<CuratedSelectionContributionItem> SelectionBreakdownItems => _selectionAggregateOverview?.Breakdown ?? [];
@@ -3501,6 +3990,8 @@
         {
             NodeKey = nodeKey,
             Label = label,
+            NodeType = nodeType,
+            Zone = zone,
             StylePresetKey = FacilityNodeStyleSystem.DefaultPresetKey,
             Tags = baselineTags,
             Note = null,
@@ -3745,6 +4236,8 @@
             _editorLabelInput = string.Empty;
             _editorNodeTypeInput = string.Empty;
             _editorZoneInput = string.Empty;
+            _editorFloorAreaInput = string.Empty;
+            _editorFloorAreaValidationMessage = null;
             _editorTagsInput = string.Empty;
             _editorTagsSelected.Clear();
             _editorReservedTagsHidden.Clear();
@@ -3762,6 +4255,8 @@
         _editorLabelInput = _selectedFacilityNode.Label ?? string.Empty;
         _editorNodeTypeInput = _selectedFacilityNode.NodeType ?? string.Empty;
         _editorZoneInput = _selectedFacilityNode.Zone ?? string.Empty;
+        _editorFloorAreaInput = string.Empty;
+        _editorFloorAreaValidationMessage = null;
         _reconnectParentNodeKeyInput = _selectedFacilityNode.ParentNodeKey ?? string.Empty;
         _reconnectParentSearchInput = string.Empty;
         _isReconnectParentPickerOpen = false;
@@ -3777,6 +4272,8 @@
 
             if (!string.IsNullOrWhiteSpace(nodeState.Zone))
                 _editorZoneInput = nodeState.Zone;
+
+            _editorFloorAreaInput = FormatFloorAreaInput(nodeState.FloorAreaM2);
 
             _editorTagsSelected.Clear();
             _editorReservedTagsHidden.Clear();
@@ -3800,6 +4297,8 @@
         _editorReservedTagsHidden.Clear();
         _editorTagSearchInput = string.Empty;
         _editorNoteInput = string.Empty;
+        _editorFloorAreaInput = string.Empty;
+        _editorFloorAreaValidationMessage = null;
         ResetImportDraft();
         RestoreFocusedNodeStyleDraft();
     }
@@ -3938,6 +4437,60 @@
     private void ApplyEditorNodeTypeSuggestion(string suggestion)
     {
         _editorNodeTypeInput = suggestion;
+    }
+
+    private string? ResolveEffectiveEditorNodeTypeForDraft(string? draftNodeType = null)
+    {
+        var normalizedDraft = NormalizeOptionalText(draftNodeType ?? _editorNodeTypeInput);
+        if (!string.IsNullOrWhiteSpace(normalizedDraft))
+        {
+            return normalizedDraft;
+        }
+
+        if (_selectedFacilityNode is not null && _editorNodeStatesByKey.TryGetValue(_selectedFacilityNode.NodeKey, out var existingState))
+        {
+            var stateNodeType = NormalizeOptionalText(existingState.NodeType);
+            if (!string.IsNullOrWhiteSpace(stateNodeType))
+            {
+                return stateNodeType;
+            }
+        }
+
+        return NormalizeOptionalText(_selectedFacilityNode?.NodeType);
+    }
+
+    private static bool IsAreaNodeType(string? nodeType)
+        => string.Equals(nodeType, FacilityBuiltInNodeTypes.AreaNodeType, StringComparison.OrdinalIgnoreCase);
+
+    private static string FormatFloorAreaInput(double? floorAreaM2)
+        => floorAreaM2.HasValue
+            ? floorAreaM2.Value.ToString("0.###", CultureInfo.InvariantCulture)
+            : string.Empty;
+
+    private double? TryParseEditorFloorArea(out string? validationMessage)
+    {
+        validationMessage = null;
+        var rawValue = _editorFloorAreaInput.Trim();
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return null;
+        }
+
+        var normalized = rawValue.Replace(',', '.');
+        if (!double.TryParse(normalized, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out var floorAreaM2)
+            || !double.IsFinite(floorAreaM2))
+        {
+            validationMessage = "Floor area must be a valid number greater than 0, or left empty.";
+            return null;
+        }
+
+        if (floorAreaM2 <= 0d)
+        {
+            validationMessage = "Floor area must be greater than 0, or left empty.";
+            return null;
+        }
+
+        return floorAreaM2;
     }
 
     private static string BuildBindingPreviewText(FacilityDataBindingRegistry.BindingRecord binding)
@@ -4265,6 +4818,23 @@
         var label = NormalizeOptionalText(_editorLabelInput) ?? _selectedFacilityNode.Label;
         var nodeType = NormalizeOptionalText(_editorNodeTypeInput);
         var zone = NormalizeOptionalText(_editorZoneInput);
+        var effectiveNodeType = ResolveEffectiveEditorNodeTypeForDraft(nodeType);
+        var shouldPersistFloorArea = IsAreaNodeType(effectiveNodeType);
+        double? floorAreaM2 = null;
+        _editorFloorAreaValidationMessage = null;
+        if (shouldPersistFloorArea)
+        {
+            string? floorAreaValidationMessage;
+            floorAreaM2 = TryParseEditorFloorArea(out floorAreaValidationMessage);
+            _editorFloorAreaValidationMessage = floorAreaValidationMessage;
+            if (floorAreaValidationMessage is not null)
+            {
+                _editorStatusMessage = floorAreaValidationMessage;
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+        }
+
         var tags = GetTagsForEditorSave();
         var note = NormalizeOptionalText(_editorNoteInput);
 
@@ -4276,6 +4846,7 @@
             Label = label,
             NodeType = nodeType,
             Zone = zone,
+            FloorAreaM2 = shouldPersistFloorArea ? floorAreaM2 : null,
             StylePresetKey = existingState?.StylePresetKey,
             Tags = tags,
             Note = note,
@@ -4331,6 +4902,9 @@
             _editorLabelInput = label;
         }
 
+        _editorFloorAreaInput = FormatFloorAreaInput(nextState.FloorAreaM2);
+        _editorFloorAreaValidationMessage = null;
+
         await ReloadData(preserveSelection: true, preferredFocusNodeKey: nodeKey);
         _editorStatusMessage = $"Node {nodeKey} was saved.";
         await InvokeAsync(StateHasChanged);
@@ -4367,6 +4941,7 @@
             Label = existingState?.Label,
             NodeType = existingState?.NodeType,
             Zone = existingState?.Zone,
+            FloorAreaM2 = existingState?.FloorAreaM2,
             StylePresetKey = existingState?.StylePresetKey,
             Tags = existingState?.Tags ?? [],
             Note = existingState?.Note,
@@ -4573,6 +5148,7 @@
         return !string.IsNullOrWhiteSpace(nodeState.Label)
             || !string.IsNullOrWhiteSpace(nodeState.NodeType)
             || !string.IsNullOrWhiteSpace(nodeState.Zone)
+            || nodeState.FloorAreaM2.HasValue
             || !string.IsNullOrWhiteSpace(nodeState.StylePresetKey)
             || nodeState.XHint.HasValue
             || nodeState.YHint.HasValue
@@ -4846,6 +5422,7 @@
             Label = existingState?.Label,
             NodeType = existingState?.NodeType,
             Zone = existingState?.Zone,
+            FloorAreaM2 = existingState?.FloorAreaM2,
             StylePresetKey = resolvedPresetKey,
             Tags = existingState?.Tags ?? [],
             Note = existingState?.Note,
@@ -5595,7 +6172,8 @@
                     ActiveSelectionSignalCode,
                     interval.From,
                     interval.To,
-                    _selectionSignalTimeSeriesMode);
+                    _selectionSignalTimeSeriesMode,
+                    _selectedFacilityNode?.NodeKey);
             }
 
             if (!skipPostRefresh && aggregateNodeKeys.Count > 0)
@@ -5831,6 +6409,7 @@
             Label = existing?.Label,
             NodeType = existing?.NodeType,
             Zone = existing?.Zone,
+            FloorAreaM2 = existing?.FloorAreaM2,
             StylePresetKey = existing?.StylePresetKey,
             Note = existing?.Note,
             Tags = existing?.Tags ?? [],
@@ -5896,6 +6475,7 @@
             Label = existing?.Label,
             NodeType = existing?.NodeType,
             Zone = existing?.Zone,
+            FloorAreaM2 = existing?.FloorAreaM2,
             StylePresetKey = existing?.StylePresetKey,
             Note = existing?.Note,
             Tags = existing?.Tags ?? [],
@@ -6012,7 +6592,7 @@
             {
                 NodeKey = layoutNode.NodeKey,
                 Label = existing?.Label, NodeType = existing?.NodeType,
-                Zone = existing?.Zone, StylePresetKey = existing?.StylePresetKey, Note = existing?.Note, Tags = existing?.Tags ?? [],
+                Zone = existing?.Zone, FloorAreaM2 = existing?.FloorAreaM2, StylePresetKey = existing?.StylePresetKey, Note = existing?.Note, Tags = existing?.Tags ?? [],
                 XHint = alignX ? Math.Round(alignValue, 1) : Math.Round(layoutNode.X, 1),
                 YHint = alignX ? Math.Round(layoutNode.Y, 1) : Math.Round(alignValue, 1),
             };
@@ -6047,7 +6627,7 @@
                 {
                     NodeKey = n.NodeKey,
                     Label = existing?.Label, NodeType = existing?.NodeType,
-                    Zone = existing?.Zone, StylePresetKey = existing?.StylePresetKey, Note = existing?.Note, Tags = existing?.Tags ?? [],
+                    Zone = existing?.Zone, FloorAreaM2 = existing?.FloorAreaM2, StylePresetKey = existing?.StylePresetKey, Note = existing?.Note, Tags = existing?.Tags ?? [],
                     XHint = Math.Round(SnapToEditorGrid(minX + step * i), 1),
                     YHint = Math.Round(n.Y, 1)
                 };
@@ -6066,7 +6646,7 @@
                 {
                     NodeKey = n.NodeKey,
                     Label = existing?.Label, NodeType = existing?.NodeType,
-                    Zone = existing?.Zone, StylePresetKey = existing?.StylePresetKey, Note = existing?.Note, Tags = existing?.Tags ?? [],
+                    Zone = existing?.Zone, FloorAreaM2 = existing?.FloorAreaM2, StylePresetKey = existing?.StylePresetKey, Note = existing?.Note, Tags = existing?.Tags ?? [],
                     XHint = Math.Round(n.X, 1),
                     YHint = Math.Round(SnapToEditorGrid(minY + step * i), 1)
                 };

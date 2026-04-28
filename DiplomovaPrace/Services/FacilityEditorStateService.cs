@@ -10,6 +10,7 @@ public sealed class FacilityNodeEditorState
     public string? Label { get; init; }
     public string? NodeType { get; init; }
     public string? Zone { get; init; }
+    public double? FloorAreaM2 { get; init; }
     public string? StylePresetKey { get; init; }
     public IReadOnlyList<string> Tags { get; init; } = [];
     public string? Note { get; init; }
@@ -111,7 +112,7 @@ public sealed class FacilityStructureEditResult
 
 public sealed class FacilityEditorStateService
 {
-    private const int CurrentSchemaVersion = 6;
+    private const int CurrentSchemaVersion = 7;
 
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly string _stateFilePath;
@@ -1209,6 +1210,7 @@ public sealed class FacilityEditorStateService
         return !string.IsNullOrWhiteSpace(nodeState.Label)
             || !string.IsNullOrWhiteSpace(nodeState.NodeType)
             || !string.IsNullOrWhiteSpace(nodeState.Zone)
+            || nodeState.FloorAreaM2.HasValue
             || !string.IsNullOrWhiteSpace(nodeState.StylePresetKey)
             || nodeState.XHint.HasValue
             || nodeState.YHint.HasValue
@@ -1295,6 +1297,7 @@ public sealed class FacilityEditorStateService
             Label = NormalizeOptionalText(nodeState.Label),
             NodeType = NormalizeOptionalText(nodeState.NodeType),
             Zone = NormalizeOptionalText(nodeState.Zone),
+            FloorAreaM2 = NormalizeFloorArea(nodeState.FloorAreaM2),
             StylePresetKey = NormalizeOptionalStylePresetKey(nodeState.StylePresetKey),
             Tags = NormalizeTags(nodeState.Tags),
             Note = NormalizeOptionalText(nodeState.Note),
@@ -1387,6 +1390,16 @@ public sealed class FacilityEditorStateService
     {
         var normalized = FacilityNodeStyleSystem.NormalizePresetKey(raw);
         return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
+    }
+
+    private static double? NormalizeFloorArea(double? floorAreaM2)
+    {
+        if (!floorAreaM2.HasValue || !double.IsFinite(floorAreaM2.Value))
+        {
+            return null;
+        }
+
+        return floorAreaM2.Value <= 0d ? null : floorAreaM2.Value;
     }
 
     private static string NormalizeStorageRelativePath(string? raw)

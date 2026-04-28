@@ -1,6 +1,387 @@
 # Worklog
 
 ### Date
+[2026-04-28]
+
+### Task
+Implementační krok 10: floor area validation + EUI unit/scaling hardening
+
+### What changed
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- Hardened the inline `Floor area [m²]` editor contract so the field now accepts only:
+  - empty value,
+  - or a finite numeric value strictly `> 0`.
+- Updated the editor hint, placeholder, and validation messages to match the business rule directly.
+- Surfaced `EUI.StateReason` in the unavailable card so the UI now shows the concrete reason instead of only the generic unavailable summary.
+
+**`DiplomovaPrace/Services/FacilityEditorStateService.cs`:**
+- Tightened persisted floor-area normalization from `finite and >= 0` to `finite and > 0`.
+- Existing persisted `0 m²` values are now normalized away instead of surviving as misleading explicit area metadata.
+
+**`DiplomovaPrace/Services/NodeAnalyticsPreviewService.cs`:**
+- Kept the EUI formula unchanged as `EUI = Energy / FloorArea` and kept period-EUI semantics over the selected interval.
+- Hardened EUI unavailable-state reasons so the result now differentiates more explicitly between:
+  - `missing floor area`,
+  - `invalid floor area`,
+  - `missing usable energy basis`,
+  - `unsafe integration`,
+  - plus the already explicit multi-candidate area-scope case.
+- Fixed the root-cause scaling issue for power-family seeded bindings:
+  - the seeded facility dataset leaves `binding.Unit` empty for `P/P1/P2/P3`,
+  - but the actual source values are watt-scale,
+  - so blank-unit seeded power bindings are now interpreted as `W` before `P -> kWh` integration.
+- Left explicit units authoritative and did not broaden the fix into unrelated energy-family conversions.
+- Updated the EUI methodology text so it now states that power-derived energy is integrated over actual timestamp spacing before normalization to `kWh`.
+
+### Guardrails kept
+- No new KPI.
+- No baseline changes.
+- No scatter changes.
+- No compare redesign.
+- No forecast rework.
+- No automatic area defaults or auto-created nodes.
+
+### Build
+- `dotnet build` successful via the workspace build task.
+
+### Task
+Implementační krok 9: area m² support + EUI MVP
+
+### What changed
+
+**`DiplomovaPrace/Services/FacilityEditorStateService.cs`:**
+- Added persistent node-level `FloorAreaM2` metadata to `FacilityNodeEditorState`.
+- Bumped the editor-state schema version and normalized persisted floor-area values so only finite non-negative values survive load/save.
+- Marked explicit floor area as meaningful node payload so the metadata persists even when no other node-level overrides are present.
+
+**`DiplomovaPrace/Services/NodeAnalyticsPreviewService.cs`:**
+- Added a new selection-first `EUI` slice to the signal analytics result.
+- Implemented period `EUI = Energy / FloorArea` for the selected interval without switching to another signal or inventing default area values.
+- Resolved floor area strictly from explicit area-node metadata:
+  - prefer the focused scope anchor when it is an area node,
+  - otherwise allow a single unambiguous area candidate in scope,
+  - return explicit unavailable states for missing floor area, `<= 0 m²`, or multiple area candidates.
+- Implemented interval energy resolution for the active exact signal using only the active basis:
+  - direct energy samples,
+  - cumulative energy counters,
+  - or power integrated over actual timestamp spacing.
+- Added explicit unavailable states when the active exact signal is outside `energy` / `power` scope or when interval energy cannot be derived safely.
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- Added `Floor area [m²]` editing to the inline node editor for area nodes only, including local non-negative numeric validation.
+- Ensured floor-area metadata is preserved across metadata save, node move, style assignment, drag, align, and distribute editor-state updates.
+- Passed the focused node key as the explicit scope anchor into selection signal analytics.
+- Added a new `EUI` block in `Overview > Signal Analytics` with:
+  - explicit unavailable states,
+  - energy / floor area / EUI values,
+  - explanatory copy that states this is period EUI over the selected interval,
+  - and no fallback to inferred whole-building area.
+
+### Availability contract
+- Available only when:
+  - the active exact signal is in the `energy` or `power` family,
+  - interval energy can be derived safely from that same active exact signal,
+  - and the current scope resolves one explicit area floor-area value `> 0 m²`.
+- Unavailable when:
+  - no explicit floor area exists for the selected area scope,
+  - floor area is `0` or negative,
+  - multiple area candidates exist without a unique intended anchor,
+  - the active signal is outside `energy` / `power`,
+  - or the active signal does not expose a safe interval energy basis.
+
+### Guardrails kept
+- No automatic whole-building node creation.
+- No automatic `13 000 m²` default.
+- No area estimation for other zones.
+- No baseline, scatter, compare, or additional KPI redesign outside this EUI slice.
+
+### Build
+- `dotnet build` successful via the workspace build task.
+
+### Date
+[2026-04-28]
+
+### Task
+Implementační krok 8: Base vs Peak Over Time MVP
+
+### What changed
+
+**`DiplomovaPrace/Services/NodeAnalyticsPreviewService.cs`:**
+- Extended the selection-first `Power Analytics` slice with a new `Base vs Peak Over Time` result for the active exact power signal.
+- Implemented daily bucket evaluation over the same active power series already used by the existing power/load-shape metrics.
+- For each usable UTC day, the metric computes:
+  - `Base_d = 5th percentile` of that day's active power samples,
+  - `Peak_d = 95th percentile` of that same day's active power samples.
+- Added explicit unavailable states for the requested MVP rules:
+  - mixed-sign aggregate `P`,
+  - daily-only / no sub-daily power basis,
+  - fewer than 3 usable UTC days.
+- Added metadata for signal code, evaluation basis, usable-day count, and chart-ready two-series output without any fallback to another signal.
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- Added a new `Base vs Peak Over Time` chart section inside `Overview > Signal Analytics > Power Analytics`.
+- The UI now renders two lines:
+  - `Base over time`,
+  - `Peak over time`.
+- Added explicit supporting text that states:
+  - `Base over time = daily 5th percentile of the active power series`,
+  - `Peak over time = daily 95th percentile of the active power series`,
+  - sub-daily power samples are required.
+- Added a metric-local unavailable state with direct explanations for:
+  - daily-only basis,
+  - not enough usable days.
+- Kept the broader mixed-sign aggregate `P` policy unchanged, so the whole `Power Analytics` block remains explicitly unavailable for mixed-sign aggregate `P`.
+
+### Availability contract
+- Available only when:
+  - the active exact signal is in the `power` family,
+  - the active basis is not mixed-sign aggregate `P`,
+  - the current active power series has sub-daily samples,
+  - at least 3 usable UTC days are present.
+- Unavailable when:
+  - the current active power basis is mixed-sign aggregate `P`,
+  - the current series is only daily-bucketed,
+  - fewer than 3 usable UTC days exist.
+
+### Build
+- `dotnet build` successful via the workspace build task.
+
+### Date
+[2026-04-28]
+
+### Task
+Implementační krok 8: Audit a hardening analytických výpočtů proti kontraktu + mixed-sign aggregate power fix
+
+### What changed
+
+**Audit ověřil tyto selection-first analytické slices v `DiplomovaPrace/Services/NodeAnalyticsPreviewService.cs` a navázaném UI v `DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- `near-base` používá 5. percentil aktivní power série.
+- `near-peak` používá 95. percentil stejné aktivní power série.
+- `peak-base ratio` používá `near-peak / near-base` a má explicitní safe unavailable stav při numericky nebezpečně malém `near-base`.
+- `load duration curve` používá stejnou aktivní power sérii, řadí ji sestupně a nedělá fallback na jiný signal.
+- `on-hour duration` používá threshold `midpoint(near-base, near-peak)` nad stejnou aktivní power sérií.
+- `after-hours load` používá stejný threshold, fixed after-hours okna a je unavailable bez sub-daily buckets.
+- `daily weather-aware baseline` zůstává na denní energii + facility weather `Ta` s modelem `E_d = beta0 + betaH * HDD(18 C) + betaC * CDD(22 C)` a výstupy `Actual`, `Baseline expected`, `Delta abs`, `Delta %`, `CV(RMSE)`, `NMBE`, `Fit days`.
+- `temperature vs load scatter` zůstává selection-first, weather-aware, s explicitní hourly pairing granularitou a bez silent fallbacku na jiný signal.
+
+**Nalezená odchylka a oprava:**
+
+**`DiplomovaPrace/Services/NodeAnalyticsPreviewService.cs`:**
+- Found one contract gap in `Temperature vs Load Scatter`: mixed-sign aggregate `P` was already blocked inside the `Power Analytics` load-shape block, but the scatter path still accepted the same mixed-sign aggregate power basis as a valid load basis.
+- Hardened `BuildSelectionTemperatureLoadScatterAsync(...)` so aggregate `P` with both positive and negative hourly load values now returns an explicit unavailable state instead of rendering a potentially misleading weather/load scatter.
+- The unavailable state is explicit and local:
+  - no fallback to another signal,
+  - no automatic demand-positive projection,
+  - UI keeps using the existing unavailable rendering with a direct explanation that the active aggregate `P` load basis is mixed-sign and that a consumption-oriented / non-mixed-sign basis is required.
+
+### Mixed-sign aggregate policy
+- `Power Analytics` load-shape metrics remain explicitly unavailable for mixed-sign aggregate `P`:
+  - `near-base`
+  - `near-peak`
+  - `peak-base ratio`
+  - `on-hour duration`
+  - `after-hours load`
+  - `load duration curve`
+- `Temperature vs Load Scatter` now follows the same selection-first validity rule for aggregate `P` load basis and is also unavailable when the aggregate hourly power basis is mixed-sign.
+- No new KPI, EUI, compare redesign, forecast rework, or other out-of-scope feature work was introduced.
+
+### Build
+- `dotnet build` successful via the workspace build task.
+
+### Date
+[2026-04-28]
+
+### Task
+Implementační krok 7: On-hour duration MVP + After-hours Load rework + mixed-sign power policy
+
+### What changed
+
+**`DiplomovaPrace/Services/NodeAnalyticsPreviewService.cs`:**
+- Extended the selection-first `Power Analytics` slice for the active exact power signal with two new load-shape metrics:
+  - `On-hour duration` as the time/share of buckets at or above an explicit high-load threshold,
+  - `After-hours Load` as the same thresholded persistence metric, but evaluated only in fixed after-hours windows.
+- Chose an explicit MVP threshold definition:
+  - `high-load threshold = midpoint(near-base, near-peak)`
+  - where `near-base = 5th percentile` and `near-peak = 95th percentile` of the same active power series.
+- Added a load-shape-specific after-hours definition that keeps the current fixed time logic explicit:
+  - after-hours = `weekday outside 07:00-19:00 UTC + weekends`
+  - the metric reports how long / how often the active series stays above the same high-load threshold inside those windows.
+- Added explicit mixed-sign aggregate policy for selection-first power analytics:
+  - if the active exact signal is aggregate `P` and the resolved series contains both positive and negative values,
+  - `near-base`, `near-peak`, `peak-base ratio`, `on-hour duration`, `after-hours load`, and `load duration curve`
+    are all returned as unavailable,
+  - with no silent fallback to another signal and no automatic demand-positive projection.
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- Reworked the `Overview > Signal Analytics > Power Analytics` block into a clearer shared load-shape block containing:
+  - near-base,
+  - near-peak,
+  - peak-base ratio,
+  - on-hour duration,
+  - after-hours load,
+  - load duration curve.
+- Added explicit UI copy that explains the difference between:
+  - `On-hour duration` = higher-load persistence across the whole interval,
+  - `After-hours Load` = the same higher-load persistence but only in fixed after-hours windows.
+- Added threshold and schedule badges so the user can see the exact MVP basis directly in the UI.
+- Added an explicit unavailable-state message for mixed-sign aggregate `P` that explains why load-shape power analytics are hidden and that the user should choose a more suitable signal or narrower scope.
+
+### Build
+- `dotnet build` successful via the workspace build task.
+
+### Validation scope
+- Implemented only the requested power-family load-shape slice:
+  - on-hour duration MVP,
+  - after-hours load rework,
+  - mixed-sign aggregate policy for power analytics.
+- Explicitly not changed in this step: baseline, scatter, EUI, compare redesign, or other KPI areas outside this slice.
+
+### Date
+[2026-04-28]
+
+### Task
+Bugfix: JavaScript syntax/runtime repair for Main Time Series and Temperature vs Load Scatter
+
+### What changed
+
+**`DiplomovaPrace/wwwroot/js/facilityTimeSeriesChart.js`:**
+- Removed accidentally pasted patch / Razor / C# content that had been appended after the valid JavaScript module footer `})();`.
+- The contamination was split into two trailing fragments, so the shared chart runtime script did not finish parsing and `window.facilityTimeSeriesChart` was never created.
+- Kept the existing chart runtime API unchanged and limited the fix strictly to restoring valid JavaScript for:
+  - `render` (Main Time Series),
+  - `renderTemperatureLoadScatter` (Temperature vs Load Scatter),
+  - and the shared `dispose` / `resize` helpers.
+
+### Root cause
+- `facilityTimeSeriesChart.js` contained non-JavaScript content appended at the end of the file after the closure of the runtime module.
+- Because Main Time Series and Temperature vs Load Scatter both rely on the same `window.facilityTimeSeriesChart` object, the parse failure blocked initialization for both panels.
+
+### Build
+- `dotnet build` successful via the workspace build task.
+
+### Validation scope
+- Editor diagnostics for `facilityTimeSeriesChart.js`: no errors.
+- Browser smoke check on `/facility` confirmed:
+  - `window.facilityTimeSeriesChart` is present again,
+  - `Main Time Series` renders without the chart-runtime initialization fallback message,
+  - `Temperature vs Load Scatter` is present and available without the chart-runtime initialization fallback message.
+
+### Date
+[2026-04-28]
+
+### Task
+Implementační krok 6: Temperature vs Load Scatter MVP
+
+### What changed
+
+**`DiplomovaPrace/Services/NodeAnalyticsPreviewService.cs`:**
+- Added a new selection-scope `TemperatureLoadScatter` slice next to the existing active exact-signal trend, power analytics, and weather-aware baseline flow.
+- Implemented explicit scatter gating only for active `energy` / `power` signals, with clear unavailable states when the active signal, usable hourly load basis, or facility weather `Ta` source is not safe enough to use.
+- Chose explicit **hourly pairing** over complete UTC hours for the MVP.
+- Added hourly load-basis preparation for the active exact signal:
+  - hourly average power for power-family signals,
+  - hourly energy-derived load for direct energy signals,
+  - hourly energy-derived load from interval deltas for cumulative counters (`W`, `W_in`, `W_out`).
+- Added hourly facility-weather `Ta` preparation from the resolved facility weather node and paired the resulting `Ta` values against the same active-signal hourly load basis without any fallback to another signal.
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- Added a new compact `Temperature vs Load Scatter` block into `Overview > Signal Analytics`, directly under the weather-aware baseline detail and before `Power Analytics`.
+- Added clear supporting copy that states:
+  - the chart compares facility `Ta` against the active exact signal load basis,
+  - the pairing granularity is hourly,
+  - which exact signal code is used,
+  - and that this is an exploratory weather-aware scatter, not a final baseline fit.
+- Added explicit unavailable-state rendering when the current active signal is outside energy/power scope or when hourly load / weather inputs cannot be prepared safely.
+
+**`DiplomovaPrace/Components/Building/FacilityTemperatureLoadScatterPanel.razor` and `DiplomovaPrace/wwwroot/js/facilityTimeSeriesChart.js`:**
+- Added a dedicated scatter-chart component and ECharts renderer for the new temperature-vs-load plot.
+- Labeled the chart as `X = outdoor temperature Ta`, `Y = load basis`, with tooltip timestamps and point counts.
+
+### Build
+- Standard workspace `dotnet build` hit a locked `bin\Debug\net10.0\DiplomovaPrace.dll` held by the active debugger process.
+- Isolated validation build succeeded with:
+  - `dotnet build .\DiplomovaPrace\DiplomovaPrace.csproj -o .\build-validation\temperature-load-scatter`
+
+### Validation scope
+- Implemented only the requested scatter slice:
+  - temperature vs load scatter MVP,
+  - selection-first active-signal gating,
+  - facility weather `Ta`,
+  - current active signal / valid load basis,
+  - explicit unavailable states.
+- Explicitly not implemented in this step: forecast rework, compare redesign, EUI, or any KPI outside the requested scope.
+
+### Date
+[2026-04-27]
+
+### Task
+Implementační krok 5: Daily weather-aware baseline MVP + rework Deviation / Baseline Detail
+
+### What changed
+
+**`DiplomovaPrace/Services/NodeAnalyticsPreviewService.cs`:**
+- Added a new selection-scope `WeatherAwareBaseline` slice on top of the existing active exact-signal analytics flow.
+- Implemented explicit baseline gating only for active `energy` / `power` signals, with clear unavailable states when the active signal, daily energy preparation, or facility weather `Ta` source is not usable.
+- Added daily energy preparation for the active exact signal:
+  - direct daily energy from energy-family series,
+  - interval-delta daily energy from cumulative counters (`W`, `W_in`, `W_out`),
+  - daily energy derived from power by interval integration over actual timestamp spacing.
+- Added facility-level weather lookup through the existing `FacilityWeatherSourceResolver` and prepared daily average `Ta` from the resolved facility weather node.
+- Implemented the first real daily weather-aware baseline MVP model:
+  - `E_d = beta0 + betaH * HDD(18 C) + betaC * CDD(22 C)`
+  - fit over the previous 365 full UTC days before the selected interval,
+  - explicit MVP default balance temperatures `18 C` (heating) and `22 C` (cooling).
+- Added fit diagnostics `CV(RMSE)` and `NMBE` on the model fit days, with explicit unavailable states for low-data or numerically unstable fits.
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- Reworked `Overview > Signal Analytics` to include a new compact `Deviation / Baseline Detail` block driven by the new selection-first weather-aware baseline result.
+- The panel now shows `Actual`, `Baseline expected`, `Delta abs`, `Delta %`, plus `CV(RMSE)` and `NMBE` when the baseline is available.
+- Added explicit unavailable-state rendering when the active signal is outside energy/power scope or when daily energy / facility weather data are not safe enough to compute.
+- Removed the old focus-only comparable-window baseline story from the main detail panel and replaced it with a routing note to the new selection-first baseline view.
+
+### Build
+- `dotnet build` successful via the workspace build task.
+
+### Validation scope
+- Implemented only the requested baseline slice:
+  - daily weather-aware baseline,
+  - reworked `Deviation / Baseline Detail`,
+  - daily energy + facility weather `Ta`,
+  - `CV(RMSE)` and `NMBE`.
+- Explicitly not implemented in this step: scatter, forecast rework, EUI, or any other KPI outside the requested scope.
+
+### Date
+[2026-04-27]
+
+### Task
+Implementační krok 4: Power Analytics MVP (near-base, near-peak, peak-base ratio, load duration curve)
+
+### What changed
+
+**`DiplomovaPrace/Services/NodeAnalyticsPreviewService.cs`:**
+- Added a power-family-only analytics slice on top of the existing active exact signal flow.
+- Implemented near-base as the 5th percentile and near-peak as the 95th percentile of the exact active power series used by Signal Analytics.
+- Added safe peak-base ratio evaluation with an explicit unavailable state when near-base is too close to zero for stable division.
+- Added a new power-series load duration curve builder that sorts the same active power series descending, without demand-positive projection, 24h gating, or fallback to another signal.
+- Extended load-duration-curve summary metadata with dynamic unit and Y-axis labels so the reused chart can render the current power series correctly.
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- Added a new `Power Analytics` block to `Overview > Signal Analytics`, directly under the active exact-signal trend.
+- The block now shows clear unavailable state for non-power signals and renders near-base, near-peak, peak-base ratio, and LDC only for the current `power` family signal.
+- Kept the existing Performance widgets unchanged, so no unrelated KPI redesign was introduced.
+
+**`DiplomovaPrace/Components/Building/FacilityLoadDurationCurvePanel.razor`:**
+- Reused the existing LDC chart component as the rendering base and updated it to respect dynamic unit / Y-axis metadata from the new power analytics slice.
+
+### Build
+- `dotnet build` successful via the workspace build task.
+
+### Validation scope
+- Implemented only the requested power-family slice: near-base, near-peak, peak-base ratio, and load duration curve.
+- Explicitly not implemented in this step: baseline, weather-aware analytics, EUI, forecast rework, or any other KPI outside the requested scope.
+
+### Date
 [2026-04-27]
 
 ### Task

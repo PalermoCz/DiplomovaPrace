@@ -4,8 +4,8 @@
 @implements IAsyncDisposable
 
 <style>
-    .ldc-chart-host {
-        height: 220px;
+    .scatter-chart-host {
+        height: 240px;
         width: 100%;
         min-width: 0;
     }
@@ -14,19 +14,19 @@
 @if (_jsInteropUnavailable)
 {
     <div class="alert alert-secondary py-2 mb-2 border-0">
-        The load duration curve is unavailable because the chart runtime could not be initialized.
+        The temperature vs load scatter is unavailable because the chart runtime could not be initialized.
     </div>
 }
 else if (Data is not null && Data.Points.Count > 0)
 {
-    <div id="@_chartElementId" class="ldc-chart-host"></div>
-    <div class="small text-muted mt-2">Status: duration axis <strong>0-100%</strong> · value axis <strong>@(string.IsNullOrWhiteSpace(Data.Unit) ? "power" : Data.Unit)</strong> · points <strong>@Data.PointCount</strong></div>
+    <div id="@_chartElementId" class="scatter-chart-host"></div>
+    <div class="small text-muted mt-2">Status: X axis <strong>@Data.XAxisLabel</strong> · Y axis <strong>@Data.YAxisLabel</strong> · @Data.GranularityLabel.ToLowerInvariant() · points <strong>@Data.PointCount</strong></div>
 }
 
 @code {
-    [Parameter] public CuratedSelectionLoadDurationCurveSummary? Data { get; set; }
+    [Parameter] public SelectionTemperatureLoadScatterResult? Data { get; set; }
 
-    private readonly string _chartElementId = $"facility-load-duration-{Guid.NewGuid():N}";
+    private readonly string _chartElementId = $"facility-temperature-load-scatter-{Guid.NewGuid():N}";
     private string? _lastRenderedSignature;
     private bool _jsInteropUnavailable;
 
@@ -46,7 +46,7 @@ else if (Data is not null && Data.Points.Count > 0)
                 if (!string.Equals(signature, _lastRenderedSignature, StringComparison.Ordinal))
                 {
                     _lastRenderedSignature = signature;
-                    await JSRuntime.InvokeVoidAsync("facilityTimeSeriesChart.renderLoadDuration", _chartElementId, BuildModel(Data));
+                    await JSRuntime.InvokeVoidAsync("facilityTimeSeriesChart.renderTemperatureLoadScatter", _chartElementId, BuildModel(Data));
                 }
                 else if (firstRender)
                 {
@@ -66,7 +66,7 @@ else if (Data is not null && Data.Points.Count > 0)
         }
     }
 
-    private static string BuildSignature(CuratedSelectionLoadDurationCurveSummary data)
+    private static string BuildSignature(SelectionTemperatureLoadScatterResult data)
     {
         if (data.Points.Count == 0)
         {
@@ -75,20 +75,22 @@ else if (Data is not null && Data.Points.Count > 0)
 
         var firstPoint = data.Points[0];
         var lastPoint = data.Points[^1];
-        return $"{data.Points.Count}:{firstPoint.DurationPercent:F4}:{firstPoint.DemandKw:F4}:{lastPoint.DurationPercent:F4}:{lastPoint.DemandKw:F4}";
+        return $"{data.Points.Count}:{firstPoint.TimestampUtc.Ticks}:{firstPoint.OutdoorTemperatureC:F4}:{firstPoint.LoadValue:F4}:{lastPoint.TimestampUtc.Ticks}:{lastPoint.OutdoorTemperatureC:F4}:{lastPoint.LoadValue:F4}";
     }
 
-    private static object BuildModel(CuratedSelectionLoadDurationCurveSummary data)
+    private static object BuildModel(SelectionTemperatureLoadScatterResult data)
     {
         return new
         {
-            title = "Load Duration Curve",
-            unit = string.IsNullOrWhiteSpace(data.Unit) ? "kW" : data.Unit,
-            yAxisLabel = string.IsNullOrWhiteSpace(data.YAxisLabel) ? "Demand (kW)" : data.YAxisLabel,
+            title = "Temperature vs load scatter",
+            unit = data.Unit,
+            xAxisLabel = data.XAxisLabel,
+            yAxisLabel = data.YAxisLabel,
             points = data.Points.Select(point => new
             {
-                durationPercent = point.DurationPercent,
-                demandKw = point.DemandKw
+                timestampUtc = point.TimestampUtc,
+                outdoorTemperatureC = point.OutdoorTemperatureC,
+                loadValue = point.LoadValue
             }).ToArray()
         };
     }
