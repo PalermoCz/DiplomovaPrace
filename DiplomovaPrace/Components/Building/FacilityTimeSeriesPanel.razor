@@ -54,6 +54,10 @@
         min-width: 0;
     }
 
+    .ts-chart-host-compact {
+        height: clamp(12.75rem, 21vh, 16rem);
+    }
+
     @@media (max-width: 900px) {
         .ts-mode-buttons .btn {
             min-width: 4.25rem;
@@ -62,15 +66,18 @@
 </style>
 
 <div class="card border-0 shadow-none mb-0 bg-transparent">
-    <div class="card-body p-3">
+    <div class="card-body @(ShowPanelTitle || ShowStatusSummary ? "p-3" : "p-2")">
         <div class="ts-panel-header mb-2">
-            <div class="ts-panel-title-row">
-                <div class="text-muted text-uppercase fw-bold ts-panel-title">@PanelTitle</div>
-                @if (Data?.Points.Count > 0)
-                {
-                    <span class="badge bg-light text-dark border">@Data.Points.Count.ToString("N0") points</span>
-                }
-            </div>
+            @if (ShowPanelTitle)
+            {
+                <div class="ts-panel-title-row">
+                    <div class="text-muted text-uppercase fw-bold ts-panel-title">@PanelTitle</div>
+                    @if (Data?.Points.Count > 0)
+                    {
+                        <span class="badge bg-light text-dark border">@Data.Points.Count.ToString("N0") points</span>
+                    }
+                </div>
+            }
 
             <div class="ts-panel-controls-row">
                 <div class="ts-mode-buttons" role="group" aria-label="Time-series granularity mode">
@@ -100,19 +107,22 @@
             </div>
         </div>
 
-        <div class="d-flex flex-wrap align-items-center gap-3 small text-muted mb-2">
-            <span>Display mode: <strong>@GetModeLabel(SelectedMode)</strong></span>
-            @if (ShowBaselineToggle && ShowBaselineOverlay)
-            {
-                <span>Baseline: <strong>@(Data?.BaselineOverlayAvailable == true ? "available" : "unavailable")</strong></span>
-            }
-            @if (IsLoading)
-            {
-                <span class="d-inline-flex align-items-center">
-                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>Updating chart...
-                </span>
-            }
-        </div>
+        @if (ShowStatusSummary)
+        {
+            <div class="d-flex flex-wrap align-items-center gap-3 small text-muted mb-2">
+                <span>Display mode: <strong>@GetModeLabel(SelectedMode)</strong></span>
+                @if (ShowBaselineToggle && ShowBaselineOverlay)
+                {
+                    <span>Baseline: <strong>@(Data?.BaselineOverlayAvailable == true ? "available" : "unavailable")</strong></span>
+                }
+                @if (IsLoading)
+                {
+                    <span class="d-inline-flex align-items-center">
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>Updating chart...
+                    </span>
+                }
+            </div>
+        }
 
         @if (_jsInteropUnavailable)
         {
@@ -136,10 +146,13 @@
         }
         else
         {
-            <div id="@_chartElementId" class="ts-chart-host"></div>
-            <div class="small text-muted mt-2">
-                Status: <strong>@Data.GranularityLabel</strong> · Y axis: <strong>@Data.YAxisLabel</strong>@(ShowBaselineOverlay ? $" · Baseline: {(Data.BaselineOverlayAvailable ? "active" : "unavailable")}" : string.Empty)
-            </div>
+            <div id="@_chartElementId" class="ts-chart-host @(!ShowPanelTitle && !ShowStatusSummary ? "ts-chart-host-compact" : string.Empty)"></div>
+            @if (ShowStatusSummary)
+            {
+                <div class="small text-muted mt-2">
+                    Status: <strong>@Data.GranularityLabel</strong> · Y axis: <strong>@Data.YAxisLabel</strong>@(ShowBaselineOverlay ? $" · Baseline: {(Data.BaselineOverlayAvailable ? "active" : "unavailable")}" : string.Empty)
+                </div>
+            }
         }
     </div>
 </div>
@@ -151,6 +164,11 @@
     [Parameter] public bool ShowBaselineOverlay { get; set; }
     [Parameter] public EventCallback<bool> ShowBaselineOverlayChanged { get; set; }
     [Parameter] public bool ShowBaselineToggle { get; set; } = true;
+    [Parameter] public CuratedNodeTimeSeriesResult? OverlayData { get; set; }
+    [Parameter] public string? OverlaySeriesName { get; set; }
+    [Parameter] public bool OverlayIsPinned { get; set; }
+    [Parameter] public bool ShowPanelTitle { get; set; } = true;
+    [Parameter] public bool ShowStatusSummary { get; set; } = true;
     [Parameter] public bool IsLoading { get; set; }
 
     private static readonly CuratedNodeTimeSeriesMode[] _availableModes =
@@ -185,12 +203,14 @@
                 var lastPoint = Data.Points[^1];
                 var baselineFirstTicks = Data.BaselinePoints.Count > 0 ? Data.BaselinePoints[0].TimestampUtc.Ticks : 0;
                 var baselineLastTicks = Data.BaselinePoints.Count > 0 ? Data.BaselinePoints[^1].TimestampUtc.Ticks : 0;
-                var signature = $"{Data.NodeKey}:{Data.Granularity}:{Data.Points.Count}:{firstPoint.TimestampUtc.Ticks}:{lastPoint.TimestampUtc.Ticks}:{ShowBaselineOverlay}:{Data.BaselinePoints.Count}:{baselineFirstTicks}:{baselineLastTicks}";
+                var overlayFirstTicks = OverlayData?.Points.Count > 0 ? OverlayData.Points[0].TimestampUtc.Ticks : 0;
+                var overlayLastTicks = OverlayData?.Points.Count > 0 ? OverlayData.Points[^1].TimestampUtc.Ticks : 0;
+                var signature = $"{Data.NodeKey}:{Data.Granularity}:{Data.Points.Count}:{firstPoint.TimestampUtc.Ticks}:{lastPoint.TimestampUtc.Ticks}:{ShowBaselineOverlay}:{Data.BaselinePoints.Count}:{baselineFirstTicks}:{baselineLastTicks}:{OverlayData?.NodeKey}:{OverlayData?.Points.Count ?? 0}:{overlayFirstTicks}:{overlayLastTicks}:{OverlayIsPinned}:{ShowPanelTitle}:{ShowStatusSummary}";
 
                 if (!string.Equals(signature, _lastRenderedSignature, StringComparison.Ordinal))
                 {
                     _lastRenderedSignature = signature;
-                    await JSRuntime.InvokeVoidAsync("facilityTimeSeriesChart.render", _chartElementId, BuildModel(Data, ShowBaselineOverlay));
+                    await JSRuntime.InvokeVoidAsync("facilityTimeSeriesChart.render", _chartElementId, BuildModel(Data, ShowBaselineOverlay, OverlayData, OverlaySeriesName, OverlayIsPinned, !ShowPanelTitle && !ShowStatusSummary));
                 }
                 else if (firstRender)
                 {
@@ -262,13 +282,24 @@
         };
     }
 
-    private static object BuildModel(CuratedNodeTimeSeriesResult data, bool showBaselineOverlay)
+    private static object BuildModel(
+        CuratedNodeTimeSeriesResult data,
+        bool showBaselineOverlay,
+        CuratedNodeTimeSeriesResult? overlayData,
+        string? overlaySeriesName,
+        bool overlayIsPinned,
+        bool compactMode)
     {
         return new
         {
             title = data.Title,
-            actualSeriesName = "Actual power",
+            actualSeriesName = data.Title,
             baselineSeriesName = "Baseline reference",
+            overlaySeriesName = string.IsNullOrWhiteSpace(overlaySeriesName)
+                ? (overlayData?.Title ?? "Contributor overlay")
+                : overlaySeriesName,
+            overlayPinned = overlayIsPinned,
+            compact = compactMode,
             unit = data.Unit,
             yAxisLabel = data.YAxisLabel,
             points = data.Points.Select(p => new
@@ -280,8 +311,41 @@
             {
                 timestampUtc = p.TimestampUtc,
                 value = p.Value
-            }).ToArray()
+            }).ToArray(),
+            overlayPoints = overlayData?.Points.Select(p => new
+            {
+                timestampUtc = p.TimestampUtc,
+                value = p.Value
+            }).ToArray() ?? []
         };
+    }
+
+    public async Task ResetZoomAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("facilityTimeSeriesChart.resetZoom", _chartElementId);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    public async Task ExportSnapshotAsync(string fileName)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("facilityTimeSeriesChart.exportPng", _chartElementId, fileName);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
     }
 
     public async ValueTask DisposeAsync()

@@ -1,282 +1,392 @@
 # CURRENT TASK
 
 ## Název
-Implementační krok 11: Aggregate semantics + Overview/Detail redesign
+Implementační krok 11d: finální UX polish Overview + Analysis (selection donut, treemap polish, chart polish, no-scroll hardening)
 
 ## Kontext
-Máme hotové hlavní analytické slices:
-- selection-first signal analytics
-- trend + basic stats
-- subtree aggregation
-- power analytics:
-  - near-base
-  - near-peak
-  - peak-base ratio
-  - load duration curve
-  - on-hour duration
-  - after-hours load
-  - base vs peak over time
-- daily weather-aware baseline
-- temperature vs load scatter
-- EUI MVP
-- mixed-sign aggregate hardening pro scatter a power analytics
+Máme hotový velký redesign spodní analytics části:
+- spodní navigace je `Overview + Analysis`
+- Overview má 3 hlavní KPI karty:
+  - Net
+  - Consumption
+  - Production
+- Overview má hlavní chart a Top contributors treemap
+- Analysis je samostatná workspace
+- detail analytics běží nad consumption basis
 
-Po dosavadním vývoji je hlavní problém už spíš produktový a UX:
-- Overview je přehlcený textem a hodnotami
-- detailní analytika a hlavní přehled jsou promíchané
-- pro aggregate whole-facility / area scope se často pracuje s mixed-sign agregací, což je v hlavním přehledu normální a užitečné, ale pro detailní analytiky metodicky nevhodné
-- chceme jasně oddělit:
-  - elegantní přehled
-  - detailní analytický tool
+Po ručním smoke testu je nový směr správný, ale ještě je potřeba doladit několik důležitých UX detailů:
 
-Teoretický a implementační základ:
-- pokud selected scope obsahuje zároveň consumption a production, aplikace může nabídnout pohledy:
-  - consumption
-  - production
-  - net
-  a net view je užitečný, ale nemá být jediným hlavním pohledem
-- detailní load-shape / weather-aware / EUI analytiky mají být počítány nad metodicky interpretovatelným basis
-- starý detailní plán říká, že:
-  - Overview má být jednoduchý a hlavní
-  - Performance má být kompaktní
-  - cílový směr je jeden hlavní chart area a méně scrollu
+### Co je potřeba opravit / dopolishovat
+1. `Baseline overlay` je stále vidět v Overview a má být odstraněn
+2. `Selection` panel nahoře je pořád příliš slabý:
+   - malý pie chart
+   - chybí druhé číslo ve smyslu:
+     - `With data`
+     - `No data`
+3. Selection chart má být větší a graficky silnější:
+   - ideálně donut
+   - s hlavním číslem uvnitř
+4. Treemap funguje, ale potřebuje polish:
+   - barvy podle node style
+   - stejný hover hintbox jako selection chart
+   - lepší práci s textem v malých tiles
+   - adaptivní `Other` tak, aby nepřerostlo přes 20 %
+   - možnost rozkliknout `Other` a dostat se ke contributorům uvnitř
+5. Hlavní chart pořád postrádá dotáhnutý polish a užitečné interakce
+6. Na FullHD stále vzniká zbytečný scroll
+7. To samé platí i pro `Analysis`
 
-## Produktové rozhodnutí pro tento krok
-### Overview
-Overview má pracovat s těmito aggregate semantics pohledy:
-- `Net`
-- `Consumption`
-- `Production`
-
-### Detail analytics / tool
-Detailní analytiky mají pracovat **jen nad `Consumption` basis**.
-
-To znamená:
-- v detailním toolu nechci přepínač `Net / Consumption / Production`
-- net a production jsou přehledové pohledy v Overview
-- detailní výpočty (baseline, scatter, power analytics, EUI, signal analytics) se mají řídit consumption-oriented basis
+Tento krok je poslední velký UX polish / hardening sprint pro spodní analytics workspace.
 
 ---
 
 ## Cíl
-Přeorganizovat FacilityWorkbench tak, aby:
-1. Overview byl přehledný, kompaktní a elegantní
-2. Overview uměl ukázat `Net / Consumption / Production`
-3. detailní analytika byla jasně oddělená jako tool vrstva
-4. detailní analytiky běžely jen nad `Consumption` basis
-5. mixed-sign whole-facility scope přestal být produktově problém v hlavním přehledu
+Dodat finální UX polish tak, aby:
+1. Overview působil jako čistý executive summary
+2. Selection panel nahoře byl silnější a informativnější
+3. treemap byla vizuálně i interakčně dotažená
+4. chart byl dotažený jako hlavní vizuální prvek
+5. Overview i Analysis se co nejlépe vešly na FullHD / 2K bez zbytečného scrollu
 
 ---
 
 ## Scope tohoto kroku
 
 ### Ano
-- aggregate semantics pro Overview:
-  - Net
-  - Consumption
-  - Production
-- redesign / přeuspořádání Overview a navazující detailní analytics části
-- consumption-only basis pro detailní analytiky
-- zmenšení textového a vizuálního chaosu
-- lepší oddělení headline overview vs detail tool
+- odstranit baseline overlay z Overview
+- redesign Selection chart na větší donut
+- přidat textové second-line statistiky:
+  - With data
+  - No data
+- treemap polish
+- chart polish
+- `Other` behavior a contributor drill-in
+- no-scroll hardening pro Overview i Analysis
+- drobné copy / spacing / hierarchy polish
 
 ### Ne
 - nové KPI
-- nové matematické metriky
-- compare redesign jako samostatný feature slice
-- forecast redesign
-- další nové analytické funkce mimo přeuspořádání a semantics
-- změna schválených vzorců u již implementovaných metrik
+- nové matematické modely
+- baseline formula changes
+- scatter formula changes
+- EUI formula changes
+- redesign horního schematic editoru
+- nové feature moduly mimo tento polish sprint
 
 ---
 
-## Semantický kontrakt
+# Přesný UX kontrakt
 
-### 1. Overview aggregate semantics
-Overview má umět zobrazit tři pohledy nad aggregate scope:
+## A. Overview
 
-#### a) Net
-- čistá signed aggregate bilance
-- vhodná pro facility-level přehled
+### 1. Baseline overlay pryč
+V `Overview` už nechci:
+- baseline overlay toggle
+- žádný baseline overlay control
+- žádný placeholder pro něj
 
-#### b) Consumption
-- aggregate spotřebovávaná energie / výkon
-- production contribution se sem nemá míchat jako záporná část
+Baseline patří do:
+- `Analysis > Baseline`
 
-#### c) Production
-- aggregate výroba
-- vhodná pro přehled a kontext
+#### Akceptace
+- v Overview nesmí být vidět žádný baseline overlay control
+
+---
+
+### 2. KPI strip
+Zachovat 3 rovnocenné karty:
+- Net
+- Consumption
+- Production
+
+#### Požadavky
+- všechny 3 stejně vysoké a stejně důležité
+- aktivní karta je zvýrazněná
+- labely a hodnoty mají být vizuálně silnější než dnes
+- subtitle může zůstat krátký, ale klidnější
+
+---
+
+### 3. Main chart
+Chart zůstává hlavním prvkem Overview.
+
+#### Co chci doladit
+- méně whitespace
+- čistší header
+- jemnější grid
+- lepší kontrast line
+- zlepšit legend / pinned state presentation
+- lepší vizuální hierarchii mezi aggregate line a contributor overlay line
+
+#### Požadované interakce
+Implementuj / dotahej tyto užitečné funkce:
+
+##### a) Double click = reset zoom
+Pokud chart runtime umožňuje, přidej:
+- double click → reset zoom / reset view
+
+##### b) Export snapshot
+Přidej malé, nenápadné tlačítko:
+- export chart snapshot
+- preferovaně PNG / image export
+- pokud je v runtime už dostupná podobná schopnost, využij ji
+
+##### c) Jasnější overlay state
+Pokud je contributor:
+- hover preview
+- nebo pinned
+
+pak to musí být přehledně vidět v chart headeru.
+
+Například:
+- `Previewing: H1.Z29`
+- `Pinned: H1.Z29`
+- `Clear`
+
+Nechci, aby overlay stav působil jako náhodná malá badge bez jasného významu.
+
+##### d) Production chart semantics
+V `Production` mode má být production zobrazována jako:
+- **kladná velikost výroby**
+- ne jako záporná čára
+
+---
+
+## B. Treemap
+
+### 1. Barvy podle node style
+Každý treemap tile má používat:
+- barvu odvozenou z přiřazeného node style
+- stejně jako se pracuje s barvou v horním selection chartu
+
+#### Fallback
+Pokud node style barvu nemá:
+- použij bezpečný fallback
+
+---
+
+### 2. Hover hintbox
+Treemap hover musí používat:
+- stejný hintbox / hover pattern jako selection chart nahoře
+
+#### Hover má ukazovat minimálně
+- node label
+- value
+- share %
+- semantics mode (`Net / Consumption / Production`)
+
+---
+
+### 3. Adaptivní `Other`
+Treemap nesmí fungovat fixně jen jako top N.
+
+#### Pravidlo
+- zobraz tolik contributorů, aby:
+  - `Other <= 20 %`
+- s horním limitem:
+  - max 10 contributor tiles + `Other`
 
 #### Důležité
-Tyto tři pohledy jsou **overview semantics**, ne nový detail analytics mode.
+- pokud i při tomto limitu `Other` zůstává velké, je to v pořádku
+- ale musí být dobře pojmenované a dobře obsloužené
+
+### 4. `Other` label
+Nepoužívej matoucí wording typu:
+- `Other / Unclassified`
+pokud to jsou ve skutečnosti jen sloučené menší contributory.
+
+#### Doporučené znění
+- `Other contributors`
 
 ---
 
-### 2. Detail analytics semantics
-Detailní analytiky se mají počítat **jen nad Consumption basis**.
+### 5. Klik na `Other`
+Klik na `Other` musí otevřít malý contributor drill-in.
 
-To platí pro:
-- Signal Analytics detail trend / stats
-- weather-aware baseline
-- temperature vs load scatter
-- power analytics:
-  - near-base
-  - near-peak
-  - peak-base ratio
-  - LDC
-  - on-hour duration
-  - after-hours load
-  - base vs peak over time
-- EUI
+#### Požadované chování
+- otevři malý popover / side list / lightweight panel
+- zobraz seznam contributorů uvnitř `Other`
+- pro každý:
+  - label
+  - value
+  - share
+- hover = preview do chartu
+- click = pin do chartu
 
 #### Důležité
-- nepočítej tyto metriky nad raw mixed-sign net aggregate
-- neukazuj v detailním toolu přepínač `Net / Consumption / Production`
-- detailní tool se má opírat o **consumption-only basis**
-- žádné silent fallbacky na jiný nesouvisející signal
+Nechci fullscreen modal ani další velký panel.
+Má to být lehké a rychlé.
 
 ---
 
-## Co přesně chci implementovat
+### 6. Text rendering v tiles
+Text nesmí v malých tiles působit useknutě a rozbitě.
 
-### 1. Overview redesign
-Přepracuj Overview tak, aby byl výrazně přehlednější.
+#### Pravidla
+- velké tiles:
+  - label + value + share
+- střední tiles:
+  - label + value
+- malé tiles:
+  - žádný text uvnitř
+  - info jen v hoveru
+
+---
+
+## C. Selection panel nahoře
+
+### 1. Pie chart změnit na větší donut
+Současný malý pie chart je moc drobný.
 
 #### Chci
-- kompaktní headline KPI vrstvu
-- jeden hlavní chart area
-- přehledový semantics switch / přepínač:
-  - `Net`
-  - `Consumption`
-  - `Production`
-- méně permanentních textových vysvětlení v hlavním pohledu
-- méně “debug-like” detailů v Overview
+- výraznější donut
+- vizuálně dominantnější než dnes
 
-#### Headline KPI směr
-V Overview chci vidět hlavně:
-- hlavní energetický headline pro aktuální semantics mode
-- kompaktní supporting context
-- ne detailní metodické texty
+### 2. Hlavní číslo dovnitř
+Do středu donutu chci:
+- hlavní číslo:
+  - např. `91`
+- pod něj text:
+  - `Selected nodes`
+
+To má být hlavní vizuální anchor Selection panelu.
 
 ---
 
-### 2. Main chart area
-Hlavní chart area v Overview má být jedna hlavní grafická plocha.
+### 3. Druhá řada statistik
+Vedle / pod donutem chci ještě 2 malé textové statistiky:
 
-#### Chci
-- chart reaguje na:
-  - selected interval
-  - selected scope
-  - overview semantics mode (`Net / Consumption / Production`)
-- chart area nemá být obklopená zbytečně mnoha textovými bloky
+- `With data`
+- `No data`
 
 #### Důležité
-Nechci v tomto kroku rozkopat chart runtime.
-Jde o produktové přeuspořádání a napojení na správnou semantics vrstvu.
-
----
-
-### 3. Detail analytics / tool separation
-Detailní analytiky odděl tak, aby bylo zřejmé:
-- tohle je „tool / analysis layer“
-- ne hlavní overview dashboard
+Ne jako chips.
+Ne jako velké cardy.
+Ne jako technické `Supported / Unsupported`.
 
 #### Chci
-- zřetelnou sekci pro detailní analytiky
-- consumption-only basis pro výpočty
-- signal selector a detailní metriky mohou zůstat, ale nemají dominovat hlavnímu přehledu
+malé číslo + malý popisek, např.:
 
-#### Důležité
-- detail analytics nemají běžet nad `Net`
-- detail analytics nemají běžet nad `Production`, pokud to není výslovně metodicky schválené
-- pro tento krok používáme **Consumption-only**
+```text
+83  With data
+8   No data
+````
 
----
+#### Styl
 
-### 4. Existing panel cleanup
-Bez zavádění nových funkcí:
-- zredukuj textový šum
-- schovej nebo zkompaktni nadbytečné explanatory texty
-- zachovej důležité unavailable states
-- zachovej metodickou korektnost
-- ale přestaň zobrazovat vše jako stejně důležité
+*   decentní
+*   ale čitelný
+*   musí zapadat do Selection panelu
 
----
+***
 
-### 5. Minimal semantics explanations
-Přidej krátké, ale velmi stručné vysvětlení semantics:
+## D. No-scroll hardening
 
-#### Overview
-- Net = balance of consumption and production
-- Consumption = consumption-only view
-- Production = production-only view
+### 1. Overview
 
-#### Detail analytics
-- detail calculations use consumption basis
+Na FullHD (1920×1080) a 2K musí být Overview co nejkompaktnější.
 
-Nechci dlouhé bloky metodického textu v hlavním Overview.
+#### Požadavek
 
----
+*   KPI strip + chart + treemap se mají co nejvíc vejít bez zbytečného vertikálního scrollu
+*   pokud je scroll nevyhnutelný, musí být výrazně menší než dnes
 
-## Důležitá pravidla
+### 2. Analysis
 
-### 1. Detail analytics = consumption-only
-Tohle je klíčové rozhodnutí tohoto kroku.
-Neimplementuj přepínač `Net / Consumption / Production` pro detailní analytiky.
+Stejný požadavek platí pro Analysis.
 
-### 2. Overview = jediná vrstva pro net/consumption/production switch
-Net je přehledová semantics vrstva, ne detailní výpočetní basis.
+#### Požadavek
 
-### 3. Bez nových výpočetních metrik
-Nepřidávej nové KPI ani nové výpočty.
-Přeorganizuj a přesměruj již existující logiku.
+*   Analysis toolbar + aktivní modul
+*   žádný zbytečný vertikální odpad
+*   menší card padding
+*   menší spacing
+*   vždy jen jeden aktivní modul
+*   minimalizovat celostránkový scroll
 
-### 4. Bez tichých fallbacků
-Kde detailní analytika nemá consumption basis, musí to být stále explicitně unavailable.
+***
 
-### 5. Respektovat stávající selection-first architekturu
-Použij:
-- current selection scope
-- current active signal model
-- current aggregate logic
-- current binding model
+## E. Analysis workspace polish
 
-Nestav paralelní nový data world bokem.
+### 1. Toolbar
 
----
+Toolbar má být kompaktní a čistý.
 
-## Co je mimo scope
-Neimplementuj:
-- nové KPI
-- forecast redesign
-- compare redesign jako samostatný feature
-- další matematické modely
-- change of formulas
-- phase auto-summing
-- production-specific detail analytics
+### 2. Modulové layouty
 
----
+Každý modul má být kompaktnější:
+
+*   méně vertikálního paddingu
+*   méně explanatory textu
+*   víc data, méně prose
+
+### 3. Power modul
+
+Udržet:
+
+*   KPI nahoře
+*   jeden chart slot
+*   `LDC` a `Base vs Peak Over Time` jako switch
+*   ne pod sebou
+
+### 4. Baseline modul
+
+Karty + krátký note.
+Ne dlouhý textový blok.
+
+### 5. Trend / Scatter / EUI
+
+Stejně:
+
+*   kompaktní, čisté, bez zbytečné výplně
+
+***
+
+# F. Neakceptovatelné výsledky
+
+Tyto výsledky nejsou přijatelné:
+
+*   baseline overlay zůstane v Overview
+*   treemap bude mít dál náhodné / nesouvisející barvy
+*   `Other` zůstane fixní a nekontrolované přes 20 %
+*   nebude možné nahlédnout dovnitř `Other`
+*   selection chart zůstane malý pie bez silného vizuálního anchoru
+*   `With data / No data` se zobrazí jako chips
+*   FullHD / 2K scroll se reálně nezlepší
+*   chart overlay state zůstane nečitelný
+*   chart nedostane žádný skutečný polish / utility funkce
+
+***
 
 ## Pravidla práce
-- nejdřív stručně napiš plán
-- pak implementuj
-- drž se scope tohoto kroku
-- po dokončení napiš:
-  - co bylo změněno v Overview
-  - jak funguje semantics přepínač
-  - jak je oddělená detail analytics vrstva
-  - jak je zajištěno, že detailní analytiky používají consumption basis
-- proveď build
-- aktualizuj `AI/WORKLOG.md`
 
----
+*   nejdřív stručně napiš plán
+*   potom implementuj
+*   drž se tohoto scope
+*   po dokončení napiš:
+    *   co bylo změněno v Overview
+    *   jak funguje selection donut a `With data / No data`
+    *   jak funguje adaptivní `Other`
+    *   jak funguje `Other` drill-in
+    *   jaké chart utility byly přidány
+    *   jak byl vylepšen layout pro FullHD / 2K
+*   proveď build
+*   aktualizuj `AI/WORKLOG.md`
+
+***
 
 ## Akceptační kritéria
+
 Krok je hotový, pokud:
-1. Overview má přehledový semantics switch `Net / Consumption / Production`
-2. hlavní chart area reaguje na tento switch
-3. detailní analytiky jsou vizuálně oddělené od hlavního Overview
-4. detailní analytiky používají consumption-only basis
-5. mixed-sign aggregate whole-facility scope už není problém v hlavním přehledu
-6. textový a vizuální chaos je menší než předtím
-7. build projde
+
+1.  baseline overlay už v Overview není
+2.  selection chart je větší donut s číslem uvnitř
+3.  v Selection panelu jsou textové statistiky `With data / No data`
+4.  treemap používá barvy podle node style
+5.  treemap používá stejný hover hintbox pattern jako selection chart
+6.  `Other` je adaptivní do cíle max 20 %, s horním limitem contributorů
+7.  klik na `Other` umožní zobrazit contributory uvnitř
+8.  malé treemap tiles už nepůsobí rozbitě useknutým textem
+9.  chart má dotažený overlay state a alespoň 2 utility funkce (např. reset zoom, export)
+10. Overview i Analysis jsou kompaktnější a méně scrollují na FullHD / 2K
+11. build projde

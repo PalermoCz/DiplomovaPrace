@@ -703,6 +703,13 @@ public enum CuratedAggregateEnergyProfile
     Neutral
 }
 
+public enum OverviewAggregateSemanticsMode
+{
+    Net,
+    Consumption,
+    Production
+}
+
 public enum CuratedNodeTimeSeriesMode
 {
     Auto,
@@ -1116,6 +1123,7 @@ public class NodeAnalyticsPreviewService
         DateTime to,
         CuratedNodeTimeSeriesMode mode = CuratedNodeTimeSeriesMode.Auto,
         bool includeBaselineOverlay = false,
+        OverviewAggregateSemanticsMode semanticsMode = OverviewAggregateSemanticsMode.Net,
         CancellationToken ct = default)
     {
         selectedNodeKeys ??= [];
@@ -1149,10 +1157,10 @@ public class NodeAnalyticsPreviewService
         }
 
         var template = timeSeries[0];
-        var points = SumTimeSeriesByTimestamp(timeSeries.Select(x => x.Points));
+        var points = BuildOverviewAggregatePoints(timeSeries.Select(x => x.Points), semanticsMode);
         var baselineProviders = timeSeries.Count(x => x.BaselinePoints.Count > 0);
         var baselinePoints = includeBaselineOverlay
-            ? SumTimeSeriesByTimestamp(timeSeries.Where(x => x.BaselinePoints.Count > 0).Select(x => x.BaselinePoints))
+            ? BuildOverviewAggregatePoints(timeSeries.Where(x => x.BaselinePoints.Count > 0).Select(x => x.BaselinePoints), semanticsMode)
             : [];
 
         string? baselineOverlayMessage = null;
@@ -1171,23 +1179,109 @@ public class NodeAnalyticsPreviewService
         return new CuratedNodeTimeSeriesResult
         {
             NodeKey = "selection_set",
-            Title = supportedNodeKeys.Count == 1 ? template.Title : "Selection set aggregate power",
+            Title = ResolveOverviewAggregateTitle(supportedNodeKeys.Count, template.Title, semanticsMode),
             Unit = template.Unit,
             YAxisLabel = template.YAxisLabel,
             Granularity = template.Granularity,
             GranularityLabel = template.GranularityLabel,
-            AggregationMethod = $"{template.AggregationMethod} Selection aggregate: sum of supported-node power at each timestamp.",
-            InterpretationNote = ResolveSelectionAggregateInterpretationNote(template.Granularity, CuratedAggregateEnergyProfile.Neutral),
+            AggregationMethod = ResolveOverviewAggregateAggregationMethod(template.AggregationMethod, semanticsMode),
+            InterpretationNote = ResolveOverviewAggregateInterpretationNote(template.Granularity, semanticsMode),
             RequestedMode = template.RequestedMode,
             RequestedModeLabel = template.RequestedModeLabel,
             BaselineOverlayRequested = includeBaselineOverlay,
             BaselineOverlayAvailable = baselinePoints.Count > 0,
             BaselineOverlayMessage = baselineOverlayMessage,
             BaselinePoints = baselinePoints,
-            NoDataMessage = points.Count == 0 ? "No time-series data is available for the selected interval." : null,
+            NoDataMessage = points.Count == 0 ? ResolveOverviewAggregateNoDataMessage(semanticsMode) : null,
             Points = points
         };
     }
+
+    private static IReadOnlyList<CuratedNodeTimeSeriesPoint> BuildOverviewAggregatePoints(
+        IEnumerable<IReadOnlyList<CuratedNodeTimeSeriesPoint>> seriesCollection,
+        OverviewAggregateSemanticsMode semanticsMode)
+    {
+        return seriesCollection
+            .SelectMany(points => points)
+            .GroupBy(point => point.TimestampUtc)
+            .Select(group =>
+            {
+                var values = group.Select(point => point.Value).ToArray();
+                var aggregateValue = semanticsMode switch
+                {
+                    OverviewAggregateSemanticsMode.Consumption => values.Where(value => value > 0d).Sum(),
+                    OverviewAggregateSemanticsMode.Production => values.Where(value => value < 0d).Sum(value => Math.Abs(value)),
+                    _ => values.Sum()
+                };
+
+                return new CuratedNodeTimeSeriesPoint
+                {
+                    TimestampUtc = group.Key,
+                    Value = aggregateValue
+                };
+            })
+            .OrderBy(point => point.TimestampUtc)
+            .ToList();
+    }
+
+    private static string ResolveOverviewAggregateTitle(
+        int supportedNodeCount,
+        string templateTitle,
+        OverviewAggregateSemanticsMode semanticsMode)
+    {
+        if (supportedNodeCount == 1)
+        {
+            return templateTitle;
+        }
+
+        return semanticsMode switch
+        {
+            OverviewAggregateSemanticsMode.Consumption => "Selection set consumption view",
+            OverviewAggregateSemanticsMode.Production => "Selection set production view",
+            _ => "Selection set net view"
+        };
+    }
+
+    private static string ResolveOverviewAggregateAggregationMethod(string baseAggregationMethod, OverviewAggregateSemanticsMode semanticsMode)
+    {
+        var semanticsText = semanticsMode switch
+        {
+            OverviewAggregateSemanticsMode.Consumption => "positive supported-node power only at each timestamp",
+            OverviewAggregateSemanticsMode.Production => "absolute value of negative supported-node power only at each timestamp",
+            _ => "signed sum of supported-node power at each timestamp"
+        };
+
+        return $"{baseAggregationMethod} Selection aggregate: {semanticsText}.";
+    }
+
+    private static string ResolveOverviewAggregateInterpretationNote(
+        CuratedNodeTimeSeriesGranularity granularity,
+        OverviewAggregateSemanticsMode semanticsMode)
+    {
+        var granularityText = granularity switch
+        {
+            CuratedNodeTimeSeriesGranularity.DailyAverage => "Daily aggregation smooths intra-day variation.",
+            CuratedNodeTimeSeriesGranularity.HourlyAverage => "Hourly aggregation shows the dominant daily shape.",
+            _ => "Raw detail keeps the original intra-interval variation."
+        };
+
+        var semanticsText = semanticsMode switch
+        {
+            OverviewAggregateSemanticsMode.Consumption => "Consumption shows only load-side contribution; production is excluded from the plotted values.",
+            OverviewAggregateSemanticsMode.Production => "Production shows only generation-side contribution as positive magnitude.",
+            _ => "Net shows the signed balance of consumption and production."
+        };
+
+        return $"{granularityText} {semanticsText}";
+    }
+
+    private static string ResolveOverviewAggregateNoDataMessage(OverviewAggregateSemanticsMode semanticsMode)
+        => semanticsMode switch
+        {
+            OverviewAggregateSemanticsMode.Consumption => "No consumption-basis time-series data is available for the selected interval.",
+            OverviewAggregateSemanticsMode.Production => "No production-basis time-series data is available for the selected interval.",
+            _ => "No net time-series data is available for the selected interval."
+        };
 
     public async Task<CuratedSelectionAggregateOverviewResult> GetCuratedSelectionAggregateOverviewAsync(
         IEnumerable<string> selectedNodeKeys,
@@ -1770,7 +1864,7 @@ public class NodeAnalyticsPreviewService
             return aggregateTimeSeries;
         }
 
-        return await GetCuratedSelectionAggregateTimeSeriesAsync(selectedNodeKeys, from, to, performanceMode, includeBaselineOverlay: false, ct);
+        return await GetCuratedSelectionAggregateTimeSeriesAsync(selectedNodeKeys, from, to, performanceMode, includeBaselineOverlay: false, ct: ct);
     }
 
     private static (CuratedNodeCompareTimeSeriesResult? CompareTimeSeries, CuratedSelectionForecastDiagnosticsSummary Diagnostics) BuildSelectionForecastOutputs(
@@ -1974,7 +2068,6 @@ public class NodeAnalyticsPreviewService
                     Points = aggregateForecastPoints
                 }
             ],
-            ExcludedNodeMessages = compareExcludedMessages,
             NoDataMessage = null
         };
 

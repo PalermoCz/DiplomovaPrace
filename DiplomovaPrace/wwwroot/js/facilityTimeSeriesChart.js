@@ -89,6 +89,32 @@ window.facilityTimeSeriesChart = (function () {
         return toAxisDate(isoValue);
     }
 
+    function resetZoomInstance(chart) {
+        if (!chart || chart.isDisposed()) {
+            return;
+        }
+
+        chart.setOption({
+            dataZoom: [
+                { start: 0, end: 100 },
+                { start: 0, end: 100 }
+            ]
+        });
+    }
+
+    function downloadDataUrl(dataUrl, fileName) {
+        if (!dataUrl) {
+            return;
+        }
+
+        var link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = (fileName || 'chart-snapshot') + '.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
     function render(containerId, model) {
         var chart = getInstance(containerId);
         if (!chart || !model || !Array.isArray(model.points)) {
@@ -105,9 +131,17 @@ window.facilityTimeSeriesChart = (function () {
             })
             : [];
 
-        var hasBaseline = baselineSeriesData.length > 0;
+        var overlaySeriesData = Array.isArray(model.overlayPoints)
+            ? model.overlayPoints.map(function (point) {
+                return [point.timestampUtc, point.value];
+            })
+            : [];
 
-        var pointCount = Math.max(actualSeriesData.length, baselineSeriesData.length);
+        var hasBaseline = baselineSeriesData.length > 0;
+        var hasOverlay = overlaySeriesData.length > 0;
+        var hasLegend = hasBaseline || hasOverlay;
+
+        var pointCount = Math.max(actualSeriesData.length, baselineSeriesData.length, overlaySeriesData.length);
         var firstTimestamp = pointCount > 0 ? new Date(actualSeriesData[0][0]).getTime() : 0;
         var lastTimestamp = pointCount > 1 ? new Date(actualSeriesData[actualSeriesData.length - 1][0]).getTime() : firstTimestamp;
         var rangeMs = Math.max(0, lastTimestamp - firstTimestamp);
@@ -127,14 +161,36 @@ window.facilityTimeSeriesChart = (function () {
             progressive: 1000,
             progressiveThreshold: 2000,
             lineStyle: {
-                width: denseSeries ? 1.8 : 2.2,
-                color: '#0ea5e9'
+                width: denseSeries ? 2.1 : 2.6,
+                color: '#0284c7'
             },
             areaStyle: {
-                opacity: denseSeries ? 0.04 : 0.08,
-                color: '#0ea5e9'
+                opacity: denseSeries ? 0.025 : 0.055,
+                color: '#38bdf8'
             }
         }];
+
+        if (hasOverlay) {
+            series.push({
+                type: 'line',
+                name: model.overlaySeriesName || 'Contributor overlay',
+                data: overlaySeriesData,
+                showSymbol: false,
+                smooth: false,
+                sampling: useSampling ? 'lttb' : undefined,
+                progressive: 1000,
+                progressiveThreshold: 2000,
+                lineStyle: {
+                    width: model.overlayPinned ? (denseSeries ? 2.1 : 2.4) : (denseSeries ? 1.6 : 1.9),
+                    type: model.overlayPinned ? 'solid' : 'dashed',
+                    color: model.overlayPinned ? '#f97316' : '#fb923c',
+                    opacity: model.overlayPinned ? 0.98 : 0.9
+                },
+                itemStyle: {
+                    color: model.overlayPinned ? '#f97316' : '#fb923c'
+                }
+            });
+        }
 
         if (hasBaseline) {
             series.push({
@@ -159,7 +215,7 @@ window.facilityTimeSeriesChart = (function () {
 
         chart.setOption({
             animation: pointCount < 1200,
-            legend: hasBaseline
+            legend: hasLegend
                 ? {
                     top: 0,
                     right: 0,
@@ -170,16 +226,21 @@ window.facilityTimeSeriesChart = (function () {
                 }
                 : undefined,
             grid: {
-                left: 54,
-                right: 22,
-                top: hasBaseline ? 36 : 24,
-                bottom: 74,
+                left: 50,
+                right: 16,
+                top: hasLegend ? (model.compact ? 24 : 34) : (model.compact ? 10 : 22),
+                bottom: model.compact ? 54 : 68,
                 containLabel: false
             },
             tooltip: {
                 trigger: 'axis',
                 confine: true,
                 axisPointer: { type: 'line' },
+                backgroundColor: 'rgba(15, 23, 42, 0.94)',
+                borderWidth: 0,
+                textStyle: {
+                    color: '#f8fafc'
+                },
                 formatter: function (params) {
                     if (!params || params.length === 0) {
                         return '';
@@ -212,8 +273,8 @@ window.facilityTimeSeriesChart = (function () {
                 {
                     type: 'slider',
                     xAxisIndex: 0,
-                    height: 18,
-                    bottom: 26,
+                    height: model.compact ? 14 : 18,
+                    bottom: model.compact ? 14 : 22,
                     showDetail: false,
                     brushSelect: false,
                     filterMode: 'none',
@@ -247,11 +308,16 @@ window.facilityTimeSeriesChart = (function () {
                     margin: 10
                 },
                 splitLine: {
-                    lineStyle: { color: '#e2e8f0' }
+                    lineStyle: { color: 'rgba(148, 163, 184, 0.28)' }
                 }
             },
             series: series
         }, true);
+
+        chart.off('dblclick');
+        chart.on('dblclick', function () {
+            resetZoomInstance(chart);
+        });
 
         chart.resize();
     }
@@ -261,7 +327,6 @@ window.facilityTimeSeriesChart = (function () {
         if (!chart || !model || !Array.isArray(model.series)) {
             return;
         }
-
         var palette = ['#0ea5e9', '#f97316', '#16a34a', '#ef4444', '#14b8a6', '#0891b2'];
         var preparedSeries = model.series
             .map(function (series) {
@@ -656,6 +721,24 @@ window.facilityTimeSeriesChart = (function () {
         chart.resize();
     }
 
+    function resetZoom(containerId) {
+        var chart = getInstance(containerId);
+        resetZoomInstance(chart);
+    }
+
+    function exportPng(containerId, fileName) {
+        var chart = getInstance(containerId);
+        if (!chart || chart.isDisposed()) {
+            return;
+        }
+
+        downloadDataUrl(chart.getDataURL({
+            type: 'png',
+            pixelRatio: 2,
+            backgroundColor: '#ffffff'
+        }), fileName);
+    }
+
     function dispose(containerId) {
         var element = document.getElementById(containerId);
 
@@ -692,6 +775,8 @@ window.facilityTimeSeriesChart = (function () {
         renderCompare: renderCompare,
         renderLoadDuration: renderLoadDuration,
         renderTemperatureLoadScatter: renderTemperatureLoadScatter,
+        resetZoom: resetZoom,
+        exportPng: exportPng,
         dispose: dispose,
         resize: resize
     };

@@ -4,6 +4,226 @@
 [2026-04-28]
 
 ### Task
+Implementační krok 11d: finální UX polish Overview + Analysis
+
+### What changed
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- Removed the baseline overlay from `Overview` at the integration level:
+  - the Overview chart no longer requests baseline overlay data,
+  - no baseline toggle or baseline control is rendered in the Overview chart shell.
+- Reworked the top `Selection` card into a stronger donut-centered summary:
+  - larger donut,
+  - main selected-node count inside the donut,
+  - added text stats for `With data` and `No data`.
+- Hardened the Overview chart header and interactions:
+  - clearer overlay state wording (`Previewing:` / `Pinned:`),
+  - explicit `Clear pin`,
+  - added `Reset` and `PNG` utility actions.
+- Polished the contributors treemap behavior:
+  - tile colors now resolve from the assigned node style preset instead of semantics-only palette colors,
+  - `Other` is now adaptive with a target of keeping the grouped tail at or under 20 % when possible,
+  - contributor tiles are capped before grouping,
+  - `Other contributors` opens a lightweight drill-in list,
+  - drill-in rows support hover preview and click-to-pin,
+  - tile text density now adapts by tile size.
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor.css`:**
+- Enlarged and rebalanced the Selection card layout around the new donut.
+- Tightened Overview and Analysis spacing for better FullHD / 2K fit:
+  - smaller analytics widget padding,
+  - denser KPI strip,
+  - tighter chart/treemap spacing,
+  - more compact Analysis toolbar/module spacing.
+- Added styling for:
+  - Overview chart utilities,
+  - clearer overlay state chips,
+  - node-style treemap tiles,
+  - the lightweight `Other contributors` drill-in panel.
+
+**`DiplomovaPrace/Components/Building/FacilityTimeSeriesPanel.razor`:**
+- Added reusable chart utility methods for:
+  - zoom reset,
+  - PNG snapshot export.
+- Reduced compact-mode panel padding and chart height for the dense Overview layout.
+
+**`DiplomovaPrace/wwwroot/js/facilityTimeSeriesChart.js`:**
+- Added runtime support for:
+  - double click to reset zoom,
+  - programmatic zoom reset,
+  - PNG export.
+- Applied light chart polish for the compact Overview surface:
+  - tighter grid,
+  - calmer split lines,
+  - slightly stronger primary line,
+  - darker tooltip surface.
+
+### Guardrails kept
+- No new KPI.
+- No new mathematical model.
+- No baseline formula change.
+- No scatter / EUI formula change.
+- No redesign of the upper schematic workspace.
+
+### Build
+- `dotnet build` successful via the workspace build task after the final 11d polish edits.
+
+### Date
+[2026-04-28]
+
+### Task
+Implementační krok 11c: kompletní redesign spodní analytics části
+
+### What changed
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- Reworked the bottom analytics IA into exactly two workspaces:
+  - `Overview`
+  - `Analysis`
+- Simplified `Overview` so the old header ballast is gone:
+  - no extra title block with node name,
+  - no interval text as a dominant header element,
+  - no `Scope` or `Status` strips carried forward.
+- Replaced the old mixed overview KPI surface with exactly three equivalent KPI cards:
+  - `Net`,
+  - `Consumption`,
+  - `Production`.
+- Wired the Overview semantics switch so it now materially changes the active aggregate reading surface:
+  - KPI values,
+  - main chart dataset,
+  - top-contributor treemap.
+- Added a compact `Top contributors` mini treemap to Overview.
+- Linked the treemap to the main chart without introducing new formulas:
+  - hover previews a contributor overlay in the main chart,
+  - click pins the contributor overlay until cleared.
+- Kept `Analysis` as a separate workspace with exactly one active module at a time:
+  - `Trend`,
+  - `Baseline`,
+  - `Scatter`,
+  - `Power`,
+  - `EUI`.
+- Preserved the existing analytics contracts and data sources:
+  - no new KPI definitions,
+  - no new mathematical models,
+  - no fallback back to legacy bottom IA.
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor.css`:**
+- Added the new Overview KPI-card layout, chart shell, contributor treemap styling, and compact Analysis toolbar/module-switch styling.
+- Hardened the lower analytics layout for FullHD / 2K so the workspace remains denser and avoids unnecessary vertical scroll.
+
+**`DiplomovaPrace/Components/Building/FacilityTimeSeriesPanel.razor`:**
+- Extended the reusable time-series panel to support an optional contributor overlay series and a more compact chrome mode used by the redesigned Overview chart.
+
+**`DiplomovaPrace/wwwroot/js/facilityTimeSeriesChart.js`:**
+- Extended the ECharts renderer to display a secondary overlay line for contributor preview/pin interactions and tuned spacing for the denser Overview layout.
+
+**`DiplomovaPrace/wwwroot/js/editor.js`:**
+- Added the tooltip runtime used by the Overview contributor treemap tiles.
+
+### Guardrails kept
+- No new KPI.
+- No new mathematical model.
+- No fallback to legacy bottom analytics navigation.
+- Analysis remains single-module and consumption-basis driven.
+
+### Build
+- `dotnet build` successful via the workspace build task after the final Razor repair and workspace redesign.
+
+### Date
+[2026-04-28]
+
+### Task
+Implementační krok 11b: nová spodní IA `Overview + Analysis`
+
+### What changed
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- Replaced the old bottom primary analytics tab shell (`Overview / Breakdown / Performance / Compare / Diagnostics`) with exactly two bottom workspaces:
+  - `Overview`
+  - `Analysis`
+- `Overview` now owns the aggregate bottom reading surface:
+  - one main chart,
+  - a `Net / Consumption / Production` switch,
+  - a compact KPI strip,
+  - and a lighter context rail for scope / composition / coverage.
+- `Analysis` is now a separate workspace with one active module at a time:
+  - `Trend`,
+  - `Baseline`,
+  - `Scatter`,
+  - `Power`,
+  - `EUI`.
+- Removed the old bottom-tab IA as the primary navigation model instead of layering the new structure on top of it.
+- Kept the implementation within the existing analytics result set:
+  - no new KPI,
+  - no new mathematical models,
+  - no compare / diagnostics redesign carried forward into the new primary bottom IA.
+- Enforced detail analytics over a consumption basis only:
+  - signal availability and detail modules now resolve against positive-consumption contributors from the refreshed aggregate overview,
+  - when no valid consumption basis exists, Analysis shows an explicit no-data / unavailable state instead of falling back to net or production detail.
+- The `Overview` semantics switch only changes the aggregate reading surface:
+  - `Net` keeps the signed aggregate view,
+  - `Consumption` reloads the overview chart on positive consumption-only aggregation,
+  - `Production` reloads the overview chart on production magnitude aggregation,
+  - Analysis stays semantics-independent and consumption-only.
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor.css`:**
+- Added styling for the new workspace switch, Overview context rail, Analysis module switch, power chart sub-switch, and responsive card/grid behavior.
+- Kept Overview visually calmer than Analysis while preserving the existing facility workbench language.
+
+### Guardrails kept
+- No new KPI.
+- No new mathematical model.
+- No fallback from Analysis to net / production detail when consumption basis is missing.
+- No return to the old multi-tab bottom IA as the primary product surface.
+
+### Build
+- `dotnet build` successful via the workspace build task after the final `Overview + Analysis` implementation.
+
+### Date
+[2026-04-28]
+
+### Task
+Implementační krok 11: aggregate semantics + Overview/Detail redesign
+
+### What changed
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- Added an `Overview semantics` switch for the main Overview aggregate surface with exactly three modes:
+  - `Net`,
+  - `Consumption`,
+  - `Production`.
+- Wired the main Overview chart area and headline KPI to this switch so the same top-level aggregate surface can be read in the selected semantics without introducing new KPI logic.
+- Split the UX more explicitly between:
+  - `Overview` as the main aggregate chart area,
+  - and a separate collapsible `Detail Analytics Tool` shell for deeper signal/performance inspection.
+- Reworked detail analytics state resolution so signal analytics and performance slices now run only on a consumption basis and show an explicit no-data / no-basis state when a valid consumption basis is not available.
+- Kept detail analytics free of any `Net / Consumption / Production` mode switch.
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor.css`:**
+- Added styling for the Overview semantics switch and the new detail-tool shell/basis banner so the Overview vs detail split is visually explicit in the main workspace.
+
+**`DiplomovaPrace/Services/NodeAnalyticsPreviewService.cs`:**
+- Added semantics-aware selection aggregate time-series support for Overview with a dedicated mode enum:
+  - `Net` = signed sum,
+  - `Consumption` = positive contributions only,
+  - `Production` = magnitude of negative contributions only.
+- Applied the same semantics transformation to the Overview aggregate curve metadata and baseline overlay path used by the main chart area.
+- Left detail analytics formulas unchanged and did not expand the change into forecast redesign, compare redesign, or new KPI math.
+
+### Guardrails kept
+- No new KPI.
+- No forecast redesign.
+- No compare redesign.
+- No additional mathematical redesign outside the requested semantics + UX/IA slice.
+- Detail analytics remains consumption-basis only.
+
+### Build
+- `dotnet build` successful via the workspace build task.
+
+### Date
+[2026-04-28]
+
+### Task
 Implementační krok 10: floor area validation + EUI unit/scaling hardening
 
 ### What changed

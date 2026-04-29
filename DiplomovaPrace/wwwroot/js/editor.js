@@ -1048,6 +1048,97 @@ window.editorCanvas = (function () {
             });
         },
 
+        setupOverviewTreemapTooltip: function (containerId) {
+            var container = document.getElementById(containerId);
+            if (!container) return;
+            if (container.dataset.overviewTreemapTooltipBound === '1') return;
+            container.dataset.overviewTreemapTooltipBound = '1';
+
+            function escapeHtml(value) {
+                return String(value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/\"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
+            function ensureCard() {
+                var card = document.getElementById('overview-treemap-hover-card');
+                if (!card) {
+                    card = document.createElement('div');
+                    card.id = 'overview-treemap-hover-card';
+                    card.className = 'schematic-hover-card';
+                    document.body.appendChild(card);
+                }
+                return card;
+            }
+
+            function findTile(el) {
+                while (el && el !== container) {
+                    if (el.dataset && el.dataset.overviewTreemapTile === 'true') {
+                        return el;
+                    }
+                    el = el.parentElement;
+                }
+                return null;
+            }
+
+            function positionCard(card, e) {
+                var offsetX = 14;
+                var offsetY = 12;
+                var left = e.clientX + offsetX;
+                var top = e.clientY + offsetY;
+
+                card.style.left = left + 'px';
+                card.style.top = top + 'px';
+
+                var rect = card.getBoundingClientRect();
+                if (rect.right > window.innerWidth - 8) {
+                    left = e.clientX - rect.width - offsetX;
+                }
+                if (rect.bottom > window.innerHeight - 8) {
+                    top = e.clientY - rect.height - offsetY;
+                }
+
+                card.style.left = Math.max(8, left) + 'px';
+                card.style.top = Math.max(8, top) + 'px';
+            }
+
+            container.addEventListener('mousemove', function (e) {
+                var tile = findTile(e.target);
+                var card = ensureCard();
+
+                if (!tile) {
+                    card.style.display = 'none';
+                    return;
+                }
+
+                var label = tile.dataset.tileLabel || 'Contributor';
+                var value = tile.dataset.tileValue || 'N/A';
+                var share = tile.dataset.tileShare || '0%';
+                var semantics = tile.dataset.tileSemantics || 'Overview';
+                var detail = (tile.dataset.tileDetail || '').trim();
+
+                var html = '<div class="shc-label">' + escapeHtml(label) + '</div>';
+                html += '<div class="shc-row"><span class="shc-key">Value</span><span class="shc-val">' + escapeHtml(value) + '</span></div>';
+                html += '<div class="shc-row"><span class="shc-key">Share</span><span class="shc-val">' + escapeHtml(share) + '</span></div>';
+                html += '<div class="shc-row"><span class="shc-key">Semantics</span><span class="shc-val">' + escapeHtml(semantics) + '</span></div>';
+                if (detail) {
+                    html += '<div class="shc-row shc-note-row"><span class="shc-key">Detail</span><span class="shc-val shc-note-val">' + escapeHtml(detail) + '</span></div>';
+                }
+
+                card.innerHTML = html;
+                card.style.display = 'block';
+                positionCard(card, e);
+            });
+
+            container.addEventListener('mouseleave', function () {
+                var card = document.getElementById('overview-treemap-hover-card');
+                if (card) card.style.display = 'none';
+            });
+        },
+
         dispose: function () {
             var svg = getSvg();
 
