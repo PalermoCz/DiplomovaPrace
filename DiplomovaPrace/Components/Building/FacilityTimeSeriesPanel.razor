@@ -32,16 +32,84 @@
         flex-wrap: wrap;
     }
 
+    .ts-controls-cluster {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+
     .ts-mode-buttons {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         gap: 0.35rem;
         min-width: 0;
+        flex-shrink: 0;
     }
 
     .ts-mode-buttons .btn {
         min-width: 4.65rem;
         white-space: nowrap;
+    }
+
+    .ts-inline-pins {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        min-width: 0;
+        flex: 1 1 auto;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .ts-inline-pins::-webkit-scrollbar {
+        display: none;
+    }
+
+    .ts-inline-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.26rem 0.56rem;
+        border: 1px solid #fdba74;
+        border-radius: 999px;
+        background: #fff7ed;
+        color: #9a3412;
+        font-size: 0.72rem;
+        font-weight: 700;
+        line-height: 1;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .ts-inline-chip-label {
+        max-width: 10rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .ts-inline-chip-dismiss {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 0.95rem;
+        height: 0.95rem;
+        border: 0;
+        padding: 0;
+        border-radius: 999px;
+        background: transparent;
+        color: #dc2626;
+        font-size: 0.86rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    .ts-inline-chip-dismiss:hover {
+        color: #b91c1c;
+        background: rgba(220, 38, 38, 0.08);
     }
 
     .ts-baseline-toggle {
@@ -59,6 +127,10 @@
     }
 
     @@media (max-width: 900px) {
+        .ts-controls-cluster {
+            width: 100%;
+        }
+
         .ts-mode-buttons .btn {
             min-width: 4.25rem;
         }
@@ -80,14 +152,35 @@
             }
 
             <div class="ts-panel-controls-row">
-                <div class="ts-mode-buttons" role="group" aria-label="Time-series granularity mode">
-                    @foreach (var mode in _availableModes)
+                <div class="ts-controls-cluster">
+                    <div class="ts-mode-buttons" role="group" aria-label="Time-series granularity mode">
+                        @foreach (var mode in _availableModes)
+                        {
+                            <button type="button"
+                                    class="btn btn-sm @(SelectedMode == mode ? "btn-primary" : "btn-outline-secondary")"
+                                    @onclick="() => SelectModeAsync(mode)">
+                                @GetModeShortLabel(mode)
+                            </button>
+                        }
+                    </div>
+
+                    @if (HeaderPinnedChips?.Count > 0)
                     {
-                        <button type="button"
-                                class="btn btn-sm @(SelectedMode == mode ? "btn-primary" : "btn-outline-secondary")"
-                                @onclick="() => SelectModeAsync(mode)">
-                            @GetModeShortLabel(mode)
-                        </button>
+                        <div class="ts-inline-pins" aria-label="Pinned contributor overlays">
+                            @foreach (var pinnedChip in HeaderPinnedChips)
+                            {
+                                <span class="ts-inline-chip">
+                                    <span class="ts-inline-chip-label">@pinnedChip.Label</span>
+                                    <button type="button"
+                                            class="ts-inline-chip-dismiss"
+                                            title="Remove pin"
+                                            aria-label="Remove pin for @pinnedChip.Label"
+                                            @onclick="() => DismissPinnedChipAsync(pinnedChip.NodeKey)">
+                                        ×
+                                    </button>
+                                </span>
+                            }
+                        </div>
                     }
                 </div>
 
@@ -164,9 +257,9 @@
     [Parameter] public bool ShowBaselineOverlay { get; set; }
     [Parameter] public EventCallback<bool> ShowBaselineOverlayChanged { get; set; }
     [Parameter] public bool ShowBaselineToggle { get; set; } = true;
-    [Parameter] public CuratedNodeTimeSeriesResult? OverlayData { get; set; }
-    [Parameter] public string? OverlaySeriesName { get; set; }
-    [Parameter] public bool OverlayIsPinned { get; set; }
+    [Parameter] public IReadOnlyList<(CuratedNodeTimeSeriesResult Data, string SeriesName, bool IsPinned)>? OverlaySeries { get; set; }
+    [Parameter] public IReadOnlyList<(string NodeKey, string Label)>? HeaderPinnedChips { get; set; }
+    [Parameter] public EventCallback<string> HeaderPinnedChipDismissed { get; set; }
     [Parameter] public bool ShowPanelTitle { get; set; } = true;
     [Parameter] public bool ShowStatusSummary { get; set; } = true;
     [Parameter] public bool IsLoading { get; set; }
@@ -199,18 +292,12 @@
         {
             if (Data?.Points.Count > 0)
             {
-                var firstPoint = Data.Points[0];
-                var lastPoint = Data.Points[^1];
-                var baselineFirstTicks = Data.BaselinePoints.Count > 0 ? Data.BaselinePoints[0].TimestampUtc.Ticks : 0;
-                var baselineLastTicks = Data.BaselinePoints.Count > 0 ? Data.BaselinePoints[^1].TimestampUtc.Ticks : 0;
-                var overlayFirstTicks = OverlayData?.Points.Count > 0 ? OverlayData.Points[0].TimestampUtc.Ticks : 0;
-                var overlayLastTicks = OverlayData?.Points.Count > 0 ? OverlayData.Points[^1].TimestampUtc.Ticks : 0;
-                var signature = $"{Data.NodeKey}:{Data.Granularity}:{Data.Points.Count}:{firstPoint.TimestampUtc.Ticks}:{lastPoint.TimestampUtc.Ticks}:{ShowBaselineOverlay}:{Data.BaselinePoints.Count}:{baselineFirstTicks}:{baselineLastTicks}:{OverlayData?.NodeKey}:{OverlayData?.Points.Count ?? 0}:{overlayFirstTicks}:{overlayLastTicks}:{OverlayIsPinned}:{ShowPanelTitle}:{ShowStatusSummary}";
+                var signature = BuildRenderSignature(Data, OverlaySeries);
 
                 if (!string.Equals(signature, _lastRenderedSignature, StringComparison.Ordinal))
                 {
                     _lastRenderedSignature = signature;
-                    await JSRuntime.InvokeVoidAsync("facilityTimeSeriesChart.render", _chartElementId, BuildModel(Data, ShowBaselineOverlay, OverlayData, OverlaySeriesName, OverlayIsPinned, !ShowPanelTitle && !ShowStatusSummary));
+                    await JSRuntime.InvokeVoidAsync("facilityTimeSeriesChart.render", _chartElementId, BuildModel(Data, ShowBaselineOverlay, OverlaySeries, !ShowPanelTitle && !ShowStatusSummary));
                 }
                 else if (firstRender)
                 {
@@ -227,6 +314,76 @@
         {
             _jsInteropUnavailable = true;
             await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private string BuildRenderSignature(
+        CuratedNodeTimeSeriesResult data,
+        IReadOnlyList<(CuratedNodeTimeSeriesResult Data, string SeriesName, bool IsPinned)>? overlaySeries)
+    {
+        var signatureParts = new List<string>
+        {
+            data.NodeKey,
+            data.Title,
+            data.Unit,
+            data.YAxisLabel,
+            data.SeriesSemantics.ToString(),
+            data.UsesDerivedIntervalSeries.ToString(),
+            data.Granularity.ToString(),
+            data.RequestedMode.ToString(),
+            data.BaselineOverlayAvailable.ToString(),
+            ShowBaselineOverlay.ToString(),
+            ComputeSeriesFingerprint(data).ToString(),
+            ShowPanelTitle.ToString(),
+            ShowStatusSummary.ToString()
+        };
+
+        foreach (var overlay in overlaySeries ?? [])
+        {
+            signatureParts.Add(overlay.Data.NodeKey);
+            signatureParts.Add(overlay.SeriesName ?? string.Empty);
+            signatureParts.Add(overlay.IsPinned.ToString());
+            signatureParts.Add(ComputeSeriesFingerprint(overlay.Data).ToString());
+        }
+
+        return string.Join(':', signatureParts);
+    }
+
+    private static int ComputeSeriesFingerprint(CuratedNodeTimeSeriesResult? series)
+    {
+        if (series is null)
+        {
+            return 0;
+        }
+
+        var hash = new HashCode();
+        hash.Add(series.NodeKey, StringComparer.Ordinal);
+        hash.Add(series.Title, StringComparer.Ordinal);
+        hash.Add(series.Unit, StringComparer.Ordinal);
+        hash.Add(series.YAxisLabel, StringComparer.Ordinal);
+        hash.Add(series.SeriesSemantics);
+        hash.Add(series.UsesDerivedIntervalSeries);
+        hash.Add(series.SeriesStatusMessage, StringComparer.Ordinal);
+        hash.Add(series.Granularity);
+        hash.Add(series.RequestedMode);
+        hash.Add(series.BaselineOverlayRequested);
+        hash.Add(series.BaselineOverlayAvailable);
+        hash.Add(series.BaselineOverlayMessage, StringComparer.Ordinal);
+        hash.Add(series.NoDataMessage, StringComparer.Ordinal);
+        AppendPointsFingerprint(ref hash, series.Points);
+        AppendPointsFingerprint(ref hash, series.BaselinePoints);
+        return hash.ToHashCode();
+    }
+
+    private static void AppendPointsFingerprint(ref HashCode hash, IReadOnlyList<CuratedNodeTimeSeriesPoint> points)
+    {
+        hash.Add(points.Count);
+
+        for (var index = 0; index < points.Count; index++)
+        {
+            var point = points[index];
+            hash.Add(point.TimestampUtc.Ticks);
+            hash.Add(BitConverter.DoubleToInt64Bits(point.Value));
         }
     }
 
@@ -258,6 +415,16 @@
         }
     }
 
+    private async Task DismissPinnedChipAsync(string nodeKey)
+    {
+        if (string.IsNullOrWhiteSpace(nodeKey) || !HeaderPinnedChipDismissed.HasDelegate)
+        {
+            return;
+        }
+
+        await HeaderPinnedChipDismissed.InvokeAsync(nodeKey);
+    }
+
     private static string GetModeShortLabel(CuratedNodeTimeSeriesMode mode)
     {
         return mode switch
@@ -285,9 +452,7 @@
     private static object BuildModel(
         CuratedNodeTimeSeriesResult data,
         bool showBaselineOverlay,
-        CuratedNodeTimeSeriesResult? overlayData,
-        string? overlaySeriesName,
-        bool overlayIsPinned,
+        IReadOnlyList<(CuratedNodeTimeSeriesResult Data, string SeriesName, bool IsPinned)>? overlaySeries,
         bool compactMode)
     {
         return new
@@ -295,10 +460,6 @@
             title = data.Title,
             actualSeriesName = data.Title,
             baselineSeriesName = "Baseline reference",
-            overlaySeriesName = string.IsNullOrWhiteSpace(overlaySeriesName)
-                ? (overlayData?.Title ?? "Contributor overlay")
-                : overlaySeriesName,
-            overlayPinned = overlayIsPinned,
             compact = compactMode,
             unit = data.Unit,
             yAxisLabel = data.YAxisLabel,
@@ -312,11 +473,18 @@
                 timestampUtc = p.TimestampUtc,
                 value = p.Value
             }).ToArray(),
-            overlayPoints = overlayData?.Points.Select(p => new
-            {
-                timestampUtc = p.TimestampUtc,
-                value = p.Value
-            }).ToArray() ?? []
+            overlaySeries = (overlaySeries ?? [])
+                .Select(series => new
+                {
+                    seriesName = string.IsNullOrWhiteSpace(series.SeriesName) ? series.Data.Title : series.SeriesName,
+                    pinned = series.IsPinned,
+                    points = series.Data.Points.Select(p => new
+                    {
+                        timestampUtc = p.TimestampUtc,
+                        value = p.Value
+                    }).ToArray()
+                })
+                .ToArray()
         };
     }
 

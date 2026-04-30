@@ -1,6 +1,268 @@
 # Worklog
 
 ### Date
+[2026-04-29]
+
+### Task
+Implementační krok 11j: literature-backed treemap redesign + operation-local loading polish + drill-in interaction fix
+
+### What changed
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- Replaced the old first-split treemap rect builder with an ordered square-ish strip layout that keeps contributors in readable non-extreme rectangles instead of long thin strips.
+- Tightened contributor grouping to true threshold-first behavior so direct tiles keep expanding until the grouped tail reaches `<= 15 %`, unless the next direct tile would already be too small to stay readable.
+- Retuned treemap text mode selection to prioritize labels more aggressively by area, shorter side, and aspect ratio so medium and narrow readable tiles no longer disappear as often.
+- Added hover debounce for contributor preview so quick pointer passes no longer trigger overlay refresh on every micro-hover.
+- Kept drill-in preview/pin interaction on the `Other contributors` overlay but routed it through the debounced hover flow and explicit pin removal flow.
+- Moved pinned contributor chips into the chart mode row and added direct per-chip unpin actions instead of keeping pinned state inside the chart surface overlay.
+- Changed loading pill progression to operation-local percentages:
+  - full overview refresh now progresses as `0 -> 18 -> 82 -> 100`,
+  - semantics/granularity chart refresh now uses `0 -> 100` for the local chart operation,
+  - the previous interpolated pseudo-progress model was removed.
+- Increased the completion hold so the loading pill visibly stays at `100 %` briefly before dismissing.
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor.css`:**
+- Added treemap stage isolation so the drill-in overlay fully owns the stacking context above the tiles.
+- Made the drill-in overlay fully opaque and raised its z-index to stop bleed-through.
+- Slightly tightened treemap tile padding and typography so square-ish tiles use space more efficiently without text spill.
+
+**`DiplomovaPrace/Components/Building/FacilityTimeSeriesPanel.razor`:**
+- Added inline pinned-contributor chips beside `Auto / 15min / Hourly / Daily`.
+- Styled the chips as horizontal non-layout controls with overflow-safe scrolling so they do not increase chart panel height.
+- Added the small red `×` dismiss action for direct unpin from the chip row.
+
+### Guardrails kept
+- No new KPI.
+- No new mathematical model.
+- Tooltip behavior was left unchanged.
+- No wider Overview / Analysis redesign beyond the requested treemap, drill-in, pinned-chip, hover-performance, and loading-pill scope.
+
+### Build
+- `dotnet build` successful via the workspace build task after the final 11j edits.
+
+### Date
+[2026-04-29]
+
+### Task
+Implementační krok 11i: debug instrumentation for loading and treemap/drill-in flow, plus targeted drill-in fixes
+
+### What changed
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- Added structured browser-console instrumentation for analytics loading operations using:
+  - `[analytics-load:start]`
+  - `[analytics-load:phase-complete]`
+  - `[analytics-load:end]`
+- Added operation ids and operation types for the active loading paths:
+  - `full-overview-refresh`
+  - `overview-chart-refresh`
+  - `overview-semantics-switch`
+  - `overview-granularity-switch`
+  - `analysis-refresh`
+  - `contributor-overlay-refresh`
+- Logged loading context with selection scope, interval, semantics mode, and chart granularity.
+- Logged phase timing and percent progression for full analytics refresh, overview-chart refresh, selection-signal refresh, and contributor-overlay refresh.
+- Added structured treemap / drill-in interaction logging using:
+  - `[treemap:interaction]`
+  - `[treemap:drill-in]`
+  - `[treemap:state]`
+- Logged tile hover / hover end / click / pin / unpin and drill-in row preview start / preview end / pin / unpin.
+- Logged drill-in open / close reasons, including explicit close, outside click, and `Other` tile toggle.
+- Fixed drill-in interaction handling by giving tiles and drill-in rows dedicated exit handlers instead of sharing a generic leave callback.
+- Fixed drill-in preview cleanup on close by clearing unpinned preview state when the overlay is dismissed.
+- Removed the instructional text from the drill-in overlay.
+- Replaced the drill-in secondary label so it now prefers node `type` instead of showing `Other / Unclassified`, with a safe fallback to role label and then `Unknown type`.
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor.css`:**
+- Hardened the drill-in overlay backdrop so it fully covers the treemap stage with an opaque surface.
+- Raised the drill-in overlay z-index and enabled backdrop pointer capture so underlying treemap tiles no longer bleed through visually or interactively.
+- Expanded the drill-in panel to the full overlay width to keep the overlay self-contained.
+
+### Guardrails kept
+- No new KPI.
+- No new loading UI redesign.
+- No new treemap redesign.
+- No new analytical model.
+- No wider Overview / Analysis refactor beyond the requested instrumentation and drill-in fixes.
+
+### Build
+- Workspace build task still hits the known debugger lock on `DiplomovaPrace\bin\Debug\net10.0\DiplomovaPrace.dll`.
+- Verified successful compilation with an isolated output build:
+  - `dotnet build .\DiplomovaPrace\DiplomovaPrace.csproj -o .\build-validation\step11i-agent-build "/property:GenerateFullPaths=true" "/consoleloggerparameters:NoSummary;ForceNoAlign"`
+
+### Date
+[2026-04-29]
+
+### Task
+Implementacni krok 11h: final stabilization polish for operation-local loading, drill-in persistence, pinned layout stability, and treemap visibility
+
+### What changed
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- Changed analytics loading operations so both the full analytics refresh and the local overview-chart refresh now start from `0 %` for their own operation instead of inheriting a partially advanced staged value.
+- Changed loading completion so the global pill now reaches a visible `100 %` before dismissing, instead of clearing immediately from an intermediate percent.
+- Kept the `Other contributors` drill-in overlay open when hovering or pinning another treemap tile; the overlay now closes only through the explicit close action or by toggling the synthetic `Other` tile itself.
+- Kept drill-in row hover bound to preview and drill-in row click bound to pin/unpin, while preserving the multi-pin overlay flow in the main chart.
+- Reworked direct-contributor selection so treemap grouping is threshold-first: direct tiles expand until `Other contributors` drops to `<= 15 %`, unless the next candidate would already be too small to stay readable.
+- Tightened treemap inline text mode selection to use tile area, shorter side, and aspect ratio instead of only simple width/height breakpoints.
+- Moved the pinned/preview chart chips out of the header flow into a dedicated chart-surface overlay layer so adding pins no longer changes panel height.
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor.css`:**
+- Added a non-layout chart context overlay inside the overview chart surface for pinned chips, preview chip, loading chip, and `Clear all pins`.
+- Strengthened treemap text readability with slightly denser label/value sizing and clearer text contrast treatment.
+- Replaced the fragile treemap outline treatment with inset ring styling plus z-index ordering so pinned tiles remain visibly outlined on all four sides.
+
+### Guardrails kept
+- No new KPI.
+- No new mathematical model.
+- Tooltip behavior was left unchanged.
+- No new Overview / Analysis redesign outside the requested loading, treemap, drill-in, and pinned-layout stabilization scope.
+
+### Build
+- Workspace build task hit the known debugger file lock on `bin\Debug\net10.0\DiplomovaPrace.dll`.
+- Verified successful compilation with an isolated build output:
+  - `dotnet build .\DiplomovaPrace\DiplomovaPrace.csproj -o .\build-validation\step11h-agent-build "/property:GenerateFullPaths=true" "/consoleloggerparameters:NoSummary;ForceNoAlign"`
+
+### Date
+[2026-04-29]
+
+### Task
+Implementační krok 11g: final polish for loading pill, treemap overlay drill-in, multi-pin chart overlay, tooltip cleanup
+
+### What changed
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- Replaced the remaining loading rail UI with a compact single-phase status pill in the analytics toolbar.
+- Kept the Overview loading skeleton at the product-correct 3 KPI placeholders.
+- Removed the chart idle micro-copy `Double click chart to reset zoom.` from the visible Overview UI.
+- Changed contributor pinning from single-pin state to multi-pin state:
+  - pinned contributors are now accumulated,
+  - the chart context shows multiple pinned chips,
+  - `Clear all pins` clears the full pinned set.
+- Reworked contributor overlay refresh so the Overview chart now keeps:
+  - multiple pinned contributor overlays,
+  - optional hover preview for a non-pinned contributor,
+  - stable reload behavior when switching `Net / Consumption / Production`.
+- Moved `Other contributors` drill-in into an overlay rendered inside the treemap stage instead of a separate block below it.
+- Kept drill-in hover as preview and made drill-in click toggle contributor pinning into the chart overlay set.
+- Tightened treemap tile text policy to the intended hierarchy:
+  - large tiles: label + value + share,
+  - medium tiles: label + share,
+  - small tiles: label only,
+  - very small tiles: no inline text.
+- Added treemap tooltip metadata wiring for `Type`, `Zone`, and `Style` sourced from the current node/editor state.
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor.css`:**
+- Styled the new compact loading pill so it sits beside `Overview / Analysis` instead of reading like a larger panel.
+- Stretched the Overview right column so the treemap card fills the same vertical weight as the main chart card.
+- Turned the drill-in into an in-place glassy overlay anchored inside the treemap stage.
+- Compressed treemap tile padding and text sizing to avoid overflow and keep labels readable in smaller rectangles.
+
+**`DiplomovaPrace/Components/Building/FacilityTimeSeriesPanel.razor`:**
+- Extended the chart component API from a single overlay series to a list of overlay series so the Overview chart can render multiple contributor pins plus hover preview.
+- Updated the render signature fingerprint to include every overlay series and preserve robust rerender behavior.
+
+**`DiplomovaPrace/wwwroot/js/facilityTimeSeriesChart.js`:**
+- Updated the ECharts renderer to support multiple contributor overlay series at once.
+- Added per-overlay visual treatment so pinned contributors remain solid and preview overlays stay dashed.
+
+**`DiplomovaPrace/wwwroot/js/editor.js`:**
+- Cleaned the treemap tooltip to match the node hintbox pattern.
+- Removed `Semantics` and `Detail` from the treemap tooltip.
+- Added `Type`, `Zone`, `Style`, and kept `Value` + `Share`.
+
+### Guardrails kept
+- No new KPI.
+- No new mathematical model.
+- No new Overview / Analysis shell redesign outside the requested loading, treemap, drill-in, chart overlay, and tooltip polish.
+
+### Build
+- `dotnet build` successful via the workspace build task after the final 11g polish edits.
+
+### Date
+[2026-04-29]
+
+### Task
+Implementační krok 11f: loading / treemap / overview chart stabilization polish
+
+### What changed
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- Moved the analytics loading rail into a compact top-right toolbar beside the existing `Overview / Analysis` switch instead of leaving it as a larger full-width block.
+- Reduced the Overview loading KPI skeleton strip from 4 placeholders to the product-correct 3 cards.
+- Added timer-backed staged loading refresh so elapsed time and the displayed progress percent keep moving during longer loads instead of freezing between stage updates.
+- Unified active contributor label resolution across both main treemap tiles and the `Other contributors` drill-in list so hover/pin state flows into the chart context and overlay naming consistently.
+- Wrapped the contributors surface into a dedicated treemap body so the drill-in can live inside the right column without forcing the left chart panel to stretch.
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor.css`:**
+- Compressed the loading rail visual treatment: smaller typography, tighter spacing, narrower footprint, and right-aligned toolbar placement.
+- Added bounded rail-bar motion and responsive toolbar behavior for a more live loading state.
+- Changed the Overview main grid to stop stretching the chart panel when the contributors drill-in opens.
+- Added treemap-body / drill-in sizing rules so the treemap avoids the previous dead white space and the drill-in scrolls inside the right column with its own max-height.
+
+**`DiplomovaPrace/Components/Building/FacilityTimeSeriesPanel.razor`:**
+- Replaced the old shape-only `_lastRenderedSignature` with a richer render fingerprint that includes series metadata plus a point/baseline content fingerprint for both primary and overlay series.
+- This fixes the root cause where `Net / Consumption / Production` could collide on the same node/granularity/point-count/timestamp shape and incorrectly skip a needed rerender when returning to an already rendered semantics mode.
+
+### Guardrails kept
+- No new KPI.
+- No new mathematical model.
+- No Overview / Analysis redesign outside the requested loading, treemap, drill-in, and rerender stabilization scope.
+
+### Build
+- `dotnet build` successful via the workspace build task after the final 11f stabilization edits.
+
+### Date
+[2026-04-29]
+
+### Task
+Implementační krok 11e: loading UX + staged progress bar pro Overview a Analysis
+
+### What changed
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- Added a global staged loading rail for the lower analytics workspace under the `Overview / Analysis` switch.
+- Introduced lightweight staged loading state for the existing refresh orchestration:
+  - headline,
+  - phase label,
+  - detail text,
+  - staged percent,
+  - elapsed time.
+- Wired the staged rail into the existing analytics refresh flow:
+  - `ReloadPreviewDataAsync()` now advances through scope, overview, analysis, and finalization phases,
+  - `ReloadOverviewChartAsync()` now exposes a dedicated staged chart-refresh rail when the chart is reloaded independently.
+- Replaced the old Overview spinner with product-level loading placeholders:
+  - KPI skeleton strip,
+  - main chart placeholder,
+  - contributors treemap placeholder.
+- Replaced the old Analysis spinner with a proper loading skeleton:
+  - toolbar skeleton,
+  - module-switch skeleton,
+  - active-module placeholder body.
+- Hardened stale-data behavior so the Overview chart placeholder is rendered while `_isOverviewChartLoading` is true instead of leaving the previous chart visible.
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor.css`:**
+- Added the loading rail styling, shimmer animation, Overview placeholder surfaces, Analysis skeleton styling, and responsive loading-state adjustments used by step 11e.
+
+### Phase labels used
+- `Resolving scope`
+- `Loading overview`
+- `Interval validation`
+- `Loading analysis`
+- `Finalizing visuals`
+- `Loading trend surface`
+- `Rendering trend surface`
+
+### Guardrails kept
+- No new KPI.
+- No new analytical model.
+- No redesign of the upper schematic workspace.
+- Loading UX was built on top of the existing analytics loading flags and refresh methods.
+
+### Build
+- `dotnet build` successful via the workspace build task after the final 11e loading UX hardening edits.
+
+### Date
 [2026-04-28]
 
 ### Task

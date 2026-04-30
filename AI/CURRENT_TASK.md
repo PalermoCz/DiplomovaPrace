@@ -1,392 +1,403 @@
-# CURRENT TASK
+# CURRENT_TASK.md
 
-## Název
-Implementační krok 11d: finální UX polish Overview + Analysis (selection donut, treemap polish, chart polish, no-scroll hardening)
+## Název úkolu
+FacilityWorkbench — přesný replace-only fix pro 3 chyby
 
-## Kontext
-Máme hotový velký redesign spodní analytics části:
-- spodní navigace je `Overview + Analysis`
-- Overview má 3 hlavní KPI karty:
-  - Net
-  - Consumption
-  - Production
-- Overview má hlavní chart a Top contributors treemap
-- Analysis je samostatná workspace
-- detail analytics běží nad consumption basis
+Tento task je čistě REPLACE-ONLY.
+Neimprovizuj.
+Nevymýšlej alternativní řešení.
+Neprováděj refactor.
+Nedělej další změny mimo přesně uvedené bloky.
 
-Po ručním smoke testu je nový směr správný, ale ještě je potřeba doladit několik důležitých UX detailů:
+Uprav pouze:
+- `DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`
+- `DiplomovaPrace/Components/Pages/FacilityWorkbench.razor.css`
 
-### Co je potřeba opravit / dopolishovat
-1. `Baseline overlay` je stále vidět v Overview a má být odstraněn
-2. `Selection` panel nahoře je pořád příliš slabý:
-   - malý pie chart
-   - chybí druhé číslo ve smyslu:
-     - `With data`
-     - `No data`
-3. Selection chart má být větší a graficky silnější:
-   - ideálně donut
-   - s hlavním číslem uvnitř
-4. Treemap funguje, ale potřebuje polish:
-   - barvy podle node style
-   - stejný hover hintbox jako selection chart
-   - lepší práci s textem v malých tiles
-   - adaptivní `Other` tak, aby nepřerostlo přes 20 %
-   - možnost rozkliknout `Other` a dostat se ke contributorům uvnitř
-5. Hlavní chart pořád postrádá dotáhnutý polish a užitečné interakce
-6. Na FullHD stále vzniká zbytečný scroll
-7. To samé platí i pro `Analysis`
-
-Tento krok je poslední velký UX polish / hardening sprint pro spodní analytics workspace.
+Nepoužívej service refactor.
+Nesahej do `NodeAnalyticsPreviewService.cs`.
+Nesahej do treemapy, editoru, schematicu, loading railu ani jiné části aplikace.
 
 ---
 
-## Cíl
-Dodat finální UX polish tak, aby:
-1. Overview působil jako čistý executive summary
-2. Selection panel nahoře byl silnější a informativnější
-3. treemap byla vizuálně i interakčně dotažená
-4. chart byl dotažený jako hlavní vizuální prvek
-5. Overview i Analysis se co nejlépe vešly na FullHD / 2K bez zbytečného scrollu
+# Cíl
+Opravit přesně tyto 3 chyby:
+
+1. `Selected / With data / No data` musí být interně konzistentní
+2. první výběr nodeů musí správně načíst Overview
+3. tabs strip `Trend / Baseline / Scatter / Power / EUI` musí být skutečně samostatný bullet a nesmí sdílet ohraničení s `Data Source + Signal`
 
 ---
 
-## Scope tohoto kroku
+# KROK 1 — Oprava selection summary classification
 
-### Ano
-- odstranit baseline overlay z Overview
-- redesign Selection chart na větší donut
-- přidat textové second-line statistiky:
-  - With data
-  - No data
-- treemap polish
-- chart polish
-- `Other` behavior a contributor drill-in
-- no-scroll hardening pro Overview i Analysis
-- drobné copy / spacing / hierarchy polish
-
-### Ne
-- nové KPI
-- nové matematické modely
-- baseline formula changes
-- scatter formula changes
-- EUI formula changes
-- redesign horního schematic editoru
-- nové feature moduly mimo tento polish sprint
-
----
-
-# Přesný UX kontrakt
-
-## A. Overview
-
-### 1. Baseline overlay pryč
-V `Overview` už nechci:
-- baseline overlay toggle
-- žádný baseline overlay control
-- žádný placeholder pro něj
-
-Baseline patří do:
-- `Analysis > Baseline`
-
-#### Akceptace
-- v Overview nesmí být vidět žádný baseline overlay control
-
----
-
-### 2. KPI strip
-Zachovat 3 rovnocenné karty:
-- Net
-- Consumption
-- Production
-
-#### Požadavky
-- všechny 3 stejně vysoké a stejně důležité
-- aktivní karta je zvýrazněná
-- labely a hodnoty mají být vizuálně silnější než dnes
-- subtitle může zůstat krátký, ale klidnější
-
----
-
-### 3. Main chart
-Chart zůstává hlavním prvkem Overview.
-
-#### Co chci doladit
-- méně whitespace
-- čistší header
-- jemnější grid
-- lepší kontrast line
-- zlepšit legend / pinned state presentation
-- lepší vizuální hierarchii mezi aggregate line a contributor overlay line
-
-#### Požadované interakce
-Implementuj / dotahej tyto užitečné funkce:
-
-##### a) Double click = reset zoom
-Pokud chart runtime umožňuje, přidej:
-- double click → reset zoom / reset view
-
-##### b) Export snapshot
-Přidej malé, nenápadné tlačítko:
-- export chart snapshot
-- preferovaně PNG / image export
-- pokud je v runtime už dostupná podobná schopnost, využij ji
-
-##### c) Jasnější overlay state
-Pokud je contributor:
-- hover preview
-- nebo pinned
-
-pak to musí být přehledně vidět v chart headeru.
-
-Například:
-- `Previewing: H1.Z29`
-- `Pinned: H1.Z29`
-- `Clear`
-
-Nechci, aby overlay stav působil jako náhodná malá badge bez jasného významu.
-
-##### d) Production chart semantics
-V `Production` mode má být production zobrazována jako:
-- **kladná velikost výroby**
-- ne jako záporná čára
-
----
-
-## B. Treemap
-
-### 1. Barvy podle node style
-Každý treemap tile má používat:
-- barvu odvozenou z přiřazeného node style
-- stejně jako se pracuje s barvou v horním selection chartu
-
-#### Fallback
-Pokud node style barvu nemá:
-- použij bezpečný fallback
-
----
-
-### 2. Hover hintbox
-Treemap hover musí používat:
-- stejný hintbox / hover pattern jako selection chart nahoře
-
-#### Hover má ukazovat minimálně
-- node label
-- value
-- share %
-- semantics mode (`Net / Consumption / Production`)
-
----
-
-### 3. Adaptivní `Other`
-Treemap nesmí fungovat fixně jen jako top N.
-
-#### Pravidlo
-- zobraz tolik contributorů, aby:
-  - `Other <= 20 %`
-- s horním limitem:
-  - max 10 contributor tiles + `Other`
-
-#### Důležité
-- pokud i při tomto limitu `Other` zůstává velké, je to v pořádku
-- ale musí být dobře pojmenované a dobře obsloužené
-
-### 4. `Other` label
-Nepoužívej matoucí wording typu:
-- `Other / Unclassified`
-pokud to jsou ve skutečnosti jen sloučené menší contributory.
-
-#### Doporučené znění
-- `Other contributors`
-
----
-
-### 5. Klik na `Other`
-Klik na `Other` musí otevřít malý contributor drill-in.
-
-#### Požadované chování
-- otevři malý popover / side list / lightweight panel
-- zobraz seznam contributorů uvnitř `Other`
-- pro každý:
-  - label
-  - value
-  - share
-- hover = preview do chartu
-- click = pin do chartu
-
-#### Důležité
-Nechci fullscreen modal ani další velký panel.
-Má to být lehké a rychlé.
-
----
-
-### 6. Text rendering v tiles
-Text nesmí v malých tiles působit useknutě a rozbitě.
-
-#### Pravidla
-- velké tiles:
-  - label + value + share
-- střední tiles:
-  - label + value
-- malé tiles:
-  - žádný text uvnitř
-  - info jen v hoveru
-
----
-
-## C. Selection panel nahoře
-
-### 1. Pie chart změnit na větší donut
-Současný malý pie chart je moc drobný.
-
-#### Chci
-- výraznější donut
-- vizuálně dominantnější než dnes
-
-### 2. Hlavní číslo dovnitř
-Do středu donutu chci:
-- hlavní číslo:
-  - např. `91`
-- pod něj text:
-  - `Selected nodes`
-
-To má být hlavní vizuální anchor Selection panelu.
-
----
-
-### 3. Druhá řada statistik
-Vedle / pod donutem chci ještě 2 malé textové statistiky:
-
-- `With data`
-- `No data`
-
-#### Důležité
-Ne jako chips.
-Ne jako velké cardy.
-Ne jako technické `Supported / Unsupported`.
-
-#### Chci
-malé číslo + malý popisek, např.:
-
-```text
-83  With data
-8   No data
+## Najdi v `FacilityWorkbench.razor` tuto metodu:
+```csharp
+private SelectionSummaryClassificationSnapshot BuildSelectionSummaryClassificationSnapshot()
 ````
 
-#### Styl
+## Smaž CELÉ aktuální tělo této metody
 
-*   decentní
-*   ale čitelný
-*   musí zapadat do Selection panelu
+a nahraď ho přesně tímto:
 
-***
+```csharp
+private SelectionSummaryClassificationSnapshot BuildSelectionSummaryClassificationSnapshot()
+{
+    var selectedNodeKeys = _selectionOrder
+        .Where(_selectionSet.Contains)
+        .Where(nodeKey => !string.IsNullOrWhiteSpace(nodeKey))
+        .Where(nodeKey => !IsWeatherNode(nodeKey))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList();
 
-## D. No-scroll hardening
+    if (selectedNodeKeys.Count == 0)
+    {
+        return new SelectionSummaryClassificationSnapshot([], [], [], []);
+    }
 
-### 1. Overview
+    var supportedItems = SelectionSummaryItems
+        .Where(item => selectedNodeKeys.Contains(item.NodeKey, StringComparer.OrdinalIgnoreCase))
+        .Where(IsLeafOrAnalyticNode)
+        .Where(item => !FacilityNodeSemantics.IsWeatherContextNode(item.NodeKey))
+        .ToList();
 
-Na FullHD (1920×1080) a 2K musí být Overview co nejkompaktnější.
+    var supportedNodeKeys = supportedItems
+        .Select(item => item.NodeKey)
+        .Where(nodeKey => !string.IsNullOrWhiteSpace(nodeKey))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList();
 
-#### Požadavek
+    var withDataNodeKeys = selectedNodeKeys
+        .Where(NodeHasAnyAnalysisData)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList();
 
-*   KPI strip + chart + treemap se mají co nejvíc vejít bez zbytečného vertikálního scrollu
-*   pokud je scroll nevyhnutelný, musí být výrazně menší než dnes
+    var withDataNodeKeySet = withDataNodeKeys.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-### 2. Analysis
+    var noDataNodeKeys = selectedNodeKeys
+        .Where(nodeKey => !withDataNodeKeySet.Contains(nodeKey))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList();
 
-Stejný požadavek platí pro Analysis.
-
-#### Požadavek
-
-*   Analysis toolbar + aktivní modul
-*   žádný zbytečný vertikální odpad
-*   menší card padding
-*   menší spacing
-*   vždy jen jeden aktivní modul
-*   minimalizovat celostránkový scroll
-
-***
-
-## E. Analysis workspace polish
-
-### 1. Toolbar
-
-Toolbar má být kompaktní a čistý.
-
-### 2. Modulové layouty
-
-Každý modul má být kompaktnější:
-
-*   méně vertikálního paddingu
-*   méně explanatory textu
-*   víc data, méně prose
-
-### 3. Power modul
-
-Udržet:
-
-*   KPI nahoře
-*   jeden chart slot
-*   `LDC` a `Base vs Peak Over Time` jako switch
-*   ne pod sebou
-
-### 4. Baseline modul
-
-Karty + krátký note.
-Ne dlouhý textový blok.
-
-### 5. Trend / Scatter / EUI
-
-Stejně:
-
-*   kompaktní, čisté, bez zbytečné výplně
+    return new SelectionSummaryClassificationSnapshot(
+        supportedItems,
+        supportedNodeKeys,
+        withDataNodeKeys,
+        noDataNodeKeys);
+}
+```
 
 ***
 
-# F. Neakceptovatelné výsledky
+# KROK 2 — Oprava aggregate scope pro Overview
 
-Tyto výsledky nejsou přijatelné:
+## Najdi v `FacilityWorkbench.razor` tuto metodu:
 
-*   baseline overlay zůstane v Overview
-*   treemap bude mít dál náhodné / nesouvisející barvy
-*   `Other` zůstane fixní a nekontrolované přes 20 %
-*   nebude možné nahlédnout dovnitř `Other`
-*   selection chart zůstane malý pie bez silného vizuálního anchoru
-*   `With data / No data` se zobrazí jako chips
-*   FullHD / 2K scroll se reálně nezlepší
-*   chart overlay state zůstane nečitelný
-*   chart nedostane žádný skutečný polish / utility funkce
+```csharp
+private IReadOnlyList<string> GetSelectionAggregateNodeKeys()
+```
 
-***
+## Smaž CELÉ aktuální tělo této metody
 
-## Pravidla práce
+a nahraď ho přesně tímto:
 
-*   nejdřív stručně napiš plán
-*   potom implementuj
-*   drž se tohoto scope
-*   po dokončení napiš:
-    *   co bylo změněno v Overview
-    *   jak funguje selection donut a `With data / No data`
-    *   jak funguje adaptivní `Other`
-    *   jak funguje `Other` drill-in
-    *   jaké chart utility byly přidány
-    *   jak byl vylepšen layout pro FullHD / 2K
-*   proveď build
-*   aktualizuj `AI/WORKLOG.md`
+```csharp
+private IReadOnlyList<string> GetSelectionAggregateNodeKeys()
+{
+    return _selectionOrder
+        .Where(_selectionSet.Contains)
+        .Where(nodeKey => !string.IsNullOrWhiteSpace(nodeKey))
+        .Where(nodeKey => !IsWeatherNode(nodeKey))
+        .Where(NodeHasAnyAnalysisData)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList();
+}
+```
 
 ***
 
-## Akceptační kritéria
+# KROK 3 — Oprava unavailable state property
 
-Krok je hotový, pokud:
+## Najdi v `FacilityWorkbench.razor` tento řádek:
 
-1.  baseline overlay už v Overview není
-2.  selection chart je větší donut s číslem uvnitř
-3.  v Selection panelu jsou textové statistiky `With data / No data`
-4.  treemap používá barvy podle node style
-5.  treemap používá stejný hover hintbox pattern jako selection chart
-6.  `Other` je adaptivní do cíle max 20 %, s horním limitem contributorů
-7.  klik na `Other` umožní zobrazit contributory uvnitř
-8.  malé treemap tiles už nepůsobí rozbitě useknutým textem
-9.  chart má dotažený overlay state a alespoň 2 utility funkce (např. reset zoom, export)
-10. Overview i Analysis jsou kompaktnější a méně scrollují na FullHD / 2K
-11. build projde
+```csharp
+private bool ShouldShowOverviewUnavailableState => !ShouldShowOverviewLoadingSkeleton && IsOverviewAvailabilityDecisionReady() && ShouldShowOverviewUnavailable();
+```
+
+## Nahraď ho přesně tímto:
+
+```csharp
+private bool ShouldShowOverviewUnavailableState => !ShouldShowOverviewLoadingSkeleton && ShouldShowOverviewUnavailable();
+```
+
+***
+
+# KROK 4 — Oprava `ShouldShowOverviewUnavailable()`
+
+## Najdi v `FacilityWorkbench.razor` tuto metodu:
+
+```csharp
+private bool ShouldShowOverviewUnavailable()
+```
+
+## Smaž CELÉ aktuální tělo této metody
+
+a nahraď ho přesně tímto:
+
+```csharp
+private bool ShouldShowOverviewUnavailable()
+{
+    if (!HasSelectedNodes)
+    {
+        return false;
+    }
+
+    var aggregateScopeNodeKeys = GetSelectionAggregateNodeKeys();
+    if (aggregateScopeNodeKeys.Count == 0)
+    {
+        return true;
+    }
+
+    return _selectionAggregateOverview is null || _selectionAggregateOverview.Summary is null;
+}
+```
+
+***
+
+# KROK 5 — Oprava `ResolveOverviewUnavailableMessage()`
+
+## Najdi v `FacilityWorkbench.razor` tuto metodu:
+
+```csharp
+private string ResolveOverviewUnavailableMessage()
+```
+
+## Smaž CELÉ aktuální tělo této metody
+
+a nahraď ho přesně tímto:
+
+```csharp
+private string ResolveOverviewUnavailableMessage()
+{
+    var aggregateScopeNodeKeys = GetSelectionAggregateNodeKeys();
+    if (aggregateScopeNodeKeys.Count == 0)
+    {
+        return "The current selection has no nodes with compatible analytics data for aggregate overview.";
+    }
+
+    if (!string.IsNullOrWhiteSpace(_selectionAggregateOverview?.Message))
+    {
+        return _selectionAggregateOverview.Message;
+    }
+
+    return "Aggregate overview data is unavailable for the current interval.";
+}
+```
+
+***
+
+# KROK 6 — Nech `Selected` jako skutečný `SelectionCount`
+
+Tento krok je kontrolní.
+
+## V `FacilityWorkbench.razor` najdi tento blok:
+
+```razor
+<div class="cp-sel-donut-center" aria-hidden="true">
+    <div class="cp-sel-count-big">@SelectionCount</div>
+    <div class="cp-sel-count-label">Selected</div>
+</div>
+```
+
+## Pokud je tam jiný výraz než `@SelectionCount`, vrať ho přesně na tento blok:
+
+```razor
+<div class="cp-sel-donut-center" aria-hidden="true">
+    <div class="cp-sel-count-big">@SelectionCount</div>
+    <div class="cp-sel-count-label">Selected</div>
+</div>
+```
+
+***
+
+# KROK 7 — Oprava wrapperu Analysis části, aby tabs strip nebyl ve stejné outer card
+
+## V `FacilityWorkbench.razor` najdi tento řádek:
+
+```razor
+<div class="overview-widget overview-widget-soft analysis-workspace-shell">
+```
+
+## Nahraď ho přesně tímto:
+
+```razor
+<div class="analysis-workspace-shell">
+```
+
+***
+
+# KROK 8 — Oprava CSS pro skutečně samostatný tabs bullet
+
+## V `FacilityWorkbench.razor.css` najdi tento blok:
+
+```css
+.analysis-workspace-shell {
+    border-style: solid;
+    gap: 0.72rem;
+}
+```
+
+## Nahraď ho přesně tímto:
+
+```css
+.analysis-workspace-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.72rem;
+}
+```
+
+***
+
+## V `FacilityWorkbench.razor.css` najdi tento blok:
+
+```css
+.analysis-module-strip {
+    margin-top: 0.18rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.42rem;
+    width: 100%;
+    padding: 0.48rem 0.56rem;
+    border: 1px solid var(--wb-border);
+    border-radius: 0.95rem;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 251, 255, 0.96) 100%);
+    box-shadow: var(--wb-shadow-soft);
+}
+```
+
+## Nahraď ho přesně tímto:
+
+```css
+.analysis-module-strip {
+    margin-top: 0.72rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.42rem;
+    width: auto;
+    max-width: 100%;
+}
+```
+
+***
+
+## V `FacilityWorkbench.razor.css` najdi tento blok:
+
+```css
+.analysis-control-tabs-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin-top: 0;
+    width: 100%;
+}
+```
+
+## Nahraď ho přesně tímto:
+
+```css
+.analysis-control-tabs-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin-top: 0;
+}
+```
+
+***
+
+## V `FacilityWorkbench.razor.css` najdi tento blok:
+
+```css
+.analysis-module-nav {
+    width: auto;
+    max-width: 100%;
+    border-color: #d7e2f1;
+    background: rgba(255, 255, 255, 0.9);
+}
+```
+
+## Nahraď ho přesně tímto:
+
+```css
+.analysis-module-nav {
+    width: auto;
+    max-width: 100%;
+}
+```
+
+***
+
+# KROK 9 — Build a nic dalšího
+
+Po všech replace:
+
+1.  build
+2.  nic dalšího neupravuj
+3.  neposílej další návrhy
+
+***
+
+# Akceptační kritéria
+
+Task je hotový jen pokud:
+
+1.  Selection karta ukazuje:
+    *   `Selected = skutečný SelectionCount`
+2.  Pro selection typu `19 selected` už nevznikne stav:
+    *   `16 with data`
+    *   `2 no data`
+3.  První výběr nodeů už neskončí blank / chybným overview stavem
+4.  `Overview unavailable` se zobrazí jen když aggregate scope opravdu neexistuje nebo overview result opravdu není k dispozici
+5.  `Trend / Baseline / Scatter / Power / EUI` je vizuálně samostatný bullet a nesdílí outer border s `Data Source + Signal`
+6.  Build projde
+
+***
+
+# Povinný výstup agenta
+
+Na konci napiš:
+
+1.  že jsi přesně nahradil `BuildSelectionSummaryClassificationSnapshot()`
+2.  že jsi přesně nahradil `GetSelectionAggregateNodeKeys()`
+3.  že jsi přesně nahradil `ShouldShowOverviewUnavailableState`
+4.  že jsi přesně nahradil `ShouldShowOverviewUnavailable()`
+5.  že jsi přesně nahradil `ResolveOverviewUnavailableMessage()`
+6.  že jsi přesně nahradil Analysis wrapper a CSS bloky pro tabs strip
+7.  jestli build prošel
+
+Pokud toto nevyjmenuješ, task je nesplněný.
+
+````
+
+---
+
+# Krátký prompt pro agenta
+
+```text
+Otevři CURRENT_TASK.md a udělej přesně jen uvedené replace operace.
+
+Důležité:
+- nic nevymýšlej
+- nic nerefactoruj
+- nic neopravuj bokem
+- jen najdi přesné bloky a nahraď je přesně zadaným kódem
+- scope:
+  - FacilityWorkbench.razor
+  - FacilityWorkbench.razor.css
+
+Na konci povinně napiš:
+1. které bloky jsi nahradil
+2. že jsi nic dalšího neměnil
+3. jestli build prošel

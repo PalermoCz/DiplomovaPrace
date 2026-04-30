@@ -1017,16 +1017,16 @@
     },
     {
       "nodeKey": "meter__weatherstation_weather",
-      "label": null,
-      "nodeType": null,
-      "zone": null,
+      "label": "Roof station",
+      "nodeType": "weather",
+      "zone": "weather",
       "floorAreaM2": null,
       "stylePresetKey": null,
       "tags": [],
       "note": null,
       "xHint": 740,
       "yHint": 1000,
-      "updatedUtc": "2026-04-28T14:23:52.0422822Z"
+      "updatedUtc": "2026-04-30T20:06:26.1471841Z"
     },
     {
       "nodeKey": "office_building",

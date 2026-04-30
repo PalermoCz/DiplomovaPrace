@@ -115,6 +115,25 @@ window.facilityTimeSeriesChart = (function () {
         document.body.removeChild(link);
     }
 
+    function getOverlayPalette(index, pinned) {
+        var pinnedPalette = [
+            { line: '#f97316', fill: '#f97316' },
+            { line: '#10b981', fill: '#10b981' },
+            { line: '#8b5cf6', fill: '#8b5cf6' },
+            { line: '#e11d48', fill: '#e11d48' },
+            { line: '#f59e0b', fill: '#f59e0b' }
+        ];
+        var previewPalette = [
+            { line: '#fb923c', fill: '#fb923c' },
+            { line: '#34d399', fill: '#34d399' },
+            { line: '#a78bfa', fill: '#a78bfa' },
+            { line: '#fb7185', fill: '#fb7185' },
+            { line: '#fbbf24', fill: '#fbbf24' }
+        ];
+        var palette = pinned ? pinnedPalette : previewPalette;
+        return palette[index % palette.length];
+    }
+
     function render(containerId, model) {
         var chart = getInstance(containerId);
         if (!chart || !model || !Array.isArray(model.points)) {
@@ -131,17 +150,30 @@ window.facilityTimeSeriesChart = (function () {
             })
             : [];
 
-        var overlaySeriesData = Array.isArray(model.overlayPoints)
-            ? model.overlayPoints.map(function (point) {
-                return [point.timestampUtc, point.value];
+        var overlaySeriesModels = Array.isArray(model.overlaySeries)
+            ? model.overlaySeries.map(function (overlay) {
+                return {
+                    seriesName: overlay && overlay.seriesName ? overlay.seriesName : 'Contributor overlay',
+                    pinned: !!(overlay && overlay.pinned),
+                    points: Array.isArray(overlay && overlay.points)
+                        ? overlay.points.map(function (point) {
+                            return [point.timestampUtc, point.value];
+                        })
+                        : []
+                };
+            }).filter(function (overlay) {
+                return overlay.points.length > 0;
             })
             : [];
 
         var hasBaseline = baselineSeriesData.length > 0;
-        var hasOverlay = overlaySeriesData.length > 0;
+        var hasOverlay = overlaySeriesModels.length > 0;
         var hasLegend = hasBaseline || hasOverlay;
 
-        var pointCount = Math.max(actualSeriesData.length, baselineSeriesData.length, overlaySeriesData.length);
+        var pointCount = Math.max(actualSeriesData.length, baselineSeriesData.length);
+        overlaySeriesModels.forEach(function (overlay) {
+            pointCount = Math.max(pointCount, overlay.points.length);
+        });
         var firstTimestamp = pointCount > 0 ? new Date(actualSeriesData[0][0]).getTime() : 0;
         var lastTimestamp = pointCount > 1 ? new Date(actualSeriesData[actualSeriesData.length - 1][0]).getTime() : firstTimestamp;
         var rangeMs = Math.max(0, lastTimestamp - firstTimestamp);
@@ -170,27 +202,28 @@ window.facilityTimeSeriesChart = (function () {
             }
         }];
 
-        if (hasOverlay) {
+        overlaySeriesModels.forEach(function (overlay, overlayIndex) {
+            var colors = getOverlayPalette(overlayIndex, overlay.pinned);
             series.push({
                 type: 'line',
-                name: model.overlaySeriesName || 'Contributor overlay',
-                data: overlaySeriesData,
+                name: overlay.seriesName || 'Contributor overlay',
+                data: overlay.points,
                 showSymbol: false,
                 smooth: false,
                 sampling: useSampling ? 'lttb' : undefined,
                 progressive: 1000,
                 progressiveThreshold: 2000,
                 lineStyle: {
-                    width: model.overlayPinned ? (denseSeries ? 2.1 : 2.4) : (denseSeries ? 1.6 : 1.9),
-                    type: model.overlayPinned ? 'solid' : 'dashed',
-                    color: model.overlayPinned ? '#f97316' : '#fb923c',
-                    opacity: model.overlayPinned ? 0.98 : 0.9
+                    width: overlay.pinned ? (denseSeries ? 2.1 : 2.4) : (denseSeries ? 1.6 : 1.9),
+                    type: overlay.pinned ? 'solid' : 'dashed',
+                    color: colors.line,
+                    opacity: overlay.pinned ? 0.98 : 0.9
                 },
                 itemStyle: {
-                    color: model.overlayPinned ? '#f97316' : '#fb923c'
+                    color: colors.fill
                 }
             });
-        }
+        });
 
         if (hasBaseline) {
             series.push({

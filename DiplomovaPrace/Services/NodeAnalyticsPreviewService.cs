@@ -6,6 +6,18 @@ using System.IO;
 
 namespace DiplomovaPrace.Services;
 
+public sealed class AnalyticsProgressUpdate
+{
+    public string StageKey { get; init; } = string.Empty;
+    public string PhaseLabel { get; init; } = string.Empty;
+    public string Detail { get; init; } = string.Empty;
+    public int CompletedSteps { get; init; }
+    public int TotalSteps { get; init; }
+    public int Percent => TotalSteps <= 0
+        ? 0
+        : Math.Clamp((int)Math.Round((double)CompletedSteps / TotalSteps * 100d), 0, 100);
+}
+
 public class CuratedNodeSummary
 {
     public string Title { get; set; } = string.Empty;
@@ -304,6 +316,25 @@ public sealed class SelectionTemperatureLoadScatterResult
     public string? Message { get; init; }
     public string? WeatherNodeKey { get; init; }
     public IReadOnlyList<SelectionTemperatureLoadScatterPoint> Points { get; init; } = [];
+}
+
+public sealed class SelectionSignalTrendCoreResult
+{
+    public SelectionSignalAvailabilityItem? SelectionSignal { get; init; }
+    public CuratedNodeTimeSeriesResult? TimeSeries { get; init; }
+    public SelectionSignalBasicStats? BasicStats { get; init; }
+    public bool IsAvailable { get; init; }
+    public bool IsAggregate { get; init; }
+    public string Message { get; init; } = string.Empty;
+    public IReadOnlyList<string> ContributingNodeKeys { get; init; } = [];
+}
+
+public sealed class SelectionSignalAuxiliaryModulesResult
+{
+    public SelectionPowerAnalyticsResult PowerAnalytics { get; init; } = new();
+    public SelectionEuiResult Eui { get; init; } = new();
+    public SelectionWeatherAwareBaselineResult WeatherAwareBaseline { get; init; } = new();
+    public SelectionTemperatureLoadScatterResult TemperatureLoadScatter { get; init; } = new();
 }
 
 public sealed class SelectionSignalAnalyticsResult
@@ -811,10 +842,33 @@ public class NodeAnalyticsPreviewService
         _weatherSourceResolver = weatherSourceResolver;
     }
 
-    public async Task<MeterKpiResult?> GetPreviewDataAsync(string meterUrn, DateTime from, DateTime to, CancellationToken ct = default)
+    private static void ReportAnalyticsProgress(
+        IProgress<AnalyticsProgressUpdate>? progress,
+        string stageKey,
+        string phaseLabel,
+        string detail,
+        int completedSteps,
+        int totalSteps)
+    {
+        progress?.Report(new AnalyticsProgressUpdate
+        {
+            StageKey = stageKey,
+            PhaseLabel = phaseLabel,
+            Detail = detail,
+            CompletedSteps = completedSteps,
+            TotalSteps = totalSteps
+        });
+    }
+
+    public async Task<MeterKpiResult?> GetPreviewDataAsync(
+        string meterUrn,
+        DateTime from,
+        DateTime to,
+        CancellationToken ct = default,
+        IProgress<AnalyticsProgressUpdate>? progress = null)
     {
         var query = new KpiQuery(meterUrn, from, to);
-        var result = await _kpiService.CalculateBasicKpiAsync(query, ct);
+        var result = await _kpiService.CalculateBasicKpiAsync(query, ct, progress);
 
         // Pokud nemĂˇme ĹľĂˇdnĂˇ data, vracĂ­me null
         if (result.RecordCount == 0)
@@ -890,18 +944,22 @@ public class NodeAnalyticsPreviewService
         };
     }
 
-    public async Task<SelectionSignalAnalyticsResult> GetSelectionSignalAnalyticsAsync(
+    public async Task<SelectionSignalTrendCoreResult> GetSelectionSignalTrendCoreAsync(
         IEnumerable<string> nodeKeys,
         FacilitySignalCode exactSignalCode,
         DateTime from,
         DateTime to,
         CuratedNodeTimeSeriesMode mode = CuratedNodeTimeSeriesMode.Auto,
         string? scopeAnchorNodeKey = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        IProgress<AnalyticsProgressUpdate>? progress = null)
     {
+        const int totalSteps = 2;
+
         if (exactSignalCode.IsEmpty)
         {
-            return new SelectionSignalAnalyticsResult
+            ReportAnalyticsProgress(progress, "selection-signal-trend-finish", "Finalizing trend", "No exact signal code was selected for trend refresh.", totalSteps, totalSteps);
+            return new SelectionSignalTrendCoreResult
             {
                 Message = "Choose an exact signal code first."
             };
@@ -915,9 +973,12 @@ public class NodeAnalyticsPreviewService
         var availability = GetSelectionSignalAvailability(scopeNodeKeys);
         var option = availability.Options.FirstOrDefault(item => FacilitySignalTaxonomy.MatchesExactCode(item.ExactSignalCode, exactSignalCode));
 
+        ReportAnalyticsProgress(progress, "selection-signal-trend-resolve", "Resolving trend signal", "Matched the active exact signal against the current analytics scope.", 1, totalSteps);
+
         if (option is null)
         {
-            return new SelectionSignalAnalyticsResult
+            ReportAnalyticsProgress(progress, "selection-signal-trend-finish", "Finalizing trend", "The selected exact signal is unavailable in the current analytics scope.", totalSteps, totalSteps);
+            return new SelectionSignalTrendCoreResult
             {
                 Message = availability.Message ?? "The selected signal is not available in the current analytics scope."
             };
@@ -928,16 +989,14 @@ public class NodeAnalyticsPreviewService
             var nodeKey = option.MatchingNodeKeys.FirstOrDefault();
             if (string.IsNullOrWhiteSpace(nodeKey))
             {
-                return new SelectionSignalAnalyticsResult
+                ReportAnalyticsProgress(progress, "selection-signal-trend-finish", "Finalizing trend", "The selected signal could not resolve to a concrete node.", totalSteps, totalSteps);
+                return new SelectionSignalTrendCoreResult
                 {
                     SelectionSignal = option,
                     Message = "The selected signal does not resolve to a usable node in the current scope."
                 };
             }
 
-            var euiTask = BuildSelectionEuiAsync(option, scopeNodeKeys, scopeAnchorNodeKey, from, to, ct);
-            var baselineTask = BuildSelectionWeatherAwareBaselineAsync(option, from, to, ct);
-            var scatterTask = BuildSelectionTemperatureLoadScatterAsync(option, from, to, ct);
             var timeSeries = await GetCuratedTimeSeriesAsync(
                 nodeKey,
                 exactSignalCode,
@@ -946,19 +1005,14 @@ public class NodeAnalyticsPreviewService
                 mode,
                 includeBaselineOverlay: false,
                 ct);
-            var eui = await euiTask;
-            var weatherAwareBaseline = await baselineTask;
-            var temperatureLoadScatter = await scatterTask;
 
-            return new SelectionSignalAnalyticsResult
+            ReportAnalyticsProgress(progress, "selection-signal-trend-finish", "Finalizing trend", "Resolved the primary trend surface for the active exact signal.", totalSteps, totalSteps);
+
+            return new SelectionSignalTrendCoreResult
             {
                 SelectionSignal = option,
                 TimeSeries = timeSeries,
                 BasicStats = BuildSelectionSignalBasicStats(timeSeries),
-                PowerAnalytics = BuildSelectionPowerAnalytics(option, timeSeries),
-                Eui = eui,
-                WeatherAwareBaseline = weatherAwareBaseline,
-                TemperatureLoadScatter = temperatureLoadScatter,
                 IsAvailable = timeSeries is not null && timeSeries.Points.Count > 0,
                 IsAggregate = false,
                 Message = timeSeries is null
@@ -972,17 +1026,10 @@ public class NodeAnalyticsPreviewService
 
         if (!option.CanAggregate)
         {
-            var eui = await BuildSelectionEuiAsync(option, scopeNodeKeys, scopeAnchorNodeKey, from, to, ct);
-            var weatherAwareBaseline = await BuildSelectionWeatherAwareBaselineAsync(option, from, to, ct);
-            var temperatureLoadScatter = await BuildSelectionTemperatureLoadScatterAsync(option, from, to, ct);
-
-            return new SelectionSignalAnalyticsResult
+            ReportAnalyticsProgress(progress, "selection-signal-trend-finish", "Finalizing trend", "The active signal cannot produce an aggregate trend for this scope.", totalSteps, totalSteps);
+            return new SelectionSignalTrendCoreResult
             {
                 SelectionSignal = option,
-                PowerAnalytics = BuildSelectionPowerAnalytics(option, null),
-                Eui = eui,
-                WeatherAwareBaseline = weatherAwareBaseline,
-                TemperatureLoadScatter = temperatureLoadScatter,
                 IsAvailable = false,
                 IsAggregate = true,
                 Message = option.AvailabilityMessage,
@@ -990,23 +1037,15 @@ public class NodeAnalyticsPreviewService
             };
         }
 
-        var euiTaskForAggregate = BuildSelectionEuiAsync(option, scopeNodeKeys, scopeAnchorNodeKey, from, to, ct);
-        var baselineTaskForAggregate = BuildSelectionWeatherAwareBaselineAsync(option, from, to, ct);
-        var scatterTaskForAggregate = BuildSelectionTemperatureLoadScatterAsync(option, from, to, ct);
         var aggregateTimeSeries = await GetSelectionSignalAggregateTimeSeriesAsync(option, from, to, mode, ct);
-        var aggregateEui = await euiTaskForAggregate;
-        var aggregateWeatherAwareBaseline = await baselineTaskForAggregate;
-        var aggregateTemperatureLoadScatter = await scatterTaskForAggregate;
 
-        return new SelectionSignalAnalyticsResult
+        ReportAnalyticsProgress(progress, "selection-signal-trend-finish", "Finalizing trend", "Resolved the aggregate trend surface for the active exact signal.", totalSteps, totalSteps);
+
+        return new SelectionSignalTrendCoreResult
         {
             SelectionSignal = option,
             TimeSeries = aggregateTimeSeries,
             BasicStats = BuildSelectionSignalBasicStats(aggregateTimeSeries),
-            PowerAnalytics = BuildSelectionPowerAnalytics(option, aggregateTimeSeries),
-            Eui = aggregateEui,
-            WeatherAwareBaseline = aggregateWeatherAwareBaseline,
-            TemperatureLoadScatter = aggregateTemperatureLoadScatter,
             IsAvailable = aggregateTimeSeries is not null && aggregateTimeSeries.Points.Count > 0,
             IsAggregate = true,
             Message = aggregateTimeSeries is null
@@ -1015,6 +1054,149 @@ public class NodeAnalyticsPreviewService
                     ? aggregateTimeSeries.NoDataMessage ?? "No time-series data is available for the selected signal in the current interval."
                     : option.AvailabilityMessage,
             ContributingNodeKeys = option.MatchingNodeKeys
+        };
+    }
+
+    public async Task<SelectionSignalAuxiliaryModulesResult> GetSelectionSignalAuxiliaryModulesAsync(
+        IEnumerable<string> nodeKeys,
+        FacilitySignalCode exactSignalCode,
+        DateTime from,
+        DateTime to,
+        CuratedNodeTimeSeriesMode mode = CuratedNodeTimeSeriesMode.Auto,
+        string? scopeAnchorNodeKey = null,
+        CancellationToken ct = default,
+        IProgress<AnalyticsProgressUpdate>? progress = null)
+    {
+        const int totalSteps = 4;
+
+        if (exactSignalCode.IsEmpty)
+        {
+            ReportAnalyticsProgress(progress, "selection-signal-aux-finish", "Finalizing auxiliary modules", "No exact signal code was selected for auxiliary modules.", totalSteps, totalSteps);
+            return new SelectionSignalAuxiliaryModulesResult();
+        }
+
+        var scopeNodeKeys = nodeKeys?
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList() ?? [];
+
+        var availability = GetSelectionSignalAvailability(scopeNodeKeys);
+        var option = availability.Options.FirstOrDefault(item => FacilitySignalTaxonomy.MatchesExactCode(item.ExactSignalCode, exactSignalCode));
+
+        if (option is null)
+        {
+            ReportAnalyticsProgress(progress, "selection-signal-aux-finish", "Finalizing auxiliary modules", "The selected exact signal is unavailable in the current analytics scope.", totalSteps, totalSteps);
+            return new SelectionSignalAuxiliaryModulesResult();
+        }
+
+        var euiTask = BuildSelectionEuiAsync(option, scopeNodeKeys, scopeAnchorNodeKey, from, to, ct);
+        var baselineTask = BuildSelectionWeatherAwareBaselineAsync(option, from, to, ct);
+        var scatterTask = BuildSelectionTemperatureLoadScatterAsync(option, from, to, ct);
+
+        SelectionPowerAnalyticsResult powerAnalytics;
+
+        if (option.CanRenderSingleNodeSeries)
+        {
+            var nodeKey = option.MatchingNodeKeys.FirstOrDefault();
+            var timeSeries = string.IsNullOrWhiteSpace(nodeKey)
+                ? null
+                : await GetCuratedTimeSeriesAsync(
+                    nodeKey,
+                    exactSignalCode,
+                    from,
+                    to,
+                    mode,
+                    includeBaselineOverlay: false,
+                    ct);
+
+            powerAnalytics = BuildSelectionPowerAnalytics(option, timeSeries);
+        }
+        else if (option.CanAggregate)
+        {
+            var aggregateTimeSeries = await GetSelectionSignalAggregateTimeSeriesAsync(option, from, to, mode, ct);
+            powerAnalytics = BuildSelectionPowerAnalytics(option, aggregateTimeSeries);
+        }
+        else
+        {
+            powerAnalytics = BuildSelectionPowerAnalytics(option, null);
+        }
+
+        ReportAnalyticsProgress(progress, "selection-signal-power", "Building power analytics", "Finished the Power module for the active exact signal.", 1, totalSteps);
+
+        var pendingTasks = new Dictionary<Task, Action>
+        {
+            [euiTask] = () => ReportAnalyticsProgress(progress, "selection-signal-eui", "Building EUI", "Finished the EUI module for the active exact signal.", 2, totalSteps),
+            [baselineTask] = () => ReportAnalyticsProgress(progress, "selection-signal-baseline", "Building weather-aware baseline", "Finished the Baseline module for the active exact signal.", 3, totalSteps),
+            [scatterTask] = () => ReportAnalyticsProgress(progress, "selection-signal-scatter", "Building temperature-load scatter", "Finished the Scatter module for the active exact signal.", 4, totalSteps)
+        };
+
+        while (pendingTasks.Count > 0)
+        {
+            var completedTask = await Task.WhenAny(pendingTasks.Keys);
+            await completedTask;
+            pendingTasks[completedTask]();
+            pendingTasks.Remove(completedTask);
+        }
+
+        return new SelectionSignalAuxiliaryModulesResult
+        {
+            PowerAnalytics = powerAnalytics,
+            Eui = euiTask.Result,
+            WeatherAwareBaseline = baselineTask.Result,
+            TemperatureLoadScatter = scatterTask.Result
+        };
+    }
+
+    public async Task<SelectionSignalAnalyticsResult> GetSelectionSignalAnalyticsAsync(
+        IEnumerable<string> nodeKeys,
+        FacilitySignalCode exactSignalCode,
+        DateTime from,
+        DateTime to,
+        CuratedNodeTimeSeriesMode mode = CuratedNodeTimeSeriesMode.Auto,
+        string? scopeAnchorNodeKey = null,
+        CancellationToken ct = default,
+        IProgress<AnalyticsProgressUpdate>? progress = null)
+    {
+        const int totalSteps = 6;
+
+        ReportAnalyticsProgress(progress, "selection-signal-resolve", "Resolving signal availability", "Resolving trend-first analysis flow for the active exact signal.", 1, totalSteps);
+        var trendCore = await GetSelectionSignalTrendCoreAsync(
+            nodeKeys,
+            exactSignalCode,
+            from,
+            to,
+            mode,
+            scopeAnchorNodeKey,
+            ct);
+
+        ReportAnalyticsProgress(progress, "selection-signal-timeseries", "Resolving main time series", "Trend core is ready; loading auxiliary modules in the second stage.", 2, totalSteps);
+        var auxiliaryModules = await GetSelectionSignalAuxiliaryModulesAsync(
+            nodeKeys,
+            exactSignalCode,
+            from,
+            to,
+            mode,
+            scopeAnchorNodeKey,
+            ct);
+
+        ReportAnalyticsProgress(progress, "selection-signal-eui", "Building EUI", "Finished the EUI layer for the active exact signal.", 3, totalSteps);
+        ReportAnalyticsProgress(progress, "selection-signal-baseline", "Building weather-aware baseline", "Finished the weather-aware baseline layer for the active exact signal.", 4, totalSteps);
+        ReportAnalyticsProgress(progress, "selection-signal-scatter", "Building temperature-load scatter", "Finished the temperature-load scatter layer for the active exact signal.", 5, totalSteps);
+        ReportAnalyticsProgress(progress, "selection-signal-finish", "Finalizing analysis", "Built the final exact-signal analytics result using trend-first staged composition.", totalSteps, totalSteps);
+
+        return new SelectionSignalAnalyticsResult
+        {
+            SelectionSignal = trendCore.SelectionSignal,
+            TimeSeries = trendCore.TimeSeries,
+            BasicStats = trendCore.BasicStats,
+            PowerAnalytics = auxiliaryModules.PowerAnalytics,
+            Eui = auxiliaryModules.Eui,
+            WeatherAwareBaseline = auxiliaryModules.WeatherAwareBaseline,
+            TemperatureLoadScatter = auxiliaryModules.TemperatureLoadScatter,
+            IsAvailable = trendCore.IsAvailable,
+            IsAggregate = trendCore.IsAggregate,
+            Message = trendCore.Message,
+            ContributingNodeKeys = trendCore.ContributingNodeKeys
         };
     }
 
@@ -1124,8 +1306,11 @@ public class NodeAnalyticsPreviewService
         CuratedNodeTimeSeriesMode mode = CuratedNodeTimeSeriesMode.Auto,
         bool includeBaselineOverlay = false,
         OverviewAggregateSemanticsMode semanticsMode = OverviewAggregateSemanticsMode.Net,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        IProgress<AnalyticsProgressUpdate>? progress = null)
     {
+        const int totalSteps = 5;
+
         selectedNodeKeys ??= [];
 
         var supportedNodeKeys = selectedNodeKeys
@@ -1134,8 +1319,11 @@ public class NodeAnalyticsPreviewService
             .Where(nodeKey => ResolveCuratedNodeSource(nodeKey)?.IsPowerSignal == true)
             .ToList();
 
+        ReportAnalyticsProgress(progress, "aggregate-timeseries-resolve", "Resolving supported nodes", "Resolved supported power nodes for the aggregate overview time series.", 1, totalSteps);
+
         if (supportedNodeKeys.Count == 0)
         {
+            ReportAnalyticsProgress(progress, "aggregate-timeseries-finish", "Finalizing trend surface", "No supported power nodes were available for aggregate time-series construction.", totalSteps, totalSteps);
             return null;
         }
 
@@ -1145,6 +1333,8 @@ public class NodeAnalyticsPreviewService
 
         await Task.WhenAll(nodeTasks);
 
+        ReportAnalyticsProgress(progress, "aggregate-timeseries-load", "Loading node time series", "Loaded node-level time series for all supported aggregate contributors.", 2, totalSteps);
+
         var timeSeries = nodeTasks
             .Select(task => task.Result)
             .Where(result => result is not null && result.Points.Count > 0)
@@ -1153,11 +1343,14 @@ public class NodeAnalyticsPreviewService
 
         if (timeSeries.Count == 0)
         {
+            ReportAnalyticsProgress(progress, "aggregate-timeseries-finish", "Finalizing trend surface", "No interval points were available after loading supported node time series.", totalSteps, totalSteps);
             return null;
         }
 
         var template = timeSeries[0];
         var points = BuildOverviewAggregatePoints(timeSeries.Select(x => x.Points), semanticsMode);
+        ReportAnalyticsProgress(progress, "aggregate-timeseries-points", "Aggregating time series", "Aggregated supported node points into the requested overview trend semantics.", 3, totalSteps);
+
         var baselineProviders = timeSeries.Count(x => x.BaselinePoints.Count > 0);
         var baselinePoints = includeBaselineOverlay
             ? BuildOverviewAggregatePoints(timeSeries.Where(x => x.BaselinePoints.Count > 0).Select(x => x.BaselinePoints), semanticsMode)
@@ -1176,7 +1369,11 @@ public class NodeAnalyticsPreviewService
             }
         }
 
-        return new CuratedNodeTimeSeriesResult
+        ReportAnalyticsProgress(progress, "aggregate-timeseries-baseline", "Resolving baseline overlay", includeBaselineOverlay
+            ? "Resolved the optional aggregate baseline overlay for the overview trend surface."
+            : "Skipped aggregate baseline overlay because it was not requested.", 4, totalSteps);
+
+        var result = new CuratedNodeTimeSeriesResult
         {
             NodeKey = "selection_set",
             Title = ResolveOverviewAggregateTitle(supportedNodeKeys.Count, template.Title, semanticsMode),
@@ -1195,6 +1392,9 @@ public class NodeAnalyticsPreviewService
             NoDataMessage = points.Count == 0 ? ResolveOverviewAggregateNoDataMessage(semanticsMode) : null,
             Points = points
         };
+
+        ReportAnalyticsProgress(progress, "aggregate-timeseries-finish", "Finalizing trend surface", "Built the final aggregate overview time-series result.", totalSteps, totalSteps);
+        return result;
     }
 
     private static IReadOnlyList<CuratedNodeTimeSeriesPoint> BuildOverviewAggregatePoints(
@@ -1290,8 +1490,11 @@ public class NodeAnalyticsPreviewService
         CuratedNodeTimeSeriesMode mode = CuratedNodeTimeSeriesMode.Auto,
         bool includeBaselineOverlay = false,
         CuratedSelectionAggregateRequestOptions? options = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        IProgress<AnalyticsProgressUpdate>? progress = null)
     {
+        const int totalSteps = 6;
+
         options ??= new CuratedSelectionAggregateRequestOptions();
         selectedNodeKeys ??= [];
 
@@ -1328,6 +1531,8 @@ public class NodeAnalyticsPreviewService
             nodeKey => ResolveCuratedNodeSource(nodeKey)?.Title ?? nodeKey,
             StringComparer.OrdinalIgnoreCase);
 
+        ReportAnalyticsProgress(progress, "aggregate-overview-resolve", "Resolving overview scope", "Resolved supported, unsupported, and context-only nodes for the aggregate overview.", 1, totalSteps);
+
         if (supportedNodeKeys.Count == 0)
         {
             var emptyCoverage = new CuratedSelectionCoverageSummary
@@ -1349,7 +1554,7 @@ public class NodeAnalyticsPreviewService
                 contextOnlyNodeKeys,
                 sourceMapLabelMap);
 
-            return new CuratedSelectionAggregateOverviewResult
+            var emptyResult = new CuratedSelectionAggregateOverviewResult
             {
                 SupportedNodeKeys = [],
                 UnsupportedNodeKeys = unsupportedNodeKeys,
@@ -1408,6 +1613,9 @@ public class NodeAnalyticsPreviewService
                 },
                 Message = "The selection set contains no compatible energy nodes for aggregate analytics."
             };
+
+            ReportAnalyticsProgress(progress, "aggregate-overview-finish", "Finalizing overview", "Built the final no-data aggregate overview result.", totalSteps, totalSteps);
+            return emptyResult;
         }
 
         var nodeTasks = supportedNodeKeys
@@ -1426,6 +1634,8 @@ public class NodeAnalyticsPreviewService
 
         await Task.WhenAll(nodeTasks);
 
+        ReportAnalyticsProgress(progress, "aggregate-overview-load", "Loading node analytics", "Loaded node summaries, time series, and deviation summaries for supported aggregate contributors.", 2, totalSteps);
+
         var summaries = new List<CuratedNodeSummary>();
         var timeSeries = new List<CuratedNodeTimeSeriesResult>();
         var deviationSummaries = new List<CuratedNodeDeviationSummary>();
@@ -1433,30 +1643,30 @@ public class NodeAnalyticsPreviewService
 
         foreach (var task in nodeTasks)
         {
-            var result = task.Result;
-            var source = ResolveCuratedNodeSource(result.NodeKey);
+            var nodeData = task.Result;
+            var source = ResolveCuratedNodeSource(nodeData.NodeKey);
             var displayLabel = !string.IsNullOrWhiteSpace(source?.Title)
                 ? source!.Title
-                : result.NodeKey;
-            var nodeRole = FacilityNodeSemantics.ResolveRole(result.NodeKey, source?.NodeTypeHint, displayLabel);
+                : nodeData.NodeKey;
+            var nodeRole = FacilityNodeSemantics.ResolveRole(nodeData.NodeKey, source?.NodeTypeHint, displayLabel);
             var nodeRoleLabel = FacilityNodeSemantics.GetRoleLabel(nodeRole);
 
-            if (result.Summary is not null)
+            if (nodeData.Summary is not null)
             {
-                summaries.Add(result.Summary);
-                breakdownInputs.Add((result.NodeKey, displayLabel, nodeRole, nodeRoleLabel, result.Summary.TotalSum));
+                summaries.Add(nodeData.Summary);
+                breakdownInputs.Add((nodeData.NodeKey, displayLabel, nodeRole, nodeRoleLabel, nodeData.Summary.TotalSum));
             }
             else
             {
-                breakdownInputs.Add((result.NodeKey, displayLabel, nodeRole, nodeRoleLabel, null));
+                breakdownInputs.Add((nodeData.NodeKey, displayLabel, nodeRole, nodeRoleLabel, null));
             }
 
-            if (result.TimeSeries is not null && result.TimeSeries.Points.Count > 0)
+            if (nodeData.TimeSeries is not null && nodeData.TimeSeries.Points.Count > 0)
             {
-                timeSeries.Add(result.TimeSeries);
+                timeSeries.Add(nodeData.TimeSeries);
             }
 
-            deviationSummaries.Add(result.Deviation);
+            deviationSummaries.Add(nodeData.Deviation);
         }
 
         var availableBreakdownEnergies = breakdownInputs
@@ -1582,6 +1792,8 @@ public class NodeAnalyticsPreviewService
             contextOnlyNodeKeys,
             sourceMapLabelMap);
 
+        ReportAnalyticsProgress(progress, "aggregate-overview-breakdown", "Building breakdown", "Built breakdown, role breakdown, coverage, and source map summaries for the aggregate overview.", 3, totalSteps);
+
         CuratedNodeSummary? aggregateSummary = null;
         if (summaries.Count > 0)
         {
@@ -1653,6 +1865,8 @@ public class NodeAnalyticsPreviewService
                 Points = points
             };
         }
+
+        ReportAnalyticsProgress(progress, "aggregate-overview-summary", "Building aggregate summary", "Built the aggregate summary card and overview time-series surface.", 4, totalSteps);
 
         CuratedNodeTimeSeriesResult? performanceEvaluationTimeSeries = null;
         if (options.IncludePerformance)
@@ -1813,7 +2027,11 @@ public class NodeAnalyticsPreviewService
                 ForecastMissingNodeCount = Math.Max(0, coverage.IncludedNodeCount - forecastProviderNodeCount)
             };
 
-        return new CuratedSelectionAggregateOverviewResult
+        ReportAnalyticsProgress(progress, "aggregate-overview-performance", "Building performance layer", options.IncludePerformance
+            ? "Built the performance summaries and evaluation layer for the aggregate overview."
+            : "Skipped heavy performance summaries because the Performance tab has not been activated.", 5, totalSteps);
+
+        var result = new CuratedSelectionAggregateOverviewResult
         {
             Summary = aggregateSummary,
             TimeSeries = aggregateTimeSeries,
@@ -1849,6 +2067,9 @@ public class NodeAnalyticsPreviewService
             IncludedNodeKeys = includedNodeKeys,
             Message = message
         };
+
+        ReportAnalyticsProgress(progress, "aggregate-overview-finish", "Finalizing overview", "Built forecast diagnostics and finalized the aggregate overview result.", totalSteps, totalSteps);
+        return result;
     }
 
     private async Task<CuratedNodeTimeSeriesResult?> ResolvePerformanceEvaluationTimeSeriesAsync(

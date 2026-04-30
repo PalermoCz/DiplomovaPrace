@@ -19,6 +19,24 @@ public class KpiService : IKpiService
         _configService = configService;
     }
 
+    private static void ReportProgress(
+        IProgress<AnalyticsProgressUpdate>? progress,
+        string stageKey,
+        string phaseLabel,
+        string detail,
+        int completedSteps,
+        int totalSteps)
+    {
+        progress?.Report(new AnalyticsProgressUpdate
+        {
+            StageKey = stageKey,
+            PhaseLabel = phaseLabel,
+            Detail = detail,
+            CompletedSteps = completedSteps,
+            TotalSteps = totalSteps
+        });
+    }
+
     private async Task<(DiplomovaPrace.Models.Configuration.DeviceConfig?, DiplomovaPrace.Models.Configuration.BuildingConfig?)> GetDeviceAndBuildingAsync(string deviceId)
     {
         var activeId = _activeBuildingService.ActiveBuildingId;
@@ -38,22 +56,35 @@ public class KpiService : IKpiService
         return (null, building);
     }
 
-    public async Task<MeterKpiResult> CalculateBasicKpiAsync(KpiQuery query, CancellationToken ct = default)
+    public async Task<MeterKpiResult> CalculateBasicKpiAsync(
+        KpiQuery query,
+        CancellationToken ct = default,
+        IProgress<AnalyticsProgressUpdate>? progress = null)
     {
+        const int totalSteps = 4;
+
         var (device, buildingConfig) = await GetDeviceAndBuildingAsync(query.DeviceId);
+        ReportProgress(progress, "kpi-resolve-scope", "Resolving KPI scope", "Resolved device metadata and building configuration for the requested KPI preview.", 1, totalSteps);
+
         if (device == null)
         {
+            ReportProgress(progress, "kpi-finish", "Finalizing KPI preview", "KPI preview finished with a missing device configuration.", totalSteps, totalSteps);
             return new MeterKpiResult(query.DeviceId, 0, null, null, null, null, null, null, null, null, null, null, null, null, false, "Device neexistuje v konfiguraci budovy.");
         }
 
         if (!device.Type.IsMeteringDevice())
         {
+            ReportProgress(progress, "kpi-finish", "Finalizing KPI preview", "KPI preview finished because the selected device is not a metering source.", totalSteps, totalSteps);
             return new MeterKpiResult(query.DeviceId, 0, null, null, null, null, null, null, null, null, null, null, null, null, false, $"Device {query.DeviceId} není smart metering zařízení.");
         }
 
         var records = await _repository.GetRangeAsync(query.DeviceId, query.From, query.To, ct);
+        ReportProgress(progress, "kpi-load-measurements", "Loading KPI records", "Loaded the requested measurement range from the repository.", 2, totalSteps);
+
         if (records.Count == 0)
         {
+            ReportProgress(progress, "kpi-compute", "Computing KPI statistics", "No measurements were available in the requested interval.", 3, totalSteps);
+            ReportProgress(progress, "kpi-finish", "Finalizing KPI preview", "Built the final no-data KPI preview result.", totalSteps, totalSteps);
             return new MeterKpiResult(query.DeviceId, 0, null, null, null, null, null, null, null, null, null, null, null, null, false);
         }
 
@@ -150,7 +181,9 @@ public class KpiService : IKpiService
             specificConsumption = totalConsumption / area.Value;
         }
 
-        return new MeterKpiResult(
+        ReportProgress(progress, "kpi-compute", "Computing KPI statistics", "Computed KPI statistics from the loaded measurement range.", 3, totalSteps);
+
+        var result = new MeterKpiResult(
             DeviceId: query.DeviceId,
             RecordCount: records.Count,
             FirstTimestamp: first.Timestamp,
@@ -167,16 +200,48 @@ public class KpiService : IKpiService
             SpecificConsumptionKWhPerM2: specificConsumption,
             IsEstimatedConsumption: isEstimated
         );
+
+        ReportProgress(progress, "kpi-finish", "Finalizing KPI preview", "Constructed the final KPI preview result.", totalSteps, totalSteps);
+        return result;
     }
 
     public async Task<KpiComparisonResult> ComparePeriodsAsync(
         string deviceId, 
         DateTime fromA, DateTime toA, 
         DateTime fromB, DateTime toB, 
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        IProgress<AnalyticsProgressUpdate>? progress = null)
     {
-        var resultA = await CalculateBasicKpiAsync(new KpiQuery(deviceId, fromA, toA), ct);
-        var resultB = await CalculateBasicKpiAsync(new KpiQuery(deviceId, fromB, toB), ct);
+        const int totalSteps = 8;
+
+        IProgress<AnalyticsProgressUpdate>? CreateScopedProgress(string stagePrefix, int completedOffset, string detailPrefix)
+        {
+            if (progress is null)
+            {
+                return null;
+            }
+
+            return new Progress<AnalyticsProgressUpdate>(update =>
+            {
+                progress.Report(new AnalyticsProgressUpdate
+                {
+                    StageKey = $"{stagePrefix}-{update.StageKey}",
+                    PhaseLabel = update.PhaseLabel,
+                    Detail = $"{detailPrefix} {update.Detail}",
+                    CompletedSteps = Math.Clamp(completedOffset + update.CompletedSteps, 0, totalSteps),
+                    TotalSteps = totalSteps
+                });
+            });
+        }
+
+        var resultA = await CalculateBasicKpiAsync(
+            new KpiQuery(deviceId, fromA, toA),
+            ct,
+            CreateScopedProgress("period-a", 0, "Primary period:"));
+        var resultB = await CalculateBasicKpiAsync(
+            new KpiQuery(deviceId, fromB, toB),
+            ct,
+            CreateScopedProgress("period-b", 4, "Comparison period:"));
 
         double? diffCons = (resultA.TotalConsumptionKWh.HasValue && resultB.TotalConsumptionKWh.HasValue) 
             ? resultA.TotalConsumptionKWh.Value - resultB.TotalConsumptionKWh.Value 

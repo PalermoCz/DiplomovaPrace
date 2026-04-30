@@ -1115,18 +1115,18 @@ window.editorCanvas = (function () {
                 }
 
                 var label = tile.dataset.tileLabel || 'Contributor';
+                var type = tile.dataset.tileType || 'N/A';
+                var zone = tile.dataset.tileZone || 'N/A';
+                var styleLabel = tile.dataset.tileStyleLabel || 'Default';
                 var value = tile.dataset.tileValue || 'N/A';
                 var share = tile.dataset.tileShare || '0%';
-                var semantics = tile.dataset.tileSemantics || 'Overview';
-                var detail = (tile.dataset.tileDetail || '').trim();
 
                 var html = '<div class="shc-label">' + escapeHtml(label) + '</div>';
+                html += '<div class="shc-row"><span class="shc-key">Type</span><span class="shc-val">' + escapeHtml(type) + '</span></div>';
+                html += '<div class="shc-row"><span class="shc-key">Zone</span><span class="shc-val">' + escapeHtml(zone) + '</span></div>';
+                html += '<div class="shc-row"><span class="shc-key">Style</span><span class="shc-val">' + escapeHtml(styleLabel) + '</span></div>';
                 html += '<div class="shc-row"><span class="shc-key">Value</span><span class="shc-val">' + escapeHtml(value) + '</span></div>';
                 html += '<div class="shc-row"><span class="shc-key">Share</span><span class="shc-val">' + escapeHtml(share) + '</span></div>';
-                html += '<div class="shc-row"><span class="shc-key">Semantics</span><span class="shc-val">' + escapeHtml(semantics) + '</span></div>';
-                if (detail) {
-                    html += '<div class="shc-row shc-note-row"><span class="shc-key">Detail</span><span class="shc-val shc-note-val">' + escapeHtml(detail) + '</span></div>';
-                }
 
                 card.innerHTML = html;
                 card.style.display = 'block';

@@ -74,7 +74,6 @@
 - Do not mix audit, implementation, and validation into one uncontrolled giant run.
 - Keep outputs concise and practical.
 
-
 ## Editor UX rules
 - Single selection and multi-selection must be mutually exclusive.
 - If exactly one node is selected:
@@ -101,8 +100,6 @@
 - Group drag must work without holding any modifier key:
   if multiple nodes are selected and the user drags one of the selected nodes, the whole selected group must move.
 
-
-
 ## AI workflow mode policy
 - Default workflow is plan-first.
 - Use Plan mode for new tasks, repo audit, root-cause analysis, scope clarification, and implementation planning.
@@ -114,7 +111,6 @@
   4. validation
 - Keep planning concise and avoid unnecessary over-exploration or parallel research.
 
-
 ## Current milestone status
 - Full dataset import is working.
 - Binding-based data loading is working.
@@ -124,9 +120,45 @@
 - Relationship editing UI for additional links is implemented.
 - Universal node style preset system is implemented.
 - Style tab with live preview is implemented.
-- FacilityWorkbench analytics have been split into tabs.
-- Topbar alert dropdown was removed.
-- Current active milestone is data presentation cleanup and literature-backed analytics design.
+- Bottom analytics IA is no longer the old tab-chaos; the primary lower workspace is now:
+  - `Overview`
+  - `Analysis`
+- Overview currently contains:
+  - 3 primary KPI cards: `Net`, `Consumption`, `Production`
+  - one main aggregate chart
+  - Top contributors treemap
+- Analysis currently contains one active module at a time:
+  - `Trend`
+  - `Baseline`
+  - `Scatter`
+  - `Power`
+  - `EUI`
+- Selection panel currently uses a donut summary with:
+  - selected nodes count
+  - `With data`
+  - `No data`
+- Treemap hover/preview and pin-to-chart workflow is implemented.
+- Current active milestone is loading UX hardening and final polish for the workbench analytics surface.
+
+## Current workbench analytics architecture
+- `Overview` is the executive summary surface.
+- `Analysis` is the detailed analytics workspace.
+- `Net / Consumption / Production` belongs to `Overview`.
+- Detail analytics in `Analysis` should use consumption-oriented basis.
+- `Overview` should stay visually light:
+  - KPI strip
+  - one main chart
+  - contributors treemap
+- `Analysis` should stay tool-like and modular:
+  - exact signal selector
+  - availability chips
+  - one active module at a time
+- Do not reintroduce the old lower IA as primary navigation:
+  - `Breakdown`
+  - `Performance`
+  - `Compare`
+  - `Diagnostics`
+- Those older concepts can be absorbed into Overview/Analysis modules or kept secondary, but must not become the main lower-shell again.
 
 ## Graph relationship architecture
 - Do not model the graph as a true multi-parent layout tree.
@@ -140,7 +172,6 @@
 - Relationship editing for additional links is now implemented.
 - Primary layout parent editing and additional-link editing must remain separate actions.
 
-
 ## Node appearance direction
 - Node appearance should be driven by a universal style preset system, not dataset-specific hardcoded layer/type rules.
 - Style editing should live in a separate Style editor surface, not in the normal single-node Edit form.
@@ -148,22 +179,49 @@
 - Alert-based appearance is not part of the intended base style model.
 - Selection, focus, and subtree highlight should remain overlay states separate from base node appearance.
 
-
 ## Data presentation direction
 - FacilityWorkbench is the primary future product surface for analytics and data display.
 - Older pages such as DashboardView, KpiView, BuildingView, and EditorView should be treated as legacy/reference only.
-- The workbench analytics area should move toward a cleaner tab-based structure.
-- Prefer a smaller default analytics surface and lazy/conditional loading for secondary tabs.
-- Future visualization work should be literature-backed and prioritized.
-- Preferred candidate directions currently include:
-  - benchmark / peer comparison
+- Lower analytics should stay coherent and compact.
+- Prefer:
+  - fewer primary surfaces
+  - stronger hierarchy
+  - less prose/debug text
+  - more whitespace
+  - one dominant chart in Overview
+  - one active module in Analysis
+- Preferred analytics already integrated or targeted:
   - load duration curve
   - scatter: temperature vs load
   - baseline vs actual
   - peak demand / load factor / after-hours load
-  - EUI / cost per m²
+  - EUI
 - Do not add new analytics opportunistically; first keep the workbench information architecture coherent.
 
+## Current UX decisions that future agents must preserve
+- Overview must not become a long stacked dashboard again.
+- Analysis must not become a long stacked list of all modules at once.
+- Selection card should stay compact and executive-like.
+- Treemap should remain a contributors-first visualization, not a full raw breakdown dump.
+- Hover/pin interaction between treemap and main chart is important and should be preserved.
+- Overview should not reintroduce baseline overlay as a prominent control.
+- Any future compare-like behavior should prefer lightweight chart overlays or contributor context over reintroducing a giant standalone compare surface.
 
+## Current implementation-risk notes
+- `FacilityWorkbench.razor`, `FacilityWorkbench.razor.css`, `FacilityTimeSeriesPanel.razor`, and `facilityTimeSeriesChart.js` are currently sensitive integration points.
+- Recent work showed that giant multi-file patches can easily corrupt:
+  - Razor markup structure
+  - CSS block boundaries
+  - chart JS module exports
+- Future agents should strongly prefer:
+  1. smaller validated patches
+  2. syntax check / build after each risky file
+  3. avoiding giant uncontrolled rewrites in these files
+- For workbench UI changes, manual or very tightly-scoped patching is preferred over one huge agent run.
 
-  
+## Next-step direction
+- Current likely next work item is loading UX hardening:
+  - loading skeletons/placeholders
+  - staged progress bar / loading rail
+  - do not show stale values as if they were fresh during long-running refresh
+- Keep this as UX/state work, not a new analytics-model sprint.
