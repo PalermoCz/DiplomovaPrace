@@ -261,7 +261,7 @@ window.facilityTimeSeriesChart = (function () {
             grid: {
                 left: 50,
                 right: 16,
-                top: hasLegend ? (model.compact ? 24 : 34) : (model.compact ? 10 : 22),
+                top: model.compact ? 24 : 34,
                 bottom: model.compact ? 54 : 68,
                 containLabel: false
             },

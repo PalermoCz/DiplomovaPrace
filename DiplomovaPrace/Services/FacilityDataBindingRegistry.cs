@@ -49,13 +49,17 @@ public sealed class FacilityDataBindingRegistry
     public FacilityDataBindingRegistry(
         IConfiguration config,
         IWebHostEnvironment environment,
-        FacilityEditorStateService editorStateService,
+        IServiceProvider serviceProvider,
         ILogger<FacilityDataBindingRegistry> logger)
     {
         _contentRootPath = environment.ContentRootPath;
         _dataRootPath = config["Facility:DataRootPath"] ?? string.Empty;
         var bindingsCsvPath = config["Facility:BindingsCsvPath"];
         _seedByNodeId = LoadBindings(bindingsCsvPath, _seedBindingsExposedUtc, logger);
+
+        using var scope = serviceProvider.CreateScope();
+        var editorStateService = scope.ServiceProvider.GetRequiredService<FacilityEditorStateService>();
+        editorStateService.SetFacilityId(1);
 
         foreach (var bindingId in editorStateService.GetDeletedBindingIdsSnapshot())
         {

@@ -4,11 +4,11 @@
 @using DiplomovaPrace.Services
 @using Radzen.Blazor
 
-<PageTitle>Import Měření</PageTitle>
+<PageTitle>Measurement Import</PageTitle>
 
 <div class="container-fluid py-4">
     <h2>CSV Import</h2>
-    <p class="text-muted">Podporovaný formát: <code>DeviceId,Timestamp,ActiveEnergyKWh,ActivePowerKW,VoltageV,CurrentA,PowerFactor</code></p>
+    <p class="text-muted">Supported format: <code>DeviceId,Timestamp,ActiveEnergyKWh,ActivePowerKW,VoltageV,CurrentA,PowerFactor</code></p>
 
     <div class="card mb-4">
         <div class="card-body">
@@ -17,11 +17,11 @@
                 @if (_isImporting)
                 {
                     <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                    <span> Importuji...</span>
+                    <span> Importing...</span>
                 }
                 else
                 {
-                    <span>Spustit Import</span>
+                    <span>Run Import</span>
                 }
             </button>
         </div>
@@ -31,31 +31,31 @@
     {
         <div class="card">
             <div class="card-header bg-@(_result.ErrorCount > 0 ? "warning" : "success") text-dark">
-                <strong>Výsledek Importu</strong>
+                <strong>Import Result</strong>
             </div>
             <div class="card-body">
                 <ul class="list-group mb-3">
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Celkový počet řádků (včetně hlavičky)
+                        Total lines (including header)
                         <span class="badge bg-primary rounded-pill">@_result.TotalLines</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Úspěšně importováno
+                        Successfully imported
                         <span class="badge bg-success rounded-pill">@_result.ImportedCount</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Přeskočeno (kvůli neshodě zařízení nebo chybějícím datům)
+                        Skipped (device mismatch or missing data)
                         <span class="badge bg-secondary rounded-pill">@_result.SkippedCount</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Chyby formátu
+                        Format errors
                         <span class="badge bg-danger rounded-pill">@_result.ErrorCount</span>
                     </li>
                 </ul>
 
                 @if (_result.UnknownDevices.Any())
                 {
-                    <h5 class="text-warning">Neznámá zařízení:</h5>
+                    <h5 class="text-warning">Unknown devices:</h5>
                     <ul>
                         @foreach (var dev in _result.UnknownDevices)
                         {
@@ -66,15 +66,15 @@
 
                 @if (_result.Errors.Any())
                 {
-                    <h5 class="text-danger">Seznam chyb:</h5>
+                    <h5 class="text-danger">Error list:</h5>
                     <ul class="text-danger">
                         @foreach (var err in _result.Errors.Take(50))
                         {
-                            <li>Řádek @err.LineNumber: @err.Reason</li>
+                            <li>Line @err.LineNumber: @err.Reason</li>
                         }
                         @if (_result.Errors.Count > 50)
                         {
-                            <li><em>... a @(_result.Errors.Count - 50) dalších chyb</em></li>
+                            <li><em>... and @(_result.Errors.Count - 50) more errors</em></li>
                         }
                     </ul>
                 }
@@ -109,7 +109,7 @@
         }
         catch (Exception ex)
         {
-            _result = new CsvImportResult(0, 0, 0, 1, new[] { new CsvImportError(0, $"Neočekávaná chyba: {ex.Message}") }, Array.Empty<string>());
+            _result = new CsvImportResult(0, 0, 0, 1, new[] { new CsvImportError(0, $"Unexpected error: {ex.Message}") }, Array.Empty<string>());
         }
         finally
         {

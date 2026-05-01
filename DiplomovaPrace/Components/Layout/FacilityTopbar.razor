@@ -1,5 +1,6 @@
 @using DiplomovaPrace.Components.Editor
 @using DiplomovaPrace.Persistence
+@using DiplomovaPrace.Persistence.Schematic
 @using DiplomovaPrace.Services
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Components.Authorization
@@ -47,16 +48,28 @@
                         <span class="fw-semibold">Select facility</span>
                         <button class="btn btn-sm btn-outline-secondary" @onclick="CloseFacilitySelector">Close</button>
                     </div>
-                    <div class="list-group list-group-flush">
-                        <button type="button" class="list-group-item list-group-item-action active d-flex align-items-center justify-content-between" @onclick="OpenFacilityWorkspace">
-                            <span>@CurrentFacilityName</span>
-                            <i class="bi bi-check2-circle"></i>
-                        </button>
-                        <div class="list-group-item text-muted small d-flex align-items-center">
-                            <i class="bi bi-info-circle me-2"></i>
-                            Additional facilities will be available in a follow-up milestone.
-                        </div>
+                    <div class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
+                        @foreach (var fac in _userFacilities)
+                        {
+                            var isActive = ActiveFacilityId.HasValue && fac.Id == ActiveFacilityId.Value;
+                            <button type="button" class="list-group-item list-group-item-action @(isActive ? "active" : "") d-flex align-items-center justify-content-between" @onclick="() => SwitchFacility(fac.Id)">
+                                <span>@fac.Name</span>
+                                @if (isActive)
+                                {
+                                    <i class="bi bi-check2-circle"></i>
+                                }
+                            </button>
+                        }
                     </div>
+                    @if (_showMembersButton)
+                    {
+                        <div class="card-footer bg-white p-2">
+                            <button type="button" class="btn btn-sm btn-primary w-100 d-flex align-items-center justify-content-center" @onclick="CreateFacilityAsync">
+                                <i class="bi bi-plus-lg me-2"></i>
+                                Create new facility
+                            </button>
+                        </div>
+                    }
                 </div>
             }
         </div>
@@ -128,12 +141,16 @@
 </header>
 
 @code {
+    [Parameter] public int? ActiveFacilityId { get; set; }
+
     private bool _isFacilitySelectorOpen;
     private bool _isAccountMenuOpen;
     private bool _showMembersButton;
-    private string CurrentFacilityName => "Smart Company Facility";
+    private string CurrentFacilityName = "Loading...";
+    private List<(int Id, string Name)> _userFacilities = new();
+    private int? _userId;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
         try
         {
@@ -143,17 +160,34 @@
                 var userIdClaim = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
                 if (int.TryParse(userIdClaim, out var userId))
                 {
-                    var activeFacilityName = Configuration["Facility:ActiveFacilityName"] ?? "Smart Company Facility";
-
+                    _userId = userId;
                     await using var db = await DbFactory.CreateDbContextAsync();
-                    var facilityId = await db.Facilities
-                        .Where(f => f.Name == activeFacilityName)
-                        .Select(f => (int?)f.Id)
-                        .FirstOrDefaultAsync();
+                    
+                    var memberships = await db.FacilityMemberships
+                        .Where(m => m.AppUserId == userId)
+                        .Select(m => m.FacilityId)
+                        .ToListAsync();
+                    
+                    _userFacilities = await db.Facilities
+                        .Where(f => memberships.Contains(f.Id))
+                        .Select(f => new { f.Id, f.Name })
+                        .OrderBy(f => f.Id)
+                        .ToListAsync()
+                        .ContinueWith(t => t.Result.Select(f => (f.Id, f.Name)).ToList());
 
-                    if (facilityId.HasValue)
+                    if (ActiveFacilityId.HasValue)
                     {
-                        _showMembersButton = await MembersManagementService.IsUserOwnerOrAdminAsync(facilityId.Value, userId);
+                        var active = _userFacilities.FirstOrDefault(f => f.Id == ActiveFacilityId.Value);
+                        if (active != default)
+                        {
+                            CurrentFacilityName = active.Name;
+                        }
+                        _showMembersButton = await MembersManagementService.IsUserOwnerOrAdminAsync(ActiveFacilityId.Value, userId);
+                    }
+                    else
+                    {
+                        _showMembersButton = false;
+                        CurrentFacilityName = "Select facility";
                     }
                 }
             }
@@ -161,6 +195,47 @@
         catch
         {
             _showMembersButton = false;
+        }
+    }
+
+    private async Task CreateFacilityAsync()
+    {
+        if (!_userId.HasValue) return;
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var newFacility = new FacilityEntity
+        {
+            Name = "New Facility",
+            Description = "A newly created facility."
+        };
+        db.Facilities.Add(newFacility);
+        await db.SaveChangesAsync();
+
+        db.FacilityMemberships.Add(new FacilityMembershipEntity
+        {
+            FacilityId = newFacility.Id,
+            AppUserId = _userId.Value,
+            Role = FacilityMembershipRole.Owner.ToString(),
+            CreatedAtUtc = DateTime.UtcNow
+        });
+
+        // Seed minimal default schematic
+        db.SchematicNodes.Add(new SchematicNodeEntity { FacilityId = newFacility.Id, NodeKey = "facility", Label = "Facility", NodeType = "root" });
+        db.SchematicNodes.Add(new SchematicNodeEntity { FacilityId = newFacility.Id, NodeKey = "weather", Label = "Weather", NodeType = "weather", ParentNodeKey = "facility" });
+        db.SchematicNodes.Add(new SchematicNodeEntity { FacilityId = newFacility.Id, NodeKey = "electricity_root", Label = "Electricity", NodeType = "bus", ParentNodeKey = "facility" });
+        
+        await db.SaveChangesAsync();
+
+        _isFacilitySelectorOpen = false;
+        Navigation.NavigateTo($"/facility/{newFacility.Id}", forceLoad: true);
+    }
+
+    private void SwitchFacility(int facilityId)
+    {
+        _isFacilitySelectorOpen = false;
+        if (ActiveFacilityId != facilityId)
+        {
+            Navigation.NavigateTo($"/facility/{facilityId}", forceLoad: true);
         }
     }
 
@@ -179,16 +254,6 @@
     {
         _isAccountMenuOpen = !_isAccountMenuOpen;
         _isFacilitySelectorOpen = false;
-    }
-
-    private void OpenFacilityWorkspace()
-    {
-        _isFacilitySelectorOpen = false;
-
-        if (!Navigation.Uri.Contains("/facility", StringComparison.OrdinalIgnoreCase))
-        {
-            Navigation.NavigateTo("/facility");
-        }
     }
 
 }

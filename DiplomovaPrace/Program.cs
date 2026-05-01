@@ -36,7 +36,7 @@ builder.Services.AddDbContextFactory<AppDbContext>(options =>
 builder.Services.AddSingleton<IMeasurementRepository, EfMeasurementRepository>();
 
 builder.Services.AddScoped<ICsvMeasurementImportService, CsvMeasurementImportService>();
-builder.Services.AddSingleton<FacilityEditorStateService>();
+builder.Services.AddScoped<FacilityEditorStateService>();
 builder.Services.AddScoped<FacilityNodeSeriesImportService>();
 builder.Services.AddScoped<FacilityImportService>();
 builder.Services.AddScoped<FacilityQueryService>();
@@ -178,23 +178,24 @@ app.Use(async (context, next) =>
     var dbFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
     var membershipService = scope.ServiceProvider.GetRequiredService<FacilityMembershipService>();
 
-    await using var db = await dbFactory.CreateDbContextAsync(context.RequestAborted);
-    var activeFacilityId = await db.Facilities
-        .Where(f => f.Name == activeFacilityName)
-        .Select(f => (int?)f.Id)
-        .FirstOrDefaultAsync(context.RequestAborted);
-
-    if (!activeFacilityId.HasValue)
+    int? requestedFacilityId = null;
+    if (path.StartsWithSegments("/facility", out var remaining) && remaining.HasValue)
     {
-        await next();
-        return;
+        var parts = remaining.Value.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length > 0 && int.TryParse(parts[0], out var parsedId))
+        {
+            requestedFacilityId = parsedId;
+        }
     }
 
-    var membership = await membershipService.ResolveForUserAndFacilityAsync(appUserId, activeFacilityId.Value, context.RequestAborted);
-    if (membership is null)
+    if (requestedFacilityId.HasValue)
     {
-        context.Response.Redirect("/access-denied");
-        return;
+        var membership = await membershipService.ResolveForUserAndFacilityAsync(appUserId, requestedFacilityId.Value, context.RequestAborted);
+        if (membership is null)
+        {
+            context.Response.Redirect("/access-denied");
+            return;
+        }
     }
 
     await next();

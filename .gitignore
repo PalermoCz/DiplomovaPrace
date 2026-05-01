@@ -16,7 +16,7 @@ DiplomovaPrace/obj/
 
 **/build-validation/
 build-validation
-
+release-snapshots/
 DiplomovaPrace/App_Data/
 
 DiplomovaPrace/debug_*.txt

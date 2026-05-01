@@ -11,31 +11,10 @@
       "cwd": "${workspaceFolder}/DiplomovaPrace",
       "stopAtEntry": false,
       "env": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5016"
       },
       "console": "integratedTerminal"
-    },
-    {
-      "name": "Launch Facility in Integrated Browser",
-      "type": "editor-browser",
-      "request": "launch",
-      "url": "http://localhost:5016/facility"
-    },
-    {
-      "name": "Attach to Facility Tab in Integrated Browser",
-      "type": "editor-browser",
-      "request": "attach",
-      "urlFilter": "http://localhost:5016/*"
-    }
-  ],
-  "compounds": [
-    {
-      "name": "Facility + Integrated Browser",
-      "configurations": [
-        ".NET Core Launch (Facility)",
-        "Launch Facility in Integrated Browser"
-      ],
-      "stopAll": true
     }
   ]
 }

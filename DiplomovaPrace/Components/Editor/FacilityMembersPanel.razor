@@ -53,26 +53,37 @@
                         <div class="member-actions">
                             @if (CanManageMembers)
                             {
-                                <select class="form-select form-select-sm member-role-select"
-                                        value="@member.Role"
-                                        @onchange="@((ChangeEventArgs e) => OnRoleChangeAsync(member, e.Value?.ToString()))"
-                                        disabled="@(!CanChangeRole(member))"
-                                        aria-label="Change role">
-                                    <option value="Viewer">Viewer</option>
-                                    <option value="Admin">Admin</option>
-                                    @if (_currentUserRole == FacilityMembershipRole.Owner)
-                                    {
-                                        <option value="Owner">Owner</option>
-                                    }
-                                </select>
-                                <button type="button"
-                                        class="btn btn-sm btn-outline-danger"
-                                        @onclick="@(() => OnRemoveMemberClick(member))"
-                                        disabled="@(!CanRemoveMember(member))"
-                                        title="@GetRemoveButtonTitle(member)"
-                                        aria-label="Remove member">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                                @if (_currentUserRole == FacilityMembershipRole.Admin && member.Role == "Owner")
+                                {
+                                    <div class="member-role-badge me-1" title="Only Owners can manage Owner members.">
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1" style="font-size: 0.85em;">
+                                            Owner <i class="bi bi-lock-fill ms-1" style="font-size: 0.8em;"></i>
+                                        </span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <select class="form-select form-select-sm member-role-select"
+                                            value="@member.Role"
+                                            @onchange="@((ChangeEventArgs e) => OnRoleChangeAsync(member, e.Value?.ToString()))"
+                                            disabled="@(!CanChangeRole(member))"
+                                            aria-label="Change role">
+                                        <option value="Viewer">Viewer</option>
+                                        <option value="Admin">Admin</option>
+                                        @if (_currentUserRole == FacilityMembershipRole.Owner)
+                                        {
+                                            <option value="Owner">Owner</option>
+                                        }
+                                    </select>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-danger"
+                                            @onclick="@(() => OnRemoveMemberClick(member))"
+                                            disabled="@(!CanRemoveMember(member))"
+                                            title="@GetRemoveButtonTitle(member)"
+                                            aria-label="Remove member">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                }
                             }
                             else
                             {
@@ -296,7 +307,7 @@
         _isRemovingMember = true;
         try
         {
-            var result = await MembersService.RemoveMemberAsync(_memberToRemove.MembershipId, _currentUserId);
+            var result = await MembersService.RemoveMemberAsync(_memberToRemove.MembershipId, _currentUserId, _currentUserRole);
 
             if (result == FacilityMemberRemovalResult.Success)
             {
@@ -311,6 +322,7 @@
                     FacilityMemberRemovalResult.CannotRemoveSelf => "Cannot remove yourself",
                     FacilityMemberRemovalResult.CannotRemoveLastOwner => "Cannot remove last owner",
                     FacilityMemberRemovalResult.MemberNotFound => "Member not found",
+                    FacilityMemberRemovalResult.InsufficientPermission => "You do not have permission to remove this member",
                     _ => "Removal failed"
                 };
                 _addMemberMessage = $"Error: {errorMsg}";

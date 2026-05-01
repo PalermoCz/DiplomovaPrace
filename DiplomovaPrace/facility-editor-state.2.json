@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 7,
+  "nodeEdits": [
+    {
+      "nodeKey": "facility",
+      "label": "Facility",
+      "nodeType": "root",
+      "zone": null,
+      "floorAreaM2": null,
+      "stylePresetKey": null,
+      "tags": [],
+      "note": null,
+      "xHint": null,
+      "yHint": null,
+      "updatedUtc": "2026-05-01T20:04:27.0126767Z"
+    },
+    {
+      "nodeKey": "test",
+      "label": "test",
+      "nodeType": "subzone",
+      "zone": null,
+      "floorAreaM2": null,
+      "stylePresetKey": "default-node",
+      "tags": [
+        "distribution",
+        "facility",
+        "role:powerdistribution",
+        "semantic:distribution",
+        "type:subzone",
+        "unmetered"
+      ],
+      "note": null,
+      "xHint": 0.56,
+      "yHint": 0.54,
+      "updatedUtc": "2026-05-01T20:45:10.7161972Z"
+    }
+  ],
+  "importedBindings": [],
+  "deletedBindings": [],
+  "stylePresets": [],
+  "workingSets": [],
+  "structure": {
+    "addedNodes": [
+      {
+        "nodeKey": "test",
+        "label": "test",
+        "nodeType": "subzone",
+        "zone": null,
+        "meterUrn": null,
+        "parentNodeKey": "electricity_root",
+        "xHint": 0.56,
+        "yHint": 0.54,
+        "updatedUtc": "2026-05-01T20:45:10.7082662Z"
+      }
+    ],
+    "removedNodeKeys": [],
+    "parentOverrides": {},
+    "addedRelationships": [],
+    "removedRelationships": []
+  }
+}

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting;
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.IO;
@@ -5454,7 +5454,7 @@ public class NodeAnalyticsPreviewService
         CancellationToken ct)
     {
         var nodeStates = await _facilityEditorStateService.GetNodeStatesByKeyAsync(ct);
-        var facility = await _facilityQueryService.GetMainFacilityAsync(ct);
+        var facility = await _facilityQueryService.GetFacilityAsync(_facilityEditorStateService.CurrentFacilityId, ct);
         var facilityNodesByKey = facility?.Nodes?
             .ToDictionary(node => node.NodeKey, StringComparer.OrdinalIgnoreCase)
             ?? new Dictionary<string, DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity>(StringComparer.OrdinalIgnoreCase);
@@ -5947,7 +5947,7 @@ public class NodeAnalyticsPreviewService
             };
         }
 
-        var facility = await _facilityQueryService.GetMainFacilityAsync(ct);
+        var facility = await _facilityQueryService.GetFacilityAsync(_facilityEditorStateService.CurrentFacilityId, ct);
         var weatherResolution = _weatherSourceResolver.Resolve(facility);
         if (weatherResolution?.HasTemperatureBinding != true)
         {
@@ -6470,7 +6470,7 @@ public class NodeAnalyticsPreviewService
         var fitStartInclusive = fitEndExclusive.AddDays(-WeatherAwareBaselineFitLookbackDays);
         var windowEndExclusive = predictionDays[^1].AddDays(1);
 
-        var facility = await _facilityQueryService.GetMainFacilityAsync(ct);
+        var facility = await _facilityQueryService.GetFacilityAsync(_facilityEditorStateService.CurrentFacilityId, ct);
         var weatherResolution = _weatherSourceResolver.Resolve(facility);
         if (weatherResolution?.HasTemperatureBinding != true)
         {

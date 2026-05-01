@@ -1,5 +1,6 @@
 @page "/"
 @page "/facility"
+@page "/facility/{FacilityId:int}"
 @using System.Globalization
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Components.Forms
@@ -9,6 +10,7 @@
 @using DiplomovaPrace.Persistence
 @using DiplomovaPrace.Persistence.Schematic
 @using DiplomovaPrace.Components.Editor
+@using Microsoft.EntityFrameworkCore
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject FacilityQueryService FacilityQueryService
@@ -20,6 +22,7 @@
 @inject IEditorSessionService SessionService
 @inject IJSRuntime JSRuntime
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IDbContextFactory<AppDbContext> DbFactory
 @layout DiplomovaPrace.Components.Layout.FacilityLayout
 @implements IDisposable
 
@@ -28,7 +31,7 @@
 @* Layout CSS is in FacilityWorkbench.razor.css (scoped) *@
 
 <CascadingAuthenticationState>
-    <FacilityTopbar OnMembersClicked="ToggleMembersPanel" />
+    <FacilityTopbar ActiveFacilityId="FacilityId" OnMembersClicked="ToggleMembersPanel" />
 </CascadingAuthenticationState>
 
 <div class="facility-workbench">
@@ -2177,6 +2180,9 @@
 </div> @* closes facility-workbench *@
 
 @code {
+    [Parameter] public int? FacilityId { get; set; }
+    @inject NavigationManager Navigation
+
     private const string AnalyticsTabOverview = "overview";
     private const string AnalyticsTabBreakdown = "breakdown";
     private const string AnalyticsTabPerformance = "performance";
@@ -4796,9 +4802,32 @@ private static OverviewTreemapRect FindTailRect(IReadOnlyList<OverviewTreemapRec
 
     protected override async Task OnInitializedAsync()
     {
+        if (!FacilityId.HasValue)
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var userIdClaim = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(userIdClaim, out var appUserId))
+            {
+                using var db = await DbFactory.CreateDbContextAsync();
+                var membership = await db.FacilityMemberships
+                    .Where(m => m.AppUserId == appUserId)
+                    .OrderBy(m => m.FacilityId)
+                    .FirstOrDefaultAsync();
+                if (membership is not null)
+                {
+                    Navigation.NavigateTo($"/facility/{membership.FacilityId}");
+                    return;
+                }
+            }
+            Navigation.NavigateTo("/access-denied");
+            return;
+        }
+
+        FacilityEditorStateService.SetFacilityId(FacilityId.Value);
+
         await ReloadData();
         SessionService.OnSessionChanged += HandleSessionChanged;
-        // V�choz� n�stroj pro prohl�en� sch�matu
+        // Vchoz nstroj pro prohlen schmatu
         SessionService.SetActiveTool(EditorTool.Select);
     }
 
@@ -4832,7 +4861,7 @@ private static OverviewTreemapRect FindTailRect(IReadOnlyList<OverviewTreemapRec
             ? preferredFocusNodeKey ?? SessionService.SelectedElementId
             : null;
 
-        var facilityTask = FacilityQueryService.GetMainFacilityAsync();
+        var facilityTask = FacilityQueryService.GetFacilityAsync(FacilityId!.Value);
         var editorStateTask = FacilityEditorStateService.GetNodeStatesByKeyAsync();
         var stylePresetsTask = FacilityEditorStateService.GetStylePresetsByKeyAsync();
         var workingSetsTask = FacilityEditorStateService.GetWorkingSetsAsync();

@@ -126,7 +126,8 @@ public sealed class FacilityEditorStateService
     private const int CurrentSchemaVersion = 7;
 
     private readonly SemaphoreSlim _gate = new(1, 1);
-    private readonly string _stateFilePath;
+    private readonly IWebHostEnvironment _environment;
+    private int _facilityId = 1;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -137,7 +138,20 @@ public sealed class FacilityEditorStateService
 
     public FacilityEditorStateService(IWebHostEnvironment environment)
     {
-        _stateFilePath = Path.Combine(environment.ContentRootPath, "facility-editor-state.json");
+        _environment = environment;
+    }
+
+    public void SetFacilityId(int facilityId)
+    {
+        _facilityId = facilityId;
+    }
+
+    public int CurrentFacilityId => _facilityId;
+
+    private string GetStateFilePath()
+    {
+        if (_facilityId <= 1) return Path.Combine(_environment.ContentRootPath, "facility-editor-state.json");
+        return Path.Combine(_environment.ContentRootPath, $"facility-editor-state.{_facilityId}.json");
     }
 
     /// <summary>
@@ -149,9 +163,9 @@ public sealed class FacilityEditorStateService
         await _gate.WaitAsync(ct);
         try
         {
-            if (!File.Exists(_stateFilePath))
+            if (!File.Exists(GetStateFilePath()))
                 return JsonSerializer.Serialize(new FacilityEditorStateDocument(), JsonOptions);
-            return await File.ReadAllTextAsync(_stateFilePath, ct);
+            return await File.ReadAllTextAsync(GetStateFilePath(), ct);
         }
         finally
         {
@@ -167,12 +181,12 @@ public sealed class FacilityEditorStateService
         await _gate.WaitAsync(ct);
         try
         {
-            var directory = Path.GetDirectoryName(_stateFilePath);
+            var directory = Path.GetDirectoryName(GetStateFilePath());
             if (!string.IsNullOrWhiteSpace(directory))
                 Directory.CreateDirectory(directory);
-            var tempPath = _stateFilePath + ".tmp";
+            var tempPath = GetStateFilePath() + ".tmp";
             await File.WriteAllTextAsync(tempPath, rawJson, ct);
-            File.Move(tempPath, _stateFilePath, overwrite: true);
+            File.Move(tempPath, GetStateFilePath(), overwrite: true);
         }
         finally
         {
@@ -899,14 +913,14 @@ public sealed class FacilityEditorStateService
 
     private async Task<FacilityEditorStateDocument> LoadStateUnsafeAsync(CancellationToken ct)
     {
-        if (!File.Exists(_stateFilePath))
+        if (!File.Exists(GetStateFilePath()))
         {
             return new FacilityEditorStateDocument();
         }
 
         try
         {
-            var raw = await File.ReadAllTextAsync(_stateFilePath, ct);
+            var raw = await File.ReadAllTextAsync(GetStateFilePath(), ct);
             var state = JsonSerializer.Deserialize<FacilityEditorStateDocument>(raw, JsonOptions);
             return state ?? new FacilityEditorStateDocument();
         }
@@ -918,14 +932,14 @@ public sealed class FacilityEditorStateService
 
     private FacilityEditorStateDocument LoadStateUnsafe()
     {
-        if (!File.Exists(_stateFilePath))
+        if (!File.Exists(GetStateFilePath()))
         {
             return new FacilityEditorStateDocument();
         }
 
         try
         {
-            var raw = File.ReadAllText(_stateFilePath);
+            var raw = File.ReadAllText(GetStateFilePath());
             var state = JsonSerializer.Deserialize<FacilityEditorStateDocument>(raw, JsonOptions);
             return state ?? new FacilityEditorStateDocument();
         }
@@ -937,7 +951,7 @@ public sealed class FacilityEditorStateService
 
     private async Task PersistStateUnsafeAsync(FacilityEditorStateDocument state, CancellationToken ct)
     {
-        var directory = Path.GetDirectoryName(_stateFilePath);
+        var directory = Path.GetDirectoryName(GetStateFilePath());
         if (!string.IsNullOrWhiteSpace(directory))
         {
             Directory.CreateDirectory(directory);
@@ -945,10 +959,10 @@ public sealed class FacilityEditorStateService
 
         state.SchemaVersion = CurrentSchemaVersion;
         var raw = JsonSerializer.Serialize(state, JsonOptions);
-        var tempPath = _stateFilePath + ".tmp";
+        var tempPath = GetStateFilePath() + ".tmp";
 
         await File.WriteAllTextAsync(tempPath, raw, ct);
-        File.Move(tempPath, _stateFilePath, overwrite: true);
+        File.Move(tempPath, GetStateFilePath(), overwrite: true);
     }
 
     private static FacilityStructureState NormalizeStructureState(FacilityStructureStateDocument? structure)

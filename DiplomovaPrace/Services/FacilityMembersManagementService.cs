@@ -256,10 +256,14 @@ public sealed class FacilityMembersManagementService
         if (membership is null)
             return UpdateRoleResult.NotFound;
 
+        var currentRole = FacilityMembershipRoleExtensions.ParseOrViewer(membership.Role);
+
+        // Role policy: Admin cannot update an existing Owner
+        if (callerRole == FacilityMembershipRole.Admin && currentRole == FacilityMembershipRole.Owner)
+            return UpdateRoleResult.InsufficientPermission;
+
         if (currentUserId.HasValue && membership.AppUserId == currentUserId.Value)
             return UpdateRoleResult.SelfLockoutBlocked;
-
-        var currentRole = FacilityMembershipRoleExtensions.ParseOrViewer(membership.Role);
         if (currentRole == FacilityMembershipRole.Owner && parsedRole != FacilityMembershipRole.Owner)
         {
             var ownerCount = await db.FacilityMemberships
@@ -280,6 +284,7 @@ public sealed class FacilityMembersManagementService
     public async Task<FacilityMemberRemovalResult> RemoveMemberAsync(
         int membershipId,
         int currentUserId,
+        FacilityMembershipRole callerRole = FacilityMembershipRole.Owner,
         CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
@@ -289,6 +294,12 @@ public sealed class FacilityMembersManagementService
 
         if (membership is null)
             return FacilityMemberRemovalResult.MemberNotFound;
+
+        var currentRole = FacilityMembershipRoleExtensions.ParseOrViewer(membership.Role);
+
+        // Role policy: Admin cannot remove an existing Owner
+        if (callerRole == FacilityMembershipRole.Admin && currentRole == FacilityMembershipRole.Owner)
+            return FacilityMemberRemovalResult.InsufficientPermission;
 
         // Cannot remove yourself
         if (membership.AppUserId == currentUserId)
@@ -403,6 +414,7 @@ public enum FacilityMemberRemovalResult
     Success,
     MemberNotFound,
     CannotRemoveSelf,
-    CannotRemoveLastOwner
+    CannotRemoveLastOwner,
+    InsufficientPermission
 }
 

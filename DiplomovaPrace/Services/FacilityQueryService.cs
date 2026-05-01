@@ -9,26 +9,23 @@ public class FacilityQueryService
 {
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
     private readonly FacilityEditorStateService _editorStateService;
-    private readonly string _activeFacilityName;
 
     public FacilityQueryService(
         IDbContextFactory<AppDbContext> dbFactory,
-        FacilityEditorStateService editorStateService,
-        IConfiguration config)
+        FacilityEditorStateService editorStateService)
     {
         _dbFactory = dbFactory;
         _editorStateService = editorStateService;
-        _activeFacilityName = config["Facility:ActiveFacilityName"] ?? "Smart Company Facility";
     }
 
-    public async Task<FacilityEntity?> GetMainFacilityAsync(CancellationToken ct = default)
+    public async Task<FacilityEntity?> GetFacilityAsync(int facilityId, CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
         var facility = await db.Facilities
             .AsNoTracking()
             .Include(f => f.Nodes)
             .Include(f => f.Edges)
-            .FirstOrDefaultAsync(f => f.Name == _activeFacilityName, ct);
+            .FirstOrDefaultAsync(f => f.Id == facilityId, ct);
 
         if (facility is null)
         {
