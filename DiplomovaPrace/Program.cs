@@ -7,14 +7,16 @@ using Radzen;
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Lokální konfigurace (pouze lokální, není v gitu) ──────────────────────
-// appsettings.Local.json definuje: DatabasePath, Facility:NodesCsvPath,
-// Facility:EdgesCsvPath, Facility:BindingsCsvPath, Facility:DataRootPath,
-// Facility:ForceMigration
+// appsettings.Local.json může definovat: DatabasePath, Facility:NodesCsvPath,
+// Facility:EdgesCsvPath, Facility:ForceMigration
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// Add Razor Pages for auth (server-rendered, not interactive)
+builder.Services.AddRazorPages();
 
 // Registrace Radzen komponent
 builder.Services.AddRadzenComponents();
@@ -47,6 +49,18 @@ builder.Services.AddScoped<FacilityAlertSummaryService>();
 builder.Services.AddSingleton<IBuildingConfigurationService, InMemoryBuildingConfigurationService>();
 builder.Services.AddScoped<IEditorSessionService, EditorSessionService>();
 
+// ── Auth-shell v1: Lokální email + password + cookies ─────────────────────
+builder.Services.AddScoped<AuthenticationService>();
+builder.Services.AddAuthentication("CookieAuth")
+    .AddCookie("CookieAuth", options =>
+    {
+        options.LoginPath = "/login";
+        options.LogoutPath = "/logout";
+        options.AccessDeniedPath = "/access-denied";
+        options.ExpireTimeSpan = TimeSpan.FromDays(7);
+        options.SlidingExpiration = true;
+    });
+
 var app = builder.Build();
 
 // ── Inicializace databáze ──────────────────────────────────────────────────
@@ -59,6 +73,17 @@ var app = builder.Build();
     var factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
     await using var db = await factory.CreateDbContextAsync();
     await db.Database.EnsureCreatedAsync();
+    // Ensure AppUsers table exists (for auth-shell v1)
+    await db.Database.ExecuteSqlRawAsync(@"
+        CREATE TABLE IF NOT EXISTS ""AppUsers"" (
+            ""Id"" INTEGER PRIMARY KEY AUTOINCREMENT,
+            ""Email"" TEXT NOT NULL UNIQUE,
+            ""PasswordHash"" TEXT NOT NULL,
+            ""CreatedAtUtc"" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            ""LastLoginUtc"" TEXT
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS ""IX_AppUsers_Email"" ON ""AppUsers"" (""Email"");
+    ");
     await AppDbSchemaBootstrap.EnsurePhaseOneRelationshipSchemaAsync(db);
     app.Logger.LogInformation("Databáze inicializována: {Path}", dbPath);
 
@@ -100,10 +125,15 @@ app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages:
 app.UseStaticFiles();
 app.UseRouting();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.UseAntiforgery();
 
 app.MapStaticAssets();
 
+// Map Razor Pages (auth pages: login, register, logout)
+app.MapRazorPages();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

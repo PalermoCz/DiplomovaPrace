@@ -36,6 +36,11 @@ public class AppDbContext : DbContext
     /// <summary>Mapování uzlů na měřicí body — future-proof vrstva pro Sprint 3+.</summary>
     public DbSet<FacilityMeasurementMapEntity> FacilityMeasurementMaps => Set<FacilityMeasurementMapEntity>();
 
+    // ── Auth: Aplikační uživatelé (Milestone: Auth-shell v1) ──────────────────
+
+    /// <summary>Tabulka aplikačních uživatelů — lokální email + password auth.</summary>
+    public DbSet<AppUserEntity> AppUsers => Set<AppUserEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -134,6 +139,29 @@ public class AppDbContext : DbContext
                   .WithMany(f => f.MeasurementMaps)
                   .HasForeignKey(e => e.FacilityId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ── AppUserEntity (Auth-shell v1) ─────────────────────────────────────
+
+        modelBuilder.Entity<AppUserEntity>(entity =>
+        {
+            entity.ToTable("AppUsers");
+            entity.HasKey(e => e.Id);
+
+            // Email musí být unikátní — slouží jako login identifikátor
+            entity.HasIndex(e => e.Email)
+                  .IsUnique()
+                  .HasDatabaseName("IX_AppUsers_Email");
+
+            entity.Property(e => e.Email)
+                  .IsRequired()
+                  .HasMaxLength(255);
+
+            entity.Property(e => e.PasswordHash)
+                  .IsRequired();
+
+            entity.Property(e => e.CreatedAtUtc)
+                  .HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
     }
 }

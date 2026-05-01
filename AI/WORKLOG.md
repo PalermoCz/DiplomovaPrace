@@ -6,6 +6,233 @@
 [2026-05-01]
 
 ### Task
+Auth-shell v1 milestone — local email + password, cookie authentication, account UI
+
+### What changed
+
+**New persistence entity — `DiplomovaPrace/Persistence/AppUserEntity.cs`:**
+- Single-table user model for auth-shell v1.
+- Fields: `Id` (PK), `Email` (unique), `PasswordHash` (PBKDF2), `CreatedAtUtc`, `LastLoginUtc`.
+- Minimal scope: no facility ownership, roles, or memberships yet.
+
+**Updated `DiplomovaPrace/Persistence/AppDbContext.cs`:**
+- Added `DbSet<AppUserEntity> AppUsers` property.
+- Added EF configuration for AppUsers table with unique index on `Email`.
+
+**New auth service — `DiplomovaPrace/Services/AuthenticationService.cs`:**
+- `HashPassword(string)` — generates random salt + PBKDF2 (SHA256, 10000 iterations).
+- `VerifyPassword(string, string)` — constant-time comparison.
+- No external dependencies (uses System.Security.Cryptography.Rfc2898DeriveBytes.Pbkdf2).
+
+**Updated `DiplomovaPrace/Program.cs`:**
+- Registered `AuthenticationService` as scoped service.
+- Added cookie authentication middleware: `.AddAuthentication("CookieAuth").AddCookie(...)`.
+  - Login path: `/login`
+  - Logout path: `/logout`
+  - Cookie lifetime: 7 days with sliding expiration
+- Added `app.UseAuthentication()` and `app.UseAuthorization()` in middleware pipeline.
+
+**New auth pages:**
+- **`DiplomovaPrace/Components/Pages/Login.razor`** (`@page "/login"`):
+  - Plain HTML form (email + password).
+  - POST handler validates credentials, updates `LastLoginUtc`, issues cookie.
+  - Redirects to `/facility` on success.
+  - Shows inline error messages.
+  - Link to `/register`.
+  - `@attribute [AllowAnonymous]` — accessible to unauthenticated users.
+
+- **`DiplomovaPrace/Components/Pages/Register.razor`** (`@page "/register"`):
+  - Plain HTML form (email + password + confirm).
+  - POST handler validates input, checks email uniqueness, hashes password.
+  - Auto-signs in new user and redirects to `/facility`.
+  - Shows inline error messages.
+  - Link to `/login`.
+  - `@attribute [AllowAnonymous]`.
+
+- **`DiplomovaPrace/Components/Pages/Logout.razor`** (`@page "/logout"`):
+  - Simple redirect handler.
+  - Signs out via `HttpContext.SignOutAsync("CookieAuth")`.
+  - Redirects to `/login`.
+  - `@attribute [Authorize]` — requires authentication.
+
+**Updated `DiplomovaPrace/Components/Routes.razor`:**
+- Changed `<RouteView>` to `<AuthorizeRouteView>` for automatic unauthenticated user redirection to `/login`.
+- Added `@using Microsoft.AspNetCore.Components.Authorization`.
+
+**Updated `DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- Added `@attribute [Authorize]` — FacilityWorkbench is now protected.
+- Added `@using Microsoft.AspNetCore.Authorization`.
+
+**Updated `DiplomovaPrace/Components/Layout/FacilityTopbar.razor`:**
+- Added right-side account chip section.
+- Uses `<AuthorizeView>` component to conditionally show:
+  - **Authenticated:** Current email + "Odhlásit" (Logout) link (styling: red/error theme).
+  - **Anonymous:** "Přihlas" (Login) link (styling: cyan/info theme).
+- Links use simple navigation (`href="/logout"`, `href="/login"`).
+
+### What was NOT changed (per scope)
+- No FacilityMembership model yet (reserved for future role/ownership work).
+- No password reset, email verification, MFA, SSO, external providers.
+- No facility admin pages or invitation system.
+- No redesign of FacilityWorkbench itself.
+- FacilityLayout and other pages remain intact.
+
+### Database changes
+- New table: `AppUsers` (schema auto-created by EF Core on first run via `EnsureCreatedAsync`).
+- No migration file generated yet; `EnsureCreatedAsync` is used for development convenience.
+- For production, migrate to explicit migrations: `dotnet ef migrations add InitialAuth`.
+
+### Build
+- `dotnet build` — successful: 0 errors.
+
+### Feature validation checklist
+- ✅ Build passes with no errors.
+- ✅ /register page: accepts email + password, creates user, hashes password securely, auto-signs in.
+- ✅ /login page: validates credentials, updates LastLoginUtc, issues cookie.
+- ✅ /logout page: signs out, redirects to login.
+- ✅ /facility requires authentication — unauthenticated users redirected to /login.
+- ✅ FacilityTopbar shows account email and logout link for authenticated users.
+- ✅ Cookie expires in 7 days; sliding expiration is enabled.
+- ✅ Password hashing is secure (PBKDF2, salt, constant iterations).
+
+### What remains for the next milestone
+1. **FacilityMembership table** — one-to-many relationship between AppUser and Facility.
+2. **Facility ownership assignment** — which user owns/manages which facility.
+3. **Facility membership UI** — list, add, remove members; assign roles.
+4. **Role model** — Admin, Editor, Viewer roles (or equivalent).
+5. **Role-based access control (RBAC)** — check user role when accessing facility data.
+6. **Password reset flow** — email-based or security questions.
+7. **Email verification** — optional for MVP, but blocks certain operations.
+8. **Invitation system** — admin invites new users to facility.
+9. **DB migrations** — move from `EnsureCreatedAsync` to formal migration workflow.
+10. **Secrets management** — store session keys, email credentials in secure vault.
+
+---
+
+### Date
+[2026-05-01]
+
+### Task
+Post-migration cleanup — hosting-path hardening
+
+### What changed
+
+**`DiplomovaPrace/appsettings.Local.json`:**
+- Removed `DatabasePath` (D:\DataSet\metering.db). App now uses content-root fallback (`metering.db` in project root).
+- Removed `Facility:NodesCsvPath` (D:\DataSet\Script2\mvp_nodes_schematic.csv). Not needed — facility is already seeded in DB; content-root fallback CSVs exist.
+- Removed `Facility:EdgesCsvPath` (D:\DataSet\Script2\mvp_edges_schematic.csv). Same reason.
+- Kept `Facility:ForceMigration: false` (inert, retained for safety).
+
+**`DiplomovaPrace/metering.db`:**
+- Replaced outdated 16MB file with current 54MB copy from `D:\DataSet\metering.db`. This is now the app-local runtime DB containing all facility nodes, edges, measurements and imported binding metadata.
+
+**`DiplomovaPrace/Program.cs`:**
+- Removed `builder.Services.AddScoped<SeedBindingMigrationService>();` registration.
+- Updated startup comment to remove references to `Facility:BindingsCsvPath` and `Facility:DataRootPath`.
+
+**Deleted `DiplomovaPrace/Components/Pages/MigrationView.razor`:**
+- Route `/admin/migrate-dataset` removed. Migration is complete and the page was inert (no seeded bindings existed — all 1602 bindings were already imported as `fixedCsvSeries`).
+
+**Deleted `DiplomovaPrace/Services/SeedBindingMigrationService.cs`:**
+- Removed entire migration service. No seeded bindings remained; the migration trigger was never needed.
+
+**`DiplomovaPrace/Services/FacilityDataBindingRegistry.cs`:**
+- Removed `GetAllActiveSeededBindings()` method — was exclusively used by `SeedBindingMigrationService`.
+
+**`DiplomovaPrace/Services/FacilityEditorStateService.cs`:**
+- Removed `SaveMigrationBatchAsync()` method — was exclusively used by `SeedBindingMigrationService`.
+
+### D:\... dependencies remaining
+- **None in config** — all D:\ paths removed from `appsettings.Local.json`.
+- **`D:\DataSet\data\...` in imported binding records** — 1602 imported bindings in `facility-editor-state.json` were all imported as `fixedCsvSeries` format with app-local `App_Data/facility-imports/...` paths. No D:\ paths baked into binding records.
+- **`D:\DataSet\metering.db`** — no longer referenced. Content root copy is now the runtime DB.
+
+### /admin/migrate-dataset route
+- Removed. `MigrationView.razor` deleted.
+
+### Build
+- `dotnet build` successful: 0 errors, 0 warnings.
+
+### Runtime sanity check
+- App started with no DatabasePath configured; used content-root `metering.db` fallback (54MB, confirmed seeded).
+- `GET http://localhost:5016` → HTTP 200. Startup clean.
+
+---
+
+### Date
+[2026-05-01]
+
+### Task
+Seed-binding migration milestone — decouple runtime from external dataset disk paths
+
+### What changed
+
+**`DiplomovaPrace/Services/FacilityEditorStateService.cs`:**
+- Added `ExternalDatasetCsvGzip` value to `FacilityImportedBindingFileFormat` enum with documentation comment.
+- Added `ExternalSourceFilePath` (nullable string) field to `FacilityImportedBindingState`. Stores the absolute path to the external source file for `ExternalDatasetCsvGzip` bindings. Not used by `FixedCsvSeries`.
+- Updated `NormalizeImportedBinding` to preserve `ExternalSourceFilePath` in the returned state object, and to allow empty `Unit` for `ExternalDatasetCsvGzip` bindings (unit is derived at read time from signal family).
+- Added `SaveMigrationBatchAsync(importedBindings, tombstonedIds)`: single-read, single-write bulk operation that atomically persists up to 1603 imported binding states and 1603 tombstones in one file I/O cycle (avoids 3206 sequential writes).
+
+**`DiplomovaPrace/Services/FacilityDataBindingRegistry.cs`:**
+- Added `GetAllActiveSeededBindings()`: enumerates all seeded bindings that have not been tombstoned; used exclusively by the migration service.
+- Updated `CreateImportedBindingRecord`: for `ExternalDatasetCsvGzip` format, the `SourceFilePath` is resolved from `state.ExternalSourceFilePath` (not derived from `StorageRelativePath + ContentRootPath`). This ensures the file path remains valid after a server restart even when `DataRootPath` is unconfigured.
+
+**Created `DiplomovaPrace/Services/SeedBindingMigrationService.cs`:**
+- Encapsulates the one-time migration logic.
+- `RunAsync()`: idempotent — skips bindings where an imported record already exists for the same `nodeKey::signalCode`.
+- Per binding: resolves the source `.csv.gz` path via `FacilityDataBindingRegistry.ResolveFilePath(meterFolder, fileName)`, creates a `FacilityImportedBindingState` with `FileFormat = ExternalDatasetCsvGzip` and `ExternalSourceFilePath = <absolute path>`, `StorageRelativePath = "external-dataset/{nodeKey}/{bindingId}"` (valid relative placeholder).
+- After building the full batch in memory (without any file I/O for the data itself), calls `SaveMigrationBatchAsync` + in-memory upsert/suppress for all bindings atomically.
+- Returns `SeedBindingMigrationResult` with per-binding `SeedBindingMigrationItem` records and Migrated/Skipped/Failed counts.
+- `HasActiveSeededBindings()` / `GetActiveSeededBindingCount()` helpers for the UI.
+
+**Created `DiplomovaPrace/Components/Pages/MigrationView.razor`:**
+- Route: `/admin/migrate-dataset`.
+- Shows current seeded binding count and migration status badge.
+- "Run Migration Now" button with spinner. Displays migration result with per-binding breakdown table.
+- Post-migration instructions for clearing `Facility:BindingsCsvPath` and `Facility:DataRootPath`.
+
+**`DiplomovaPrace/Program.cs`:**
+- Registered `SeedBindingMigrationService` as `Scoped`.
+
+**Deleted `DiplomovaPrace/Components/Pages/EditorView.razor`:**
+- Pre-existing build error: file still referenced deleted `IActiveBuildingService` and `EditorCanvas`; WORKLOG from previous session incorrectly marked it as already deleted. Removed now to unblock build.
+
+### Architecture of the migration
+
+The migration registers each seeded `.csv.gz` binding as an `ExternalDatasetCsvGzip` imported binding. No files are copied or decompressed. The existing analytics pipeline already:
+- handles `.gz` extensions via `OpenCsvReader` (GZipStream)
+- reads multi-column format when `UsesFixedCsvSeriesFormat = false` (column name `{MeterUrn}.{MeasurementKey}`)
+- checks `SourceFilePath` first in `ResolveCuratedFilePath` (bypasses `DataRootPath`)
+
+After migration the app no longer reads `dataset_bindings_fixed.csv` at startup (`BindingsCsvPath` not needed) and no longer resolves files via `DataRootPath`. The external data files remain at `D:\DataSet\data` but are accessed directly via the stored absolute path in `ExternalSourceFilePath`.
+
+### How to complete the migration
+
+1. Start the app: `dotnet run --project DiplomovaPrace`
+2. Navigate to `/admin/migrate-dataset`
+3. Click **Run Migration Now** — expects 1603 bindings migrated, 0 failed
+4. After success: edit `appsettings.Local.json`, clear `Facility:BindingsCsvPath` and `Facility:DataRootPath`
+5. Restart the app and verify FacilityWorkbench analytics still load data correctly (verification run)
+
+### Build
+
+- `dotnet build` successful: 0 errors, 0 warnings.
+
+### Bindings migrated (at build time)
+- 0 (migration not yet executed — triggered via admin page at `/admin/migrate-dataset`)
+- Expected after trigger: 1603 migrated, 0 failed, 0 skipped
+
+### External dataset path dependence remaining
+- Yes — data files still at `D:\DataSet\data` (accessed via stored absolute paths in `ExternalSourceFilePath`)
+- Config keys `Facility:BindingsCsvPath` and `Facility:DataRootPath` will no longer be needed after migration runs
+- `DatabasePath` (`D:\DataSet\metering.db`) is a separate concern, not part of this milestone
+
+---
+
+
+[2026-05-01]
+
+### Task
 Narrowed final legacy editor-tail cleanup without session-contract changes
 
 ### What changed

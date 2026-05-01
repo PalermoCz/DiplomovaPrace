@@ -1,21 +1,21 @@
 # CURRENT_TASK.md
 
 ## Goal
-Simulate the state as if the current thesis dataset CSV files had been imported manually, by migrating active seeded bindings into app-local imported storage and removing runtime dependence on external dataset disk paths.
+Implement the smallest possible first auth-shell milestone for the app.
 
 ## Problem
-The intended final product should run on hosted server-side .db files and uploaded CSV runtime data only.
-However, the current runtime still appears to mix:
-- seeded bindings resolved from external dataset paths
-- app-local imported bindings stored under App_Data/facility-imports
+The project is ready to move from data/runtime cleanup into users/auth, but the full ownership/invitation/role system would be too large as a first step.
 
-We need to use the existing import/binding model to migrate the currently used seed-bound CSV files into app-local storage.
+We need the smallest working v1 auth shell:
+- local user accounts
+- login / register / logout
+- persistent cookie auth
+- authenticated shell
+- account identity visible in the topbar
 
 ## Desired direction
-Implement a narrow one-time migration milestone only.
-Do not redesign the architecture.
-Do not implement users/auth yet.
-Do not implement multi-facility hardening yet.
+Implement only the first auth-shell milestone.
+Do not implement full invitations, memberships UI, or facility admin pages yet.
 
 ## Scope
 Implementation only.
@@ -27,45 +27,39 @@ Read first:
 - AI/DATA_VISUALIZATION_AUDIT.md
 
 Then inspect at minimum:
-- DiplomovaPrace/Services/FacilityDataBindingRegistry.cs
-- DiplomovaPrace/Services/FacilityNodeSeriesImportService.cs
-- DiplomovaPrace/Services/FacilityEditorStateService.cs
-- DiplomovaPrace/Services/NodeAnalyticsPreviewService.cs
 - DiplomovaPrace/Program.cs
-- DiplomovaPrace/appsettings.json
-- DiplomovaPrace/appsettings.Local.json
-- any binding/state types needed for imported binding persistence
+- DiplomovaPrace/Components/Layout/FacilityTopbar.razor
+- DiplomovaPrace/Components/Layout/FacilityLayout.razor
+- DiplomovaPrace/Components/Pages/FacilityWorkbench.razor
+- DiplomovaPrace/Persistence/AppDbContext.cs
+- existing facility entities
 
 ## Required implementation
-1. Enumerate currently active seeded bindings for the current active facility/runtime.
-2. For each seeded binding:
-   - resolve the current source CSV file using the existing seeded binding path resolution
-   - convert/copy it into the same app-local imported storage format used by manual node CSV import
-   - persist imported binding metadata in the same way as manual import
-3. Only after successful per-binding migration, suppress/tombstone the old seeded binding.
-4. Produce a migration result summary:
-   - migrated
-   - skipped
-   - failed
-   - unresolved source paths
-5. Validate that runtime analytics still works after migration.
-6. If safe, perform one verification run with external dataset binding paths disabled/empty (or otherwise clearly bypassed) to confirm hosting-readiness direction.
+1. Add `AppUsers` persistence model/table.
+2. Add local email + password registration.
+3. Add local login/logout with cookie authentication.
+4. Add the minimum auth pipeline registration in Program.cs.
+5. Add a basic authenticated-shell guard so unauthenticated users are redirected to `/login`.
+6. Add a right-side account chip in the topbar showing the current signed-in email and a sign-out action.
+7. Keep the rest of the product surface intact.
 
 ## Do NOT change
-- Do not redesign the whole data architecture
-- Do not implement multi-facility support yet
-- Do not implement users/auth yet
-- Do not change FacilityWorkbench UI
-- Do not broaden into deployment implementation yet
+- Do not implement invitations yet
+- Do not implement facility membership management UI yet
+- Do not implement role administration UI yet
+- Do not implement password reset
+- Do not implement email verification
+- Do not implement MFA
+- Do not redesign FacilityWorkbench
 
 ## Constraints
-- Keep the migration narrow and reversible
-- Use the existing app-local import/binding persistence model whenever possible
-- Do not tombstone old bindings before successful imported replacement exists
-- Build must pass
-- Update AI/WORKLOG.md after implementation
+- Keep the milestone as small and buildable as possible
+- Use local email + password auth only
+- Keep the UI change minimal: account chip only
+- Do not create duplicate ownership source-of-truth logic yet
 
 ## Guardrails
-- This is a one-time dataset-decoupling milestone, not a broad data rewrite
-- Focus on removing runtime dependency on external dataset disk paths
-- If any binding cannot be migrated cleanly, stop and report it explicitly
+- This is the first auth-shell milestone, not the whole user-management system
+- Prefer FacilityMembership as future role source-of-truth; do not add conflicting ownership fields unless strictly necessary
+- Build must pass
+- Update AI/WORKLOG.md after implementation

@@ -2,9 +2,11 @@
 @page "/facility"
 @using System.Globalization
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Authorization
 @using DiplomovaPrace.Services
 @using DiplomovaPrace.Persistence.Schematic
 @using DiplomovaPrace.Components.Editor
+@attribute [Authorize]
 @rendermode InteractiveServer
 @inject FacilityQueryService FacilityQueryService
 @inject FacilityEditorStateService FacilityEditorStateService

@@ -1,0 +1,33 @@
+@page "/logout"
+@model DiplomovaPrace.Pages.LogoutModel
+@{
+    ViewData["Title"] = "Odhlášení";
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Odhlášení</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 0; 
+            background: #0f172a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .logout-message {
+            color: white;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="logout-message">
+        <p>Odhlašuji vás...</p>
+    </div>
+</body>
+</html>

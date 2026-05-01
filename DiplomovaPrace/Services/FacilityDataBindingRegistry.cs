@@ -268,7 +268,8 @@ public sealed class FacilityDataBindingRegistry
         var relativeFolder = Path.GetDirectoryName(storageRelativePath)?.Replace('\\', '/') ?? string.Empty;
         var resolvedAbsolutePath = absoluteFilePath;
 
-        if (string.IsNullOrWhiteSpace(resolvedAbsolutePath) && !string.IsNullOrWhiteSpace(state.StorageRelativePath))
+        if (string.IsNullOrWhiteSpace(resolvedAbsolutePath)
+            && !string.IsNullOrWhiteSpace(state.StorageRelativePath))
         {
             resolvedAbsolutePath = Path.GetFullPath(Path.Combine(contentRootPath, state.StorageRelativePath.Replace('/', Path.DirectorySeparatorChar)));
         }

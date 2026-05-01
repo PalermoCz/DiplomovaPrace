@@ -22,7 +22,7 @@ namespace DiplomovaPrace.Services;
 /// </summary>
 public class FacilityImportService
 {
-    private const string FacilityName = "Smart Company Facility";
+    private readonly string _activeFacilityName;
 
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
     private readonly ILogger<FacilityImportService> _logger;
@@ -36,6 +36,7 @@ public class FacilityImportService
         _dbFactory = dbFactory;
         _logger = logger;
         _config = config;
+        _activeFacilityName = config["Facility:ActiveFacilityName"] ?? "Smart Company Facility";
     }
 
     /// <summary>
@@ -48,11 +49,11 @@ public class FacilityImportService
 
         // ── Idempotence check: pokud facility existuje, přeskočíme seed ───────
         var alreadyExists = await db.Facilities
-            .AnyAsync(f => f.Name == FacilityName, ct);
+            .AnyAsync(f => f.Name == _activeFacilityName, ct);
 
         if (alreadyExists)
         {
-            _logger.LogInformation("Facility '{Name}' již existuje. Seed se přeskočí.", FacilityName);
+            _logger.LogInformation("Facility '{Name}' již existuje. Seed se přeskočí.", _activeFacilityName);
             return;
         }
 
@@ -71,12 +72,12 @@ public class FacilityImportService
             return;
         }
 
-        _logger.LogInformation("Zahajuji seed facility '{Name}'...", FacilityName);
+        _logger.LogInformation("Zahajuji seed facility '{Name}'...", _activeFacilityName);
 
         // ── 1. Vytvoření facility ─────────────────────────────────────────────
         var facility = new FacilityEntity
         {
-            Name = FacilityName,
+            Name = _activeFacilityName,
             Description = "Hlavní provozovna — schematický model v MVP konfiguraci.",
             TimeZone = "Europe/Prague"
         };
@@ -184,7 +185,7 @@ public class FacilityImportService
         }
 
         _logger.LogInformation("Seed facility '{Name}' dokončen. Uzly: {Nodes}, Hrany: {Edges}.",
-            FacilityName, nodeEntities.Count, edgeEntities.Count);
+            _activeFacilityName, nodeEntities.Count, edgeEntities.Count);
     }
 
     // ── CSV parsování ─────────────────────────────────────────────────────────
@@ -209,6 +210,8 @@ public class FacilityImportService
             HasHeaderRecord = true,
             TrimOptions = TrimOptions.Trim,
             MissingFieldFound = null,
+            // edge_kind/is_layout_edge/note are optional in minimalist mvp_edges.csv
+            HeaderValidated = null,
         });
         return csv.GetRecords<EdgeCsvRow>().ToList();
     }

@@ -1,6 +1,7 @@
 using DiplomovaPrace.Persistence;
 using DiplomovaPrace.Persistence.Schematic;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace DiplomovaPrace.Services;
 
@@ -8,13 +9,16 @@ public class FacilityQueryService
 {
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
     private readonly FacilityEditorStateService _editorStateService;
+    private readonly string _activeFacilityName;
 
     public FacilityQueryService(
         IDbContextFactory<AppDbContext> dbFactory,
-        FacilityEditorStateService editorStateService)
+        FacilityEditorStateService editorStateService,
+        IConfiguration config)
     {
         _dbFactory = dbFactory;
         _editorStateService = editorStateService;
+        _activeFacilityName = config["Facility:ActiveFacilityName"] ?? "Smart Company Facility";
     }
 
     public async Task<FacilityEntity?> GetMainFacilityAsync(CancellationToken ct = default)
@@ -24,7 +28,7 @@ public class FacilityQueryService
             .AsNoTracking()
             .Include(f => f.Nodes)
             .Include(f => f.Edges)
-            .FirstOrDefaultAsync(f => f.Name == "Smart Company Facility", ct);
+            .FirstOrDefaultAsync(f => f.Name == _activeFacilityName, ct);
 
         if (facility is null)
         {

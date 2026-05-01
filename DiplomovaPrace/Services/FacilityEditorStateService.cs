@@ -30,7 +30,13 @@ public sealed class FacilitySavedWorkingSet
 
 public enum FacilityImportedBindingFileFormat
 {
-    FixedCsvSeries
+    FixedCsvSeries,
+    /// <summary>
+    /// External dataset CSV (optionally gzipped), multi-column format: datetime_utc,{MeterUrn}.{MeasurementKey}.
+    /// Used exclusively by the seed-binding migration milestone to register pre-existing dataset files
+    /// as imported bindings without copying or decompressing them.
+    /// </summary>
+    ExternalDatasetCsvGzip
 }
 
 public sealed class FacilityImportedBindingState
@@ -47,6 +53,11 @@ public sealed class FacilityImportedBindingState
     public string Resolution { get; init; } = "irregular";
     public long? FileSizeBytes { get; init; }
     public DateTime ImportedUtc { get; init; } = DateTime.UtcNow;
+    /// <summary>
+    /// For ExternalDatasetCsvGzip only: absolute path to the external source file.
+    /// Not used by FixedCsvSeries format. Set by the seed-binding migration milestone.
+    /// </summary>
+    public string? ExternalSourceFilePath { get; init; }
 }
 
 public sealed class FacilityDeletedBindingState
@@ -1238,7 +1249,8 @@ public sealed class FacilityEditorStateService
         }
 
         var unit = binding.Unit?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(unit))
+        // ExternalDatasetCsvGzip bindings may have an empty unit (unit is resolved at read time from signal family).
+        if (string.IsNullOrWhiteSpace(unit) && binding.FileFormat != FacilityImportedBindingFileFormat.ExternalDatasetCsvGzip)
         {
             throw new InvalidOperationException("Unit bindingu musí být vyplněná.");
         }
@@ -1264,7 +1276,8 @@ public sealed class FacilityEditorStateService
             FileFormat = binding.FileFormat,
             Resolution = string.IsNullOrWhiteSpace(binding.Resolution) ? "irregular" : binding.Resolution.Trim(),
             FileSizeBytes = binding.FileSizeBytes.HasValue && binding.FileSizeBytes.Value > 0 ? binding.FileSizeBytes.Value : null,
-            ImportedUtc = binding.ImportedUtc == default ? DateTime.UtcNow : binding.ImportedUtc
+            ImportedUtc = binding.ImportedUtc == default ? DateTime.UtcNow : binding.ImportedUtc,
+            ExternalSourceFilePath = NormalizeOptionalText(binding.ExternalSourceFilePath),
         };
     }
 

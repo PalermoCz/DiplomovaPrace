@@ -17,6 +17,8 @@ DiplomovaPrace/obj/
 **/build-validation/
 build-validation
 
+DiplomovaPrace/App_Data/
+
 DiplomovaPrace/debug_*.txt
 *.db-shm
 *.db-wal
