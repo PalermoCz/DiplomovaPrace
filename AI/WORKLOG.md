@@ -6,6 +6,32 @@
 [2026-05-01]
 
 ### Task
+Release readiness sweep: members modal, invite flow, build + publish verification
+
+### What changed
+
+**Runtime verification (Development):**
+- Confirmed Members button opens the members modal in a real browser session.
+- Verified existing-user attach via Members panel (added `existing.attach@example.com`).
+- Verified new-user invite path: invite message shown + Invite pending badge for a new email.
+- Confirmed schematic renders and node search returns bound node key (e.g., `meter__h1_z10`).
+
+**Smoke tests:**
+- Ran `build-validation/release-smoke` in Development: PASS (invite -> set-password -> login hash verify -> role policies -> owner safeguards -> change-password).
+- Ran `build-validation/release-smoke` in Production: PASS; missing SMTP throws, token not logged outside Development, invite status reported as EmailDeliveryFailed.
+
+**Build + publish:**
+- Clean build completed.
+- `dotnet publish` verified from publish output folder (correct content root).
+- Static assets load in publish output: `/app.css`, `/css/building.css`, `/_framework/blazor.web.js`.
+- Auth endpoints respond as expected in publish output: `/login` 200, `/set-password` 200, `/facility` + `/change-password` redirect to login.
+
+---
+
+### Date
+[2026-05-01]
+
+### Task
 Members UX polish + explicit add-by-email validation + local dev account normalization
 
 ### What changed
