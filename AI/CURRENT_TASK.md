@@ -1,21 +1,50 @@
 # CURRENT_TASK.md
 
 ## Goal
-Implement the smallest possible first auth-shell milestone for the app.
+Clean up the local project file clutter safely without losing the currently restored working schematic or the restored CSV-backed data bindings.
 
 ## Problem
-The project is ready to move from data/runtime cleanup into users/auth, but the full ownership/invitation/role system would be too large as a first step.
+The richer schematic and bindings are now working again, but the repository/project folder is cluttered with many temporary forensic, recovery, export, and backup files.
 
-We need the smallest working v1 auth shell:
-- local user accounts
-- login / register / logout
-- persistent cookie auth
-- authenticated shell
-- account identity visible in the topbar
+We must clean up the mess safely.
+
+Critical rule:
+The currently working schematic and restored data bindings must NOT be lost again.
+
+## Current known working runtime core
+Treat these as critical runtime assets unless proven otherwise:
+- `DiplomovaPrace/metering.db`
+- `DiplomovaPrace/facility-editor-state.json`
+- `DiplomovaPrace/App_Data/facility-imports/`
+
+These must be preserved.
+
+## Likely cleanup candidates
+Examples currently visible in the repo/project folder:
+- helper scripts:
+  - `add_membership.py`
+  - `check_db.py`
+  - `check_git_db.py`
+  - `check_null_types.py`
+  - `check_users.py`
+  - `get_user.py`
+  - `reconstruct_added_nodes.py`
+  - `validate_added.py`
+- export/temp forensic files:
+  - `combined_db_export.json`
+  - `ddrive_combined_db_export.json`
+  - `db_export/...`
+  - `db_export/ddrive_temp_db/...`
+- safety backups / restore snapshots:
+  - `facility-editor-state.pre-binding-fix.json`
+  - `facility-editor-state.pre-importedBindings-restore.json`
+  - `facility-editor-state.pre-restore-20260501.json`
+  - `metering.db.backup-pre-ddrive-restore`
 
 ## Desired direction
-Implement only the first auth-shell milestone.
-Do not implement full invitations, memberships UI, or facility admin pages yet.
+Do a safe cleanup only.
+Do NOT implement new features.
+Do NOT touch graph logic or auth logic unless required for cleanup safety.
 
 ## Scope
 Implementation only.
@@ -24,42 +53,46 @@ Read first:
 - AI/AGENT_CONTEXT.md
 - AI/CURRENT_TASK.md
 - AI/WORKLOG.md
-- AI/DATA_VISUALIZATION_AUDIT.md
 
 Then inspect at minimum:
-- DiplomovaPrace/Program.cs
-- DiplomovaPrace/Components/Layout/FacilityTopbar.razor
-- DiplomovaPrace/Components/Layout/FacilityLayout.razor
-- DiplomovaPrace/Components/Pages/FacilityWorkbench.razor
-- DiplomovaPrace/Persistence/AppDbContext.cs
-- existing facility entities
+- current repo/project file tree
+- current runtime file paths actually used by the app
+- current working DB/editor-state/imports state
 
-## Required implementation
-1. Add `AppUsers` persistence model/table.
-2. Add local email + password registration.
-3. Add local login/logout with cookie authentication.
-4. Add the minimum auth pipeline registration in Program.cs.
-5. Add a basic authenticated-shell guard so unauthenticated users are redirected to `/login`.
-6. Add a right-side account chip in the topbar showing the current signed-in email and a sign-out action.
-7. Keep the rest of the product surface intact.
+## Required work
+1. First create a **golden snapshot** of the currently working runtime state in a safe archive location.
+   At minimum snapshot:
+   - `DiplomovaPrace/metering.db`
+   - `DiplomovaPrace/facility-editor-state.json`
+   - `DiplomovaPrace/App_Data/facility-imports/`
+2. Then classify current clutter into:
+   - KEEP
+   - ARCHIVE
+   - DELETE
+3. Perform cleanup safely:
+   - preserve critical runtime files
+   - move useful recovery artifacts to an archive folder if they may still be valuable
+   - delete only clearly temporary/helper/export clutter
+4. Do NOT delete the recovered working graph/data state.
+5. After cleanup, verify runtime:
+   - app starts
+   - login still works
+   - facility schematic still renders
+   - bindings/data still appear on nodes
 
 ## Do NOT change
-- Do not implement invitations yet
-- Do not implement facility membership management UI yet
-- Do not implement role administration UI yet
-- Do not implement password reset
-- Do not implement email verification
-- Do not implement MFA
-- Do not redesign FacilityWorkbench
+- Do not alter the currently restored graph content
+- Do not alter imported binding behavior unless required for cleanup safety
+- Do not start a new feature milestone
+- Do not delete D-drive source artifacts blindly if they might still be the only provenance backup
 
 ## Constraints
-- Keep the milestone as small and buildable as possible
-- Use local email + password auth only
-- Keep the UI change minimal: account chip only
-- Do not create duplicate ownership source-of-truth logic yet
+- Safety first
+- Snapshot first, cleanup second
+- Runtime verification required after cleanup
+- All user-facing text must remain English only
 
 ## Guardrails
-- This is the first auth-shell milestone, not the whole user-management system
-- Prefer FacilityMembership as future role source-of-truth; do not add conflicting ownership fields unless strictly necessary
-- Build must pass
-- Update AI/WORKLOG.md after implementation
+- If any file is uncertain, archive it instead of deleting it
+- Prefer moving uncertain artifacts to an archive folder over hard deletion
+- Report exactly what was kept, archived, and deleted

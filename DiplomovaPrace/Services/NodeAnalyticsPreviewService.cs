@@ -4183,7 +4183,7 @@ public class NodeAnalyticsPreviewService
                 IsAvailable = false,
                 Methodology = "The weather node is only an explanatory factor in this sprint, so baseline deviation is not evaluated here yet.",
                 Message = "Baseline is not available for this node or interval yet.",
-                Unit = "Â°C"
+                Unit = "deg C"
             };
         }
 
@@ -4351,9 +4351,9 @@ public class NodeAnalyticsPreviewService
                 ColumnName = "WeatherStation.Weather.Ta",
                 Title = "Instant average temperature",
                 NodeTypeHint = FacilityBuiltInNodeTypes.WeatherNodeType,
-                Unit = "Â°C",
+                Unit = "deg C",
                 SummaryLabel = "Average temperature",
-                StatsUnit = "Â°C",
+                StatsUnit = "deg C",
                 StatsLabel = "Temperature",
                 SupportsDeviation = false
             };
@@ -4458,7 +4458,7 @@ public class NodeAnalyticsPreviewService
         }
         else if (signalFamily == FacilitySignalFamily.WeatherTemperature)
         {
-            unit = string.IsNullOrWhiteSpace(binding.Unit) ? "Â°C" : binding.Unit;
+            unit = string.IsNullOrWhiteSpace(binding.Unit) ? "deg C" : binding.Unit;
             summaryLabel = "Average temperature";
             statsUnit = unit;
             statsLabel = "Temperature";
@@ -4493,9 +4493,9 @@ public class NodeAnalyticsPreviewService
         }
         else if (isFlowSignal)
         {
-            unit = "mÂł";
+            unit = "m³";
             summaryLabel = "Volume";
-            statsUnit = "mÂł";
+            statsUnit = "m³";
             statsLabel = "Flow";
         }
         else

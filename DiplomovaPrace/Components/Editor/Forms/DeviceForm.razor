@@ -38,36 +38,36 @@
 
     <div class="mb-2">
         <label class="form-label">Jednotka</label>
-        <InputText class="form-control" @bind-Value="_model.Unit" placeholder="např. °C, %, lux" />
+        <InputText class="form-control" @bind-Value="_model.Unit" placeholder="e.g. deg C, %, lux" />
     </div>
 
     <div class="mb-2">
         <label class="form-label">Vlastní popisek</label>
-        <InputText class="form-control" @bind-Value="_model.LabelOverride" placeholder="(prázdné = použít název)" />
+        <InputText class="form-control" @bind-Value="_model.LabelOverride" placeholder="(empty = use name)" />
     </div>
 
     <div class="mb-2 form-check">
         <InputCheckbox class="form-check-input" id="chk-show-value" @bind-Value="_model.ShowValue" />
-        <label class="form-check-label" for="chk-show-value">Zobrazit hodnotu pod ikonou</label>
+        <label class="form-check-label" for="chk-show-value">Show value under icon</label>
     </div>
 
-    <div class="prop-section-title mt-3">Prahové hodnoty alarmu</div>
+    <div class="prop-section-title mt-3">Alarm Thresholds</div>
 
     <div class="mb-2">
-        <label class="form-label">Max (alarm nad)</label>
-        <InputNumber class="form-control" @bind-Value="_model.AlarmHigh" placeholder="(prázdné = bez limitu)" />
+        <label class="form-label">Max (alarm above)</label>
+        <InputNumber class="form-control" @bind-Value="_model.AlarmHigh" placeholder="(empty = no limit)" />
     </div>
 
     <div class="mb-3">
-        <label class="form-label">Min (alarm pod)</label>
-        <InputNumber class="form-control" @bind-Value="_model.AlarmLow" placeholder="(prázdné = bez limitu)" />
+        <label class="form-label">Min (alarm below)</label>
+        <InputNumber class="form-control" @bind-Value="_model.AlarmLow" placeholder="(empty = no limit)" />
     </div>
 
-    <div class="prop-section-title mt-3">Podmíněné formátování</div>
+    <div class="prop-section-title mt-3">Conditional Formatting</div>
 
     <div class="mb-3">
-        <label class="form-label">Pravidla zobrazení</label>
-        <div class="form-text mb-2">Barva se aplikuje pokud je podmínka splněna. První splněné pravidlo vyhrává.</div>
+        <label class="form-label">Display Rules</label>
+        <div class="form-text mb-2">The color is applied if the condition is met. The first satisfied rule wins.</div>
         @foreach (var (rule, index) in _model.DisplayRules.Select((r, i) => (r, i)))
         {
             <div class="card mb-2 p-2">
@@ -92,7 +92,7 @@
         }
         @if (_model.DisplayRules.Count == 0)
         {
-            <div class="text-muted small">Žádná pravidla. Použije se výchozí barva.</div>
+            <div class="text-muted small">No rules. The default color will be used.</div>
         }
         <button type="button" class="btn btn-sm btn-outline-primary w-100 mt-2"
                 @onclick="AddRule">+ Přidat pravidlo</button>

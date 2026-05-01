@@ -1,0 +1,2015 @@
+{
+  "current_table_list": [
+    "AppUsers",
+    "Facilities",
+    "FacilityMeasurementMaps",
+    "FacilityMemberships",
+    "MeasurementRecords",
+    "SchematicEdges",
+    "SchematicNodes",
+    "sqlite_sequence"
+  ],
+  "current_table_counts": {
+    "AppUsers": 4,
+    "Facilities": 1,
+    "FacilityMeasurementMaps": 33,
+    "FacilityMemberships": 2,
+    "MeasurementRecords": 0,
+    "SchematicEdges": 37,
+    "SchematicNodes": 38,
+    "sqlite_sequence": 6
+  },
+  "current_Facilities": [
+    {
+      "Id": 1,
+      "Name": "Smart Company Facility",
+      "Description": "Hlavní provozovna — schematický model v MVP konfiguraci.",
+      "TimeZone": "Europe/Prague"
+    }
+  ],
+  "current_SchematicNodes": [
+    {
+      "Id": 1,
+      "FacilityId": 1,
+      "NodeKey": "ext_grid",
+      "Label": "External Grid",
+      "NodeType": "grid",
+      "Zone": "infrastructure",
+      "MeterUrn": null,
+      "ParentNodeKey": null,
+      "XHint": 0.5,
+      "YHint": 0.05
+    },
+    {
+      "Id": 2,
+      "FacilityId": 1,
+      "NodeKey": "trafo_vz81",
+      "Label": "Transformer V.Z81",
+      "NodeType": "transformer",
+      "Zone": "infrastructure",
+      "MeterUrn": "V.Z81",
+      "ParentNodeKey": "ext_grid",
+      "XHint": 0.15,
+      "YHint": 0.05
+    },
+    {
+      "Id": 3,
+      "FacilityId": 1,
+      "NodeKey": "trafo_vz82",
+      "Label": "Transformer V.Z82",
+      "NodeType": "transformer",
+      "Zone": "infrastructure",
+      "MeterUrn": "V.Z82",
+      "ParentNodeKey": "ext_grid",
+      "XHint": 0.25,
+      "YHint": 0.05
+    },
+    {
+      "Id": 4,
+      "FacilityId": 1,
+      "NodeKey": "trafo_h2z35",
+      "Label": "Transformer H2.Z35/H2.Z351",
+      "NodeType": "transformer",
+      "Zone": "infrastructure",
+      "MeterUrn": "H2.Z35",
+      "ParentNodeKey": "ext_grid",
+      "XHint": 0.78,
+      "YHint": 0.05
+    },
+    {
+      "Id": 5,
+      "FacilityId": 1,
+      "NodeKey": "trafo_h2z36",
+      "Label": "Transformer H2.Z36/H2.Z361",
+      "NodeType": "transformer",
+      "Zone": "infrastructure",
+      "MeterUrn": "H2.Z36",
+      "ParentNodeKey": "ext_grid",
+      "XHint": 0.88,
+      "YHint": 0.05
+    },
+    {
+      "Id": 6,
+      "FacilityId": 1,
+      "NodeKey": "pv_main",
+      "Label": "PV",
+      "NodeType": "generator_pv",
+      "Zone": "generation",
+      "MeterUrn": "V.Z84",
+      "ParentNodeKey": "ext_grid",
+      "XHint": 0.65,
+      "YHint": 0.16
+    },
+    {
+      "Id": 7,
+      "FacilityId": 1,
+      "NodeKey": "chp_main",
+      "Label": "CHP",
+      "NodeType": "generator_chp",
+      "Zone": "generation",
+      "MeterUrn": "H1.Z20",
+      "ParentNodeKey": "ext_grid",
+      "XHint": 0.38,
+      "YHint": 0.32
+    },
+    {
+      "Id": 8,
+      "FacilityId": 1,
+      "NodeKey": "emission_lab",
+      "Label": "Emission Lab",
+      "NodeType": "zone",
+      "Zone": "emission_lab",
+      "MeterUrn": null,
+      "ParentNodeKey": "trafo_vz81",
+      "XHint": 0.2,
+      "YHint": 0.22
+    },
+    {
+      "Id": 9,
+      "FacilityId": 1,
+      "NodeKey": "em_dist_1",
+      "Label": "EM Distribution 1",
+      "NodeType": "subzone",
+      "Zone": "emission_lab",
+      "MeterUrn": "H1.Z15",
+      "ParentNodeKey": "emission_lab",
+      "XHint": 0.08,
+      "YHint": 0.28
+    },
+    {
+      "Id": 10,
+      "FacilityId": 1,
+      "NodeKey": "em_dist_2",
+      "Label": "EM Distribution 2",
+      "NodeType": "subzone",
+      "Zone": "emission_lab",
+      "MeterUrn": "H1.Z17",
+      "ParentNodeKey": "emission_lab",
+      "XHint": 0.16,
+      "YHint": 0.28
+    },
+    {
+      "Id": 11,
+      "FacilityId": 1,
+      "NodeKey": "em_test_1",
+      "Label": "Test 1",
+      "NodeType": "test",
+      "Zone": "emission_lab",
+      "MeterUrn": "H1.Z21",
+      "ParentNodeKey": "emission_lab",
+      "XHint": 0.23,
+      "YHint": 0.36
+    },
+    {
+      "Id": 12,
+      "FacilityId": 1,
+      "NodeKey": "em_test_2",
+      "Label": "Test 2",
+      "NodeType": "test",
+      "Zone": "emission_lab",
+      "MeterUrn": "H1.Z22",
+      "ParentNodeKey": "emission_lab",
+      "XHint": 0.31,
+      "YHint": 0.36
+    },
+    {
+      "Id": 13,
+      "FacilityId": 1,
+      "NodeKey": "em_cooling_1",
+      "Label": "Cooling 1",
+      "NodeType": "cooling_branch",
+      "Zone": "emission_lab",
+      "MeterUrn": "H1.Z24",
+      "ParentNodeKey": "emission_lab",
+      "XHint": 0.39,
+      "YHint": 0.36
+    },
+    {
+      "Id": 14,
+      "FacilityId": 1,
+      "NodeKey": "em_cooling_2",
+      "Label": "Cooling 2",
+      "NodeType": "cooling_branch",
+      "Zone": "emission_lab",
+      "MeterUrn": "H1.Z25",
+      "ParentNodeKey": "emission_lab",
+      "XHint": 0.47,
+      "YHint": 0.36
+    },
+    {
+      "Id": 15,
+      "FacilityId": 1,
+      "NodeKey": "em_hvac_1",
+      "Label": "HVAC 1",
+      "NodeType": "hvac_branch",
+      "Zone": "emission_lab",
+      "MeterUrn": "H1.Z13",
+      "ParentNodeKey": "emission_lab",
+      "XHint": 0.24,
+      "YHint": 0.45
+    },
+    {
+      "Id": 16,
+      "FacilityId": 1,
+      "NodeKey": "em_hvac_2",
+      "Label": "HVAC 2",
+      "NodeType": "hvac_branch",
+      "Zone": "emission_lab",
+      "MeterUrn": "H1.Z14",
+      "ParentNodeKey": "emission_lab",
+      "XHint": 0.32,
+      "YHint": 0.45
+    },
+    {
+      "Id": 17,
+      "FacilityId": 1,
+      "NodeKey": "design_studio",
+      "Label": "Design Studio",
+      "NodeType": "zone",
+      "Zone": "design_studio",
+      "MeterUrn": null,
+      "ParentNodeKey": "ext_grid",
+      "XHint": 0.45,
+      "YHint": 0.56
+    },
+    {
+      "Id": 18,
+      "FacilityId": 1,
+      "NodeKey": "ds_main",
+      "Label": "Design Main",
+      "NodeType": "subzone",
+      "Zone": "design_studio",
+      "MeterUrn": "H2.T.Z33",
+      "ParentNodeKey": "design_studio",
+      "XHint": 0.58,
+      "YHint": 0.5
+    },
+    {
+      "Id": 19,
+      "FacilityId": 1,
+      "NodeKey": "ds_dist_1",
+      "Label": "Design Dist 1",
+      "NodeType": "subzone",
+      "Zone": "design_studio",
+      "MeterUrn": "H3.Z40",
+      "ParentNodeKey": "design_studio",
+      "XHint": 0.1,
+      "YHint": 0.62
+    },
+    {
+      "Id": 20,
+      "FacilityId": 1,
+      "NodeKey": "ds_dist_2",
+      "Label": "Design Dist 2",
+      "NodeType": "subzone",
+      "Zone": "design_studio",
+      "MeterUrn": "H3.Z41",
+      "ParentNodeKey": "design_studio",
+      "XHint": 0.18,
+      "YHint": 0.62
+    },
+    {
+      "Id": 21,
+      "FacilityId": 1,
+      "NodeKey": "ds_sim_1",
+      "Label": "Simulation 1",
+      "NodeType": "simulation",
+      "Zone": "design_studio",
+      "MeterUrn": "H3.Z45",
+      "ParentNodeKey": "design_studio",
+      "XHint": 0.42,
+      "YHint": 0.62
+    },
+    {
+      "Id": 22,
+      "FacilityId": 1,
+      "NodeKey": "ds_sim_2",
+      "Label": "Simulation 2",
+      "NodeType": "simulation",
+      "Zone": "design_studio",
+      "MeterUrn": "H3.Z47",
+      "ParentNodeKey": "design_studio",
+      "XHint": 0.5,
+      "YHint": 0.62
+    },
+    {
+      "Id": 23,
+      "FacilityId": 1,
+      "NodeKey": "ds_server_1",
+      "Label": "Server 1",
+      "NodeType": "server",
+      "Zone": "design_studio",
+      "MeterUrn": "H3.Z43",
+      "ParentNodeKey": "design_studio",
+      "XHint": 0.26,
+      "YHint": 0.69
+    },
+    {
+      "Id": 24,
+      "FacilityId": 1,
+      "NodeKey": "ds_vent_1",
+      "Label": "Ventilation 1",
+      "NodeType": "ventilation",
+      "Zone": "design_studio",
+      "MeterUrn": "H3.Z42",
+      "ParentNodeKey": "design_studio",
+      "XHint": 0.18,
+      "YHint": 0.69
+    },
+    {
+      "Id": 25,
+      "FacilityId": 1,
+      "NodeKey": "office_building",
+      "Label": "Office Building",
+      "NodeType": "zone",
+      "Zone": "offices",
+      "MeterUrn": null,
+      "ParentNodeKey": "trafo_h2z36",
+      "XHint": 0.83,
+      "YHint": 0.56
+    },
+    {
+      "Id": 26,
+      "FacilityId": 1,
+      "NodeKey": "office_main",
+      "Label": "Office Main",
+      "NodeType": "subzone",
+      "Zone": "offices",
+      "MeterUrn": "H2.T.Z30",
+      "ParentNodeKey": "office_building",
+      "XHint": 0.78,
+      "YHint": 0.54
+    },
+    {
+      "Id": 27,
+      "FacilityId": 1,
+      "NodeKey": "office_1",
+      "Label": "Office 1",
+      "NodeType": "office_branch",
+      "Zone": "offices",
+      "MeterUrn": "H4.Z50",
+      "ParentNodeKey": "office_building",
+      "XHint": 0.82,
+      "YHint": 0.64
+    },
+    {
+      "Id": 28,
+      "FacilityId": 1,
+      "NodeKey": "office_2",
+      "Label": "Office 2",
+      "NodeType": "office_branch",
+      "Zone": "offices",
+      "MeterUrn": "H4.Z51",
+      "ParentNodeKey": "office_building",
+      "XHint": 0.9,
+      "YHint": 0.64
+    },
+    {
+      "Id": 29,
+      "FacilityId": 1,
+      "NodeKey": "workshop",
+      "Label": "Workshop",
+      "NodeType": "zone",
+      "Zone": "workshop",
+      "MeterUrn": null,
+      "ParentNodeKey": "trafo_h2z35",
+      "XHint": 0.45,
+      "YHint": 0.82
+    },
+    {
+      "Id": 30,
+      "FacilityId": 1,
+      "NodeKey": "workshop_main",
+      "Label": "Workshop Main",
+      "NodeType": "subzone",
+      "Zone": "workshop",
+      "MeterUrn": "H2.T.Z34",
+      "ParentNodeKey": "workshop",
+      "XHint": 0.73,
+      "YHint": 0.76
+    },
+    {
+      "Id": 31,
+      "FacilityId": 1,
+      "NodeKey": "robotlab",
+      "Label": "Robotlab",
+      "NodeType": "subzone",
+      "Zone": "workshop",
+      "MeterUrn": "H2.ZE74",
+      "ParentNodeKey": "workshop",
+      "XHint": 0.78,
+      "YHint": 0.86
+    },
+    {
+      "Id": 32,
+      "FacilityId": 1,
+      "NodeKey": "workshop_server_1",
+      "Label": "Workshop Server 1",
+      "NodeType": "server",
+      "Zone": "workshop",
+      "MeterUrn": "H2.Z61",
+      "ParentNodeKey": "workshop",
+      "XHint": 0.1,
+      "YHint": 0.86
+    },
+    {
+      "Id": 33,
+      "FacilityId": 1,
+      "NodeKey": "workshop_server_2",
+      "Label": "Workshop Server 2",
+      "NodeType": "server",
+      "Zone": "workshop",
+      "MeterUrn": "H2.Z62",
+      "ParentNodeKey": "workshop",
+      "XHint": 0.18,
+      "YHint": 0.86
+    },
+    {
+      "Id": 34,
+      "FacilityId": 1,
+      "NodeKey": "workshop_vent_1",
+      "Label": "Workshop Vent 1",
+      "NodeType": "ventilation",
+      "Zone": "workshop",
+      "MeterUrn": "H2.Z68",
+      "ParentNodeKey": "workshop",
+      "XHint": 0.5,
+      "YHint": 0.86
+    },
+    {
+      "Id": 35,
+      "FacilityId": 1,
+      "NodeKey": "workshop_vent_2",
+      "Label": "Workshop Vent 2",
+      "NodeType": "ventilation",
+      "Zone": "workshop",
+      "MeterUrn": "H2.Z69",
+      "ParentNodeKey": "workshop",
+      "XHint": 0.58,
+      "YHint": 0.86
+    },
+    {
+      "Id": 36,
+      "FacilityId": 1,
+      "NodeKey": "cooling_main",
+      "Label": "Cooling Plant",
+      "NodeType": "utility_cooling",
+      "Zone": "utilities",
+      "MeterUrn": "H1.K11",
+      "ParentNodeKey": "ext_grid",
+      "XHint": 0.12,
+      "YHint": 0.72
+    },
+    {
+      "Id": 37,
+      "FacilityId": 1,
+      "NodeKey": "heating_main",
+      "Label": "Heating Plant",
+      "NodeType": "utility_heating",
+      "Zone": "utilities",
+      "MeterUrn": "H1.W11",
+      "ParentNodeKey": "ext_grid",
+      "XHint": 0.2,
+      "YHint": 0.72
+    },
+    {
+      "Id": 38,
+      "FacilityId": 1,
+      "NodeKey": "weather_main",
+      "Label": "Weather",
+      "NodeType": "weather",
+      "Zone": "utilities",
+      "MeterUrn": "WeatherStation.Weather",
+      "ParentNodeKey": "ext_grid",
+      "XHint": 0.94,
+      "YHint": 0.16
+    }
+  ],
+  "current_SchematicEdges": [
+    {
+      "Id": 1,
+      "FacilityId": 1,
+      "SourceNodeKey": "ext_grid",
+      "TargetNodeKey": "trafo_vz81",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 2,
+      "FacilityId": 1,
+      "SourceNodeKey": "ext_grid",
+      "TargetNodeKey": "trafo_vz82",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 3,
+      "FacilityId": 1,
+      "SourceNodeKey": "ext_grid",
+      "TargetNodeKey": "trafo_h2z35",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 4,
+      "FacilityId": 1,
+      "SourceNodeKey": "ext_grid",
+      "TargetNodeKey": "trafo_h2z36",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 5,
+      "FacilityId": 1,
+      "SourceNodeKey": "ext_grid",
+      "TargetNodeKey": "pv_main",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 6,
+      "FacilityId": 1,
+      "SourceNodeKey": "ext_grid",
+      "TargetNodeKey": "chp_main",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 7,
+      "FacilityId": 1,
+      "SourceNodeKey": "trafo_vz81",
+      "TargetNodeKey": "emission_lab",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 8,
+      "FacilityId": 1,
+      "SourceNodeKey": "ext_grid",
+      "TargetNodeKey": "design_studio",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 9,
+      "FacilityId": 1,
+      "SourceNodeKey": "trafo_h2z36",
+      "TargetNodeKey": "office_building",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 10,
+      "FacilityId": 1,
+      "SourceNodeKey": "trafo_h2z35",
+      "TargetNodeKey": "workshop",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 18,
+      "FacilityId": 1,
+      "SourceNodeKey": "emission_lab",
+      "TargetNodeKey": "em_dist_1",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 19,
+      "FacilityId": 1,
+      "SourceNodeKey": "emission_lab",
+      "TargetNodeKey": "em_dist_2",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 20,
+      "FacilityId": 1,
+      "SourceNodeKey": "emission_lab",
+      "TargetNodeKey": "em_test_1",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 21,
+      "FacilityId": 1,
+      "SourceNodeKey": "emission_lab",
+      "TargetNodeKey": "em_test_2",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 22,
+      "FacilityId": 1,
+      "SourceNodeKey": "emission_lab",
+      "TargetNodeKey": "em_cooling_1",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 23,
+      "FacilityId": 1,
+      "SourceNodeKey": "emission_lab",
+      "TargetNodeKey": "em_cooling_2",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 24,
+      "FacilityId": 1,
+      "SourceNodeKey": "emission_lab",
+      "TargetNodeKey": "em_hvac_1",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 25,
+      "FacilityId": 1,
+      "SourceNodeKey": "emission_lab",
+      "TargetNodeKey": "em_hvac_2",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 27,
+      "FacilityId": 1,
+      "SourceNodeKey": "design_studio",
+      "TargetNodeKey": "ds_main",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 28,
+      "FacilityId": 1,
+      "SourceNodeKey": "design_studio",
+      "TargetNodeKey": "ds_dist_1",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 29,
+      "FacilityId": 1,
+      "SourceNodeKey": "design_studio",
+      "TargetNodeKey": "ds_dist_2",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 30,
+      "FacilityId": 1,
+      "SourceNodeKey": "design_studio",
+      "TargetNodeKey": "ds_sim_1",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 31,
+      "FacilityId": 1,
+      "SourceNodeKey": "design_studio",
+      "TargetNodeKey": "ds_sim_2",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 32,
+      "FacilityId": 1,
+      "SourceNodeKey": "design_studio",
+      "TargetNodeKey": "ds_server_1",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 33,
+      "FacilityId": 1,
+      "SourceNodeKey": "design_studio",
+      "TargetNodeKey": "ds_vent_1",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 35,
+      "FacilityId": 1,
+      "SourceNodeKey": "office_building",
+      "TargetNodeKey": "office_main",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 36,
+      "FacilityId": 1,
+      "SourceNodeKey": "office_building",
+      "TargetNodeKey": "office_1",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 37,
+      "FacilityId": 1,
+      "SourceNodeKey": "office_building",
+      "TargetNodeKey": "office_2",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 39,
+      "FacilityId": 1,
+      "SourceNodeKey": "workshop",
+      "TargetNodeKey": "workshop_main",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 40,
+      "FacilityId": 1,
+      "SourceNodeKey": "workshop",
+      "TargetNodeKey": "robotlab",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 41,
+      "FacilityId": 1,
+      "SourceNodeKey": "workshop",
+      "TargetNodeKey": "workshop_server_1",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 42,
+      "FacilityId": 1,
+      "SourceNodeKey": "workshop",
+      "TargetNodeKey": "workshop_server_2",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 43,
+      "FacilityId": 1,
+      "SourceNodeKey": "workshop",
+      "TargetNodeKey": "workshop_vent_1",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 44,
+      "FacilityId": 1,
+      "SourceNodeKey": "workshop",
+      "TargetNodeKey": "workshop_vent_2",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 45,
+      "FacilityId": 1,
+      "SourceNodeKey": "ext_grid",
+      "TargetNodeKey": "cooling_main",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 46,
+      "FacilityId": 1,
+      "SourceNodeKey": "ext_grid",
+      "TargetNodeKey": "heating_main",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    },
+    {
+      "Id": 47,
+      "FacilityId": 1,
+      "SourceNodeKey": "ext_grid",
+      "TargetNodeKey": "weather_main",
+      "RelationshipKind": "layout_primary",
+      "IsLayoutEdge": 1,
+      "Note": null
+    }
+  ],
+  "current_FacilityMeasurementMaps": [
+    {
+      "Id": 1,
+      "FacilityId": 1,
+      "NodeKey": "trafo_vz81",
+      "MeterUrn": "V.Z81",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 2,
+      "FacilityId": 1,
+      "NodeKey": "trafo_vz82",
+      "MeterUrn": "V.Z82",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 3,
+      "FacilityId": 1,
+      "NodeKey": "trafo_h2z35",
+      "MeterUrn": "H2.Z35",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 4,
+      "FacilityId": 1,
+      "NodeKey": "trafo_h2z36",
+      "MeterUrn": "H2.Z36",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 5,
+      "FacilityId": 1,
+      "NodeKey": "pv_main",
+      "MeterUrn": "V.Z84",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 6,
+      "FacilityId": 1,
+      "NodeKey": "chp_main",
+      "MeterUrn": "H1.Z20",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 7,
+      "FacilityId": 1,
+      "NodeKey": "em_dist_1",
+      "MeterUrn": "H1.Z15",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 8,
+      "FacilityId": 1,
+      "NodeKey": "em_dist_2",
+      "MeterUrn": "H1.Z17",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 9,
+      "FacilityId": 1,
+      "NodeKey": "em_test_1",
+      "MeterUrn": "H1.Z21",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 10,
+      "FacilityId": 1,
+      "NodeKey": "em_test_2",
+      "MeterUrn": "H1.Z22",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 11,
+      "FacilityId": 1,
+      "NodeKey": "em_cooling_1",
+      "MeterUrn": "H1.Z24",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 12,
+      "FacilityId": 1,
+      "NodeKey": "em_cooling_2",
+      "MeterUrn": "H1.Z25",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 13,
+      "FacilityId": 1,
+      "NodeKey": "em_hvac_1",
+      "MeterUrn": "H1.Z13",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 14,
+      "FacilityId": 1,
+      "NodeKey": "em_hvac_2",
+      "MeterUrn": "H1.Z14",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 15,
+      "FacilityId": 1,
+      "NodeKey": "ds_main",
+      "MeterUrn": "H2.T.Z33",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 16,
+      "FacilityId": 1,
+      "NodeKey": "ds_dist_1",
+      "MeterUrn": "H3.Z40",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 17,
+      "FacilityId": 1,
+      "NodeKey": "ds_dist_2",
+      "MeterUrn": "H3.Z41",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 18,
+      "FacilityId": 1,
+      "NodeKey": "ds_sim_1",
+      "MeterUrn": "H3.Z45",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 19,
+      "FacilityId": 1,
+      "NodeKey": "ds_sim_2",
+      "MeterUrn": "H3.Z47",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 20,
+      "FacilityId": 1,
+      "NodeKey": "ds_server_1",
+      "MeterUrn": "H3.Z43",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 21,
+      "FacilityId": 1,
+      "NodeKey": "ds_vent_1",
+      "MeterUrn": "H3.Z42",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 22,
+      "FacilityId": 1,
+      "NodeKey": "office_main",
+      "MeterUrn": "H2.T.Z30",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 23,
+      "FacilityId": 1,
+      "NodeKey": "office_1",
+      "MeterUrn": "H4.Z50",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 24,
+      "FacilityId": 1,
+      "NodeKey": "office_2",
+      "MeterUrn": "H4.Z51",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 25,
+      "FacilityId": 1,
+      "NodeKey": "workshop_main",
+      "MeterUrn": "H2.T.Z34",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 26,
+      "FacilityId": 1,
+      "NodeKey": "robotlab",
+      "MeterUrn": "H2.ZE74",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 27,
+      "FacilityId": 1,
+      "NodeKey": "workshop_server_1",
+      "MeterUrn": "H2.Z61",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 28,
+      "FacilityId": 1,
+      "NodeKey": "workshop_server_2",
+      "MeterUrn": "H2.Z62",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 29,
+      "FacilityId": 1,
+      "NodeKey": "workshop_vent_1",
+      "MeterUrn": "H2.Z68",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 30,
+      "FacilityId": 1,
+      "NodeKey": "workshop_vent_2",
+      "MeterUrn": "H2.Z69",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 31,
+      "FacilityId": 1,
+      "NodeKey": "cooling_main",
+      "MeterUrn": "H1.K11",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 32,
+      "FacilityId": 1,
+      "NodeKey": "heating_main",
+      "MeterUrn": "H1.W11",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 33,
+      "FacilityId": 1,
+      "NodeKey": "weather_main",
+      "MeterUrn": "WeatherStation.Weather",
+      "MeasurementKind": "electricity"
+    }
+  ],
+  "current_FacilityMemberships": [
+    {
+      "Id": 1,
+      "FacilityId": 1,
+      "AppUserId": 2,
+      "Role": "Owner",
+      "CreatedAtUtc": "2026-05-01 12:35:09.9699999"
+    },
+    {
+      "Id": 4,
+      "FacilityId": 1,
+      "AppUserId": 4,
+      "Role": "Viewer",
+      "CreatedAtUtc": "2026-05-01 13:11:51"
+    }
+  ],
+  "backup_table_list": [
+    "Facilities",
+    "FacilityMeasurementMaps",
+    "MeasurementRecords",
+    "SchematicEdges",
+    "SchematicNodes",
+    "sqlite_sequence"
+  ],
+  "backup_table_counts": {
+    "Facilities": 1,
+    "FacilityMeasurementMaps": 33,
+    "MeasurementRecords": 52514,
+    "SchematicEdges": 37,
+    "SchematicNodes": 38,
+    "sqlite_sequence": 5
+  },
+  "backup_Facilities": [
+    {
+      "Id": 1,
+      "Name": "Smart Company Facility",
+      "Description": "Hlavní provozovna — schematický model v MVP konfiguraci.",
+      "TimeZone": "Europe/Prague"
+    }
+  ],
+  "backup_SchematicNodes": [
+    {
+      "Id": 1,
+      "FacilityId": 1,
+      "NodeKey": "ext_grid",
+      "Label": "External Grid",
+      "NodeType": "grid",
+      "Zone": "infrastructure",
+      "MeterUrn": null,
+      "ParentNodeKey": null,
+      "XHint": 0.5,
+      "YHint": 0.05
+    },
+    {
+      "Id": 2,
+      "FacilityId": 1,
+      "NodeKey": "trafo_vz81",
+      "Label": "Transformer V.Z81",
+      "NodeType": "transformer",
+      "Zone": "infrastructure",
+      "MeterUrn": "V.Z81",
+      "ParentNodeKey": "ext_grid",
+      "XHint": 0.15,
+      "YHint": 0.05
+    },
+    {
+      "Id": 3,
+      "FacilityId": 1,
+      "NodeKey": "trafo_vz82",
+      "Label": "Transformer V.Z82",
+      "NodeType": "transformer",
+      "Zone": "infrastructure",
+      "MeterUrn": "V.Z82",
+      "ParentNodeKey": "ext_grid",
+      "XHint": 0.25,
+      "YHint": 0.05
+    },
+    {
+      "Id": 4,
+      "FacilityId": 1,
+      "NodeKey": "trafo_h2z35",
+      "Label": "Transformer H2.Z35/H2.Z351",
+      "NodeType": "transformer",
+      "Zone": "infrastructure",
+      "MeterUrn": "H2.Z35",
+      "ParentNodeKey": "ext_grid",
+      "XHint": 0.78,
+      "YHint": 0.05
+    },
+    {
+      "Id": 5,
+      "FacilityId": 1,
+      "NodeKey": "trafo_h2z36",
+      "Label": "Transformer H2.Z36/H2.Z361",
+      "NodeType": "transformer",
+      "Zone": "infrastructure",
+      "MeterUrn": "H2.Z36",
+      "ParentNodeKey": "ext_grid",
+      "XHint": 0.88,
+      "YHint": 0.05
+    },
+    {
+      "Id": 6,
+      "FacilityId": 1,
+      "NodeKey": "pv_main",
+      "Label": "PV",
+      "NodeType": "generator_pv",
+      "Zone": "generation",
+      "MeterUrn": "V.Z84",
+      "ParentNodeKey": "ext_grid",
+      "XHint": 0.65,
+      "YHint": 0.16
+    },
+    {
+      "Id": 7,
+      "FacilityId": 1,
+      "NodeKey": "chp_main",
+      "Label": "CHP",
+      "NodeType": "generator_chp",
+      "Zone": "generation",
+      "MeterUrn": "H1.Z20",
+      "ParentNodeKey": "ext_grid",
+      "XHint": 0.38,
+      "YHint": 0.32
+    },
+    {
+      "Id": 8,
+      "FacilityId": 1,
+      "NodeKey": "emission_lab",
+      "Label": "Emission Lab",
+      "NodeType": "zone",
+      "Zone": "emission_lab",
+      "MeterUrn": null,
+      "ParentNodeKey": "trafo_vz81",
+      "XHint": 0.2,
+      "YHint": 0.22
+    },
+    {
+      "Id": 9,
+      "FacilityId": 1,
+      "NodeKey": "em_dist_1",
+      "Label": "EM Distribution 1",
+      "NodeType": "subzone",
+      "Zone": "emission_lab",
+      "MeterUrn": "H1.Z15",
+      "ParentNodeKey": "emission_lab",
+      "XHint": 0.08,
+      "YHint": 0.28
+    },
+    {
+      "Id": 10,
+      "FacilityId": 1,
+      "NodeKey": "em_dist_2",
+      "Label": "EM Distribution 2",
+      "NodeType": "subzone",
+      "Zone": "emission_lab",
+      "MeterUrn": "H1.Z17",
+      "ParentNodeKey": "emission_lab",
+      "XHint": 0.16,
+      "YHint": 0.28
+    },
+    {
+      "Id": 11,
+      "FacilityId": 1,
+      "NodeKey": "em_test_1",
+      "Label": "Test 1",
+      "NodeType": "test",
+      "Zone": "emission_lab",
+      "MeterUrn": "H1.Z21",
+      "ParentNodeKey": "emission_lab",
+      "XHint": 0.23,
+      "YHint": 0.36
+    },
+    {
+      "Id": 12,
+      "FacilityId": 1,
+      "NodeKey": "em_test_2",
+      "Label": "Test 2",
+      "NodeType": "test",
+      "Zone": "emission_lab",
+      "MeterUrn": "H1.Z22",
+      "ParentNodeKey": "emission_lab",
+      "XHint": 0.31,
+      "YHint": 0.36
+    },
+    {
+      "Id": 13,
+      "FacilityId": 1,
+      "NodeKey": "em_cooling_1",
+      "Label": "Cooling 1",
+      "NodeType": "cooling_branch",
+      "Zone": "emission_lab",
+      "MeterUrn": "H1.Z24",
+      "ParentNodeKey": "emission_lab",
+      "XHint": 0.39,
+      "YHint": 0.36
+    },
+    {
+      "Id": 14,
+      "FacilityId": 1,
+      "NodeKey": "em_cooling_2",
+      "Label": "Cooling 2",
+      "NodeType": "cooling_branch",
+      "Zone": "emission_lab",
+      "MeterUrn": "H1.Z25",
+      "ParentNodeKey": "emission_lab",
+      "XHint": 0.47,
+      "YHint": 0.36
+    },
+    {
+      "Id": 15,
+      "FacilityId": 1,
+      "NodeKey": "em_hvac_1",
+      "Label": "HVAC 1",
+      "NodeType": "hvac_branch",
+      "Zone": "emission_lab",
+      "MeterUrn": "H1.Z13",
+      "ParentNodeKey": "emission_lab",
+      "XHint": 0.24,
+      "YHint": 0.45
+    },
+    {
+      "Id": 16,
+      "FacilityId": 1,
+      "NodeKey": "em_hvac_2",
+      "Label": "HVAC 2",
+      "NodeType": "hvac_branch",
+      "Zone": "emission_lab",
+      "MeterUrn": "H1.Z14",
+      "ParentNodeKey": "emission_lab",
+      "XHint": 0.32,
+      "YHint": 0.45
+    },
+    {
+      "Id": 17,
+      "FacilityId": 1,
+      "NodeKey": "design_studio",
+      "Label": "Design Studio",
+      "NodeType": "zone",
+      "Zone": "design_studio",
+      "MeterUrn": null,
+      "ParentNodeKey": "ext_grid",
+      "XHint": 0.45,
+      "YHint": 0.56
+    },
+    {
+      "Id": 18,
+      "FacilityId": 1,
+      "NodeKey": "ds_main",
+      "Label": "Design Main",
+      "NodeType": "subzone",
+      "Zone": "design_studio",
+      "MeterUrn": "H2.T.Z33",
+      "ParentNodeKey": "design_studio",
+      "XHint": 0.58,
+      "YHint": 0.5
+    },
+    {
+      "Id": 19,
+      "FacilityId": 1,
+      "NodeKey": "ds_dist_1",
+      "Label": "Design Dist 1",
+      "NodeType": "subzone",
+      "Zone": "design_studio",
+      "MeterUrn": "H3.Z40",
+      "ParentNodeKey": "design_studio",
+      "XHint": 0.1,
+      "YHint": 0.62
+    },
+    {
+      "Id": 20,
+      "FacilityId": 1,
+      "NodeKey": "ds_dist_2",
+      "Label": "Design Dist 2",
+      "NodeType": "subzone",
+      "Zone": "design_studio",
+      "MeterUrn": "H3.Z41",
+      "ParentNodeKey": "design_studio",
+      "XHint": 0.18,
+      "YHint": 0.62
+    },
+    {
+      "Id": 21,
+      "FacilityId": 1,
+      "NodeKey": "ds_sim_1",
+      "Label": "Simulation 1",
+      "NodeType": "simulation",
+      "Zone": "design_studio",
+      "MeterUrn": "H3.Z45",
+      "ParentNodeKey": "design_studio",
+      "XHint": 0.42,
+      "YHint": 0.62
+    },
+    {
+      "Id": 22,
+      "FacilityId": 1,
+      "NodeKey": "ds_sim_2",
+      "Label": "Simulation 2",
+      "NodeType": "simulation",
+      "Zone": "design_studio",
+      "MeterUrn": "H3.Z47",
+      "ParentNodeKey": "design_studio",
+      "XHint": 0.5,
+      "YHint": 0.62
+    },
+    {
+      "Id": 23,
+      "FacilityId": 1,
+      "NodeKey": "ds_server_1",
+      "Label": "Server 1",
+      "NodeType": "server",
+      "Zone": "design_studio",
+      "MeterUrn": "H3.Z43",
+      "ParentNodeKey": "design_studio",
+      "XHint": 0.26,
+      "YHint": 0.69
+    },
+    {
+      "Id": 24,
+      "FacilityId": 1,
+      "NodeKey": "ds_vent_1",
+      "Label": "Ventilation 1",
+      "NodeType": "ventilation",
+      "Zone": "design_studio",
+      "MeterUrn": "H3.Z42",
+      "ParentNodeKey": "design_studio",
+      "XHint": 0.18,
+      "YHint": 0.69
+    },
+    {
+      "Id": 25,
+      "FacilityId": 1,
+      "NodeKey": "office_building",
+      "Label": "Office Building",
+      "NodeType": "zone",
+      "Zone": "offices",
+      "MeterUrn": null,
+      "ParentNodeKey": "trafo_h2z36",
+      "XHint": 0.83,
+      "YHint": 0.56
+    },
+    {
+      "Id": 26,
+      "FacilityId": 1,
+      "NodeKey": "office_main",
+      "Label": "Office Main",
+      "NodeType": "subzone",
+      "Zone": "offices",
+      "MeterUrn": "H2.T.Z30",
+      "ParentNodeKey": "office_building",
+      "XHint": 0.78,
+      "YHint": 0.54
+    },
+    {
+      "Id": 27,
+      "FacilityId": 1,
+      "NodeKey": "office_1",
+      "Label": "Office 1",
+      "NodeType": "office_branch",
+      "Zone": "offices",
+      "MeterUrn": "H4.Z50",
+      "ParentNodeKey": "office_building",
+      "XHint": 0.82,
+      "YHint": 0.64
+    },
+    {
+      "Id": 28,
+      "FacilityId": 1,
+      "NodeKey": "office_2",
+      "Label": "Office 2",
+      "NodeType": "office_branch",
+      "Zone": "offices",
+      "MeterUrn": "H4.Z51",
+      "ParentNodeKey": "office_building",
+      "XHint": 0.9,
+      "YHint": 0.64
+    },
+    {
+      "Id": 29,
+      "FacilityId": 1,
+      "NodeKey": "workshop",
+      "Label": "Workshop",
+      "NodeType": "zone",
+      "Zone": "workshop",
+      "MeterUrn": null,
+      "ParentNodeKey": "trafo_h2z35",
+      "XHint": 0.45,
+      "YHint": 0.82
+    },
+    {
+      "Id": 30,
+      "FacilityId": 1,
+      "NodeKey": "workshop_main",
+      "Label": "Workshop Main",
+      "NodeType": "subzone",
+      "Zone": "workshop",
+      "MeterUrn": "H2.T.Z34",
+      "ParentNodeKey": "workshop",
+      "XHint": 0.73,
+      "YHint": 0.76
+    },
+    {
+      "Id": 31,
+      "FacilityId": 1,
+      "NodeKey": "robotlab",
+      "Label": "Robotlab",
+      "NodeType": "subzone",
+      "Zone": "workshop",
+      "MeterUrn": "H2.ZE74",
+      "ParentNodeKey": "workshop",
+      "XHint": 0.78,
+      "YHint": 0.86
+    },
+    {
+      "Id": 32,
+      "FacilityId": 1,
+      "NodeKey": "workshop_server_1",
+      "Label": "Workshop Server 1",
+      "NodeType": "server",
+      "Zone": "workshop",
+      "MeterUrn": "H2.Z61",
+      "ParentNodeKey": "workshop",
+      "XHint": 0.1,
+      "YHint": 0.86
+    },
+    {
+      "Id": 33,
+      "FacilityId": 1,
+      "NodeKey": "workshop_server_2",
+      "Label": "Workshop Server 2",
+      "NodeType": "server",
+      "Zone": "workshop",
+      "MeterUrn": "H2.Z62",
+      "ParentNodeKey": "workshop",
+      "XHint": 0.18,
+      "YHint": 0.86
+    },
+    {
+      "Id": 34,
+      "FacilityId": 1,
+      "NodeKey": "workshop_vent_1",
+      "Label": "Workshop Vent 1",
+      "NodeType": "ventilation",
+      "Zone": "workshop",
+      "MeterUrn": "H2.Z68",
+      "ParentNodeKey": "workshop",
+      "XHint": 0.5,
+      "YHint": 0.86
+    },
+    {
+      "Id": 35,
+      "FacilityId": 1,
+      "NodeKey": "workshop_vent_2",
+      "Label": "Workshop Vent 2",
+      "NodeType": "ventilation",
+      "Zone": "workshop",
+      "MeterUrn": "H2.Z69",
+      "ParentNodeKey": "workshop",
+      "XHint": 0.58,
+      "YHint": 0.86
+    },
+    {
+      "Id": 36,
+      "FacilityId": 1,
+      "NodeKey": "cooling_main",
+      "Label": "Cooling Plant",
+      "NodeType": "utility_cooling",
+      "Zone": "utilities",
+      "MeterUrn": "H1.K11",
+      "ParentNodeKey": "ext_grid",
+      "XHint": 0.12,
+      "YHint": 0.72
+    },
+    {
+      "Id": 37,
+      "FacilityId": 1,
+      "NodeKey": "heating_main",
+      "Label": "Heating Plant",
+      "NodeType": "utility_heating",
+      "Zone": "utilities",
+      "MeterUrn": "H1.W11",
+      "ParentNodeKey": "ext_grid",
+      "XHint": 0.2,
+      "YHint": 0.72
+    },
+    {
+      "Id": 38,
+      "FacilityId": 1,
+      "NodeKey": "weather_main",
+      "Label": "Weather",
+      "NodeType": "weather",
+      "Zone": "utilities",
+      "MeterUrn": "WeatherStation.Weather",
+      "ParentNodeKey": "ext_grid",
+      "XHint": 0.94,
+      "YHint": 0.16
+    }
+  ],
+  "backup_SchematicEdges": [
+    {
+      "Id": 1,
+      "FacilityId": 1,
+      "SourceNodeKey": "ext_grid",
+      "TargetNodeKey": "trafo_vz81"
+    },
+    {
+      "Id": 2,
+      "FacilityId": 1,
+      "SourceNodeKey": "ext_grid",
+      "TargetNodeKey": "trafo_vz82"
+    },
+    {
+      "Id": 3,
+      "FacilityId": 1,
+      "SourceNodeKey": "ext_grid",
+      "TargetNodeKey": "trafo_h2z35"
+    },
+    {
+      "Id": 4,
+      "FacilityId": 1,
+      "SourceNodeKey": "ext_grid",
+      "TargetNodeKey": "trafo_h2z36"
+    },
+    {
+      "Id": 5,
+      "FacilityId": 1,
+      "SourceNodeKey": "ext_grid",
+      "TargetNodeKey": "pv_main"
+    },
+    {
+      "Id": 6,
+      "FacilityId": 1,
+      "SourceNodeKey": "ext_grid",
+      "TargetNodeKey": "chp_main"
+    },
+    {
+      "Id": 7,
+      "FacilityId": 1,
+      "SourceNodeKey": "trafo_vz81",
+      "TargetNodeKey": "emission_lab"
+    },
+    {
+      "Id": 8,
+      "FacilityId": 1,
+      "SourceNodeKey": "ext_grid",
+      "TargetNodeKey": "design_studio"
+    },
+    {
+      "Id": 9,
+      "FacilityId": 1,
+      "SourceNodeKey": "trafo_h2z36",
+      "TargetNodeKey": "office_building"
+    },
+    {
+      "Id": 10,
+      "FacilityId": 1,
+      "SourceNodeKey": "trafo_h2z35",
+      "TargetNodeKey": "workshop"
+    },
+    {
+      "Id": 11,
+      "FacilityId": 1,
+      "SourceNodeKey": "emission_lab",
+      "TargetNodeKey": "em_dist_1"
+    },
+    {
+      "Id": 12,
+      "FacilityId": 1,
+      "SourceNodeKey": "emission_lab",
+      "TargetNodeKey": "em_dist_2"
+    },
+    {
+      "Id": 13,
+      "FacilityId": 1,
+      "SourceNodeKey": "emission_lab",
+      "TargetNodeKey": "em_test_1"
+    },
+    {
+      "Id": 14,
+      "FacilityId": 1,
+      "SourceNodeKey": "emission_lab",
+      "TargetNodeKey": "em_test_2"
+    },
+    {
+      "Id": 15,
+      "FacilityId": 1,
+      "SourceNodeKey": "emission_lab",
+      "TargetNodeKey": "em_cooling_1"
+    },
+    {
+      "Id": 16,
+      "FacilityId": 1,
+      "SourceNodeKey": "emission_lab",
+      "TargetNodeKey": "em_cooling_2"
+    },
+    {
+      "Id": 17,
+      "FacilityId": 1,
+      "SourceNodeKey": "emission_lab",
+      "TargetNodeKey": "em_hvac_1"
+    },
+    {
+      "Id": 18,
+      "FacilityId": 1,
+      "SourceNodeKey": "emission_lab",
+      "TargetNodeKey": "em_hvac_2"
+    },
+    {
+      "Id": 19,
+      "FacilityId": 1,
+      "SourceNodeKey": "design_studio",
+      "TargetNodeKey": "ds_main"
+    },
+    {
+      "Id": 20,
+      "FacilityId": 1,
+      "SourceNodeKey": "design_studio",
+      "TargetNodeKey": "ds_dist_1"
+    },
+    {
+      "Id": 21,
+      "FacilityId": 1,
+      "SourceNodeKey": "design_studio",
+      "TargetNodeKey": "ds_dist_2"
+    },
+    {
+      "Id": 22,
+      "FacilityId": 1,
+      "SourceNodeKey": "design_studio",
+      "TargetNodeKey": "ds_sim_1"
+    },
+    {
+      "Id": 23,
+      "FacilityId": 1,
+      "SourceNodeKey": "design_studio",
+      "TargetNodeKey": "ds_sim_2"
+    },
+    {
+      "Id": 24,
+      "FacilityId": 1,
+      "SourceNodeKey": "design_studio",
+      "TargetNodeKey": "ds_server_1"
+    },
+    {
+      "Id": 25,
+      "FacilityId": 1,
+      "SourceNodeKey": "design_studio",
+      "TargetNodeKey": "ds_vent_1"
+    },
+    {
+      "Id": 26,
+      "FacilityId": 1,
+      "SourceNodeKey": "office_building",
+      "TargetNodeKey": "office_main"
+    },
+    {
+      "Id": 27,
+      "FacilityId": 1,
+      "SourceNodeKey": "office_building",
+      "TargetNodeKey": "office_1"
+    },
+    {
+      "Id": 28,
+      "FacilityId": 1,
+      "SourceNodeKey": "office_building",
+      "TargetNodeKey": "office_2"
+    },
+    {
+      "Id": 29,
+      "FacilityId": 1,
+      "SourceNodeKey": "workshop",
+      "TargetNodeKey": "workshop_main"
+    },
+    {
+      "Id": 30,
+      "FacilityId": 1,
+      "SourceNodeKey": "workshop",
+      "TargetNodeKey": "robotlab"
+    },
+    {
+      "Id": 31,
+      "FacilityId": 1,
+      "SourceNodeKey": "workshop",
+      "TargetNodeKey": "workshop_server_1"
+    },
+    {
+      "Id": 32,
+      "FacilityId": 1,
+      "SourceNodeKey": "workshop",
+      "TargetNodeKey": "workshop_server_2"
+    },
+    {
+      "Id": 33,
+      "FacilityId": 1,
+      "SourceNodeKey": "workshop",
+      "TargetNodeKey": "workshop_vent_1"
+    },
+    {
+      "Id": 34,
+      "FacilityId": 1,
+      "SourceNodeKey": "workshop",
+      "TargetNodeKey": "workshop_vent_2"
+    },
+    {
+      "Id": 35,
+      "FacilityId": 1,
+      "SourceNodeKey": "ext_grid",
+      "TargetNodeKey": "cooling_main"
+    },
+    {
+      "Id": 36,
+      "FacilityId": 1,
+      "SourceNodeKey": "ext_grid",
+      "TargetNodeKey": "heating_main"
+    },
+    {
+      "Id": 37,
+      "FacilityId": 1,
+      "SourceNodeKey": "ext_grid",
+      "TargetNodeKey": "weather_main"
+    }
+  ],
+  "backup_FacilityMeasurementMaps": [
+    {
+      "Id": 1,
+      "FacilityId": 1,
+      "NodeKey": "trafo_vz81",
+      "MeterUrn": "V.Z81",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 2,
+      "FacilityId": 1,
+      "NodeKey": "trafo_vz82",
+      "MeterUrn": "V.Z82",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 3,
+      "FacilityId": 1,
+      "NodeKey": "trafo_h2z35",
+      "MeterUrn": "H2.Z35",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 4,
+      "FacilityId": 1,
+      "NodeKey": "trafo_h2z36",
+      "MeterUrn": "H2.Z36",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 5,
+      "FacilityId": 1,
+      "NodeKey": "pv_main",
+      "MeterUrn": "V.Z84",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 6,
+      "FacilityId": 1,
+      "NodeKey": "chp_main",
+      "MeterUrn": "H1.Z20",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 7,
+      "FacilityId": 1,
+      "NodeKey": "em_dist_1",
+      "MeterUrn": "H1.Z15",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 8,
+      "FacilityId": 1,
+      "NodeKey": "em_dist_2",
+      "MeterUrn": "H1.Z17",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 9,
+      "FacilityId": 1,
+      "NodeKey": "em_test_1",
+      "MeterUrn": "H1.Z21",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 10,
+      "FacilityId": 1,
+      "NodeKey": "em_test_2",
+      "MeterUrn": "H1.Z22",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 11,
+      "FacilityId": 1,
+      "NodeKey": "em_cooling_1",
+      "MeterUrn": "H1.Z24",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 12,
+      "FacilityId": 1,
+      "NodeKey": "em_cooling_2",
+      "MeterUrn": "H1.Z25",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 13,
+      "FacilityId": 1,
+      "NodeKey": "em_hvac_1",
+      "MeterUrn": "H1.Z13",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 14,
+      "FacilityId": 1,
+      "NodeKey": "em_hvac_2",
+      "MeterUrn": "H1.Z14",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 15,
+      "FacilityId": 1,
+      "NodeKey": "ds_main",
+      "MeterUrn": "H2.T.Z33",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 16,
+      "FacilityId": 1,
+      "NodeKey": "ds_dist_1",
+      "MeterUrn": "H3.Z40",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 17,
+      "FacilityId": 1,
+      "NodeKey": "ds_dist_2",
+      "MeterUrn": "H3.Z41",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 18,
+      "FacilityId": 1,
+      "NodeKey": "ds_sim_1",
+      "MeterUrn": "H3.Z45",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 19,
+      "FacilityId": 1,
+      "NodeKey": "ds_sim_2",
+      "MeterUrn": "H3.Z47",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 20,
+      "FacilityId": 1,
+      "NodeKey": "ds_server_1",
+      "MeterUrn": "H3.Z43",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 21,
+      "FacilityId": 1,
+      "NodeKey": "ds_vent_1",
+      "MeterUrn": "H3.Z42",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 22,
+      "FacilityId": 1,
+      "NodeKey": "office_main",
+      "MeterUrn": "H2.T.Z30",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 23,
+      "FacilityId": 1,
+      "NodeKey": "office_1",
+      "MeterUrn": "H4.Z50",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 24,
+      "FacilityId": 1,
+      "NodeKey": "office_2",
+      "MeterUrn": "H4.Z51",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 25,
+      "FacilityId": 1,
+      "NodeKey": "workshop_main",
+      "MeterUrn": "H2.T.Z34",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 26,
+      "FacilityId": 1,
+      "NodeKey": "robotlab",
+      "MeterUrn": "H2.ZE74",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 27,
+      "FacilityId": 1,
+      "NodeKey": "workshop_server_1",
+      "MeterUrn": "H2.Z61",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 28,
+      "FacilityId": 1,
+      "NodeKey": "workshop_server_2",
+      "MeterUrn": "H2.Z62",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 29,
+      "FacilityId": 1,
+      "NodeKey": "workshop_vent_1",
+      "MeterUrn": "H2.Z68",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 30,
+      "FacilityId": 1,
+      "NodeKey": "workshop_vent_2",
+      "MeterUrn": "H2.Z69",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 31,
+      "FacilityId": 1,
+      "NodeKey": "cooling_main",
+      "MeterUrn": "H1.K11",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 32,
+      "FacilityId": 1,
+      "NodeKey": "heating_main",
+      "MeterUrn": "H1.W11",
+      "MeasurementKind": "electricity"
+    },
+    {
+      "Id": 33,
+      "FacilityId": 1,
+      "NodeKey": "weather_main",
+      "MeterUrn": "WeatherStation.Weather",
+      "MeasurementKind": "electricity"
+    }
+  ],
+  "backup_FacilityMemberships": {
+    "missing": true,
+    "table": "FacilityMemberships"
+  }
+}

@@ -29,7 +29,7 @@ namespace DiplomovaPrace.Pages
             // Validate input
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
             {
-                ErrorMessage = "Email a heslo jsou vyžadovány.";
+                ErrorMessage = "Email and password are required.";
                 return Page();
             }
 
@@ -41,14 +41,14 @@ namespace DiplomovaPrace.Pages
 
                 if (user == null)
                 {
-                    ErrorMessage = "Nesprávné přihlašovací údaje.";
+                    ErrorMessage = "Invalid credentials.";
                     return Page();
                 }
 
                 // Verify password
                 if (!_authService.VerifyPassword(password, user.PasswordHash))
                 {
-                    ErrorMessage = "Nesprávné přihlašovací údaje.";
+                    ErrorMessage = "Invalid credentials.";
                     return Page();
                 }
 
@@ -76,7 +76,7 @@ namespace DiplomovaPrace.Pages
             }
             catch (Exception ex)
             {
-                ErrorMessage = $"Chyba: {ex.Message}";
+                ErrorMessage = $"Error: {ex.Message}";
                 return Page();
             }
         }

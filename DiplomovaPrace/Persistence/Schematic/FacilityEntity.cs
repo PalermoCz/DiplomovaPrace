@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using DiplomovaPrace.Persistence;
 
 namespace DiplomovaPrace.Persistence.Schematic;
 
@@ -31,4 +32,5 @@ public class FacilityEntity
     public ICollection<SchematicNodeEntity> Nodes { get; set; } = new List<SchematicNodeEntity>();
     public ICollection<SchematicEdgeEntity> Edges { get; set; } = new List<SchematicEdgeEntity>();
     public ICollection<FacilityMeasurementMapEntity> MeasurementMaps { get; set; } = new List<FacilityMeasurementMapEntity>();
+    public ICollection<FacilityMembershipEntity> FacilityMemberships { get; set; } = new List<FacilityMembershipEntity>();
 }

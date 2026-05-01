@@ -1,7 +1,7 @@
 @page "/login"
 @model DiplomovaPrace.Pages.LoginModel
 @{
-    ViewData["Title"] = "Přihlášení";
+    ViewData["Title"] = "Sign in";
 }
 
 <style>
@@ -117,7 +117,7 @@
             <div class="auth-logo">
                 <span class="auth-logo-text">FW</span>
             </div>
-            <h1 class="auth-title">Přihlášení</h1>
+            <h1 class="auth-title">Sign in</h1>
 
             @if (!string.IsNullOrEmpty(Model.ErrorMessage))
             {
@@ -132,15 +132,15 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Heslo</label>
+                    <label class="form-label">Password</label>
                     <input type="password" name="Password" class="form-input" required />
                 </div>
 
-                <button type="submit" class="form-button">Přihlásit se</button>
+                <button type="submit" class="form-button">Sign in</button>
             </form>
 
             <div class="auth-link-text">
-                Nemáš účet? <a href="/register">Zaregistruj se</a>
+                Don't have an account? <a href="/register">Create one</a>
             </div>
         </div>
     </div>

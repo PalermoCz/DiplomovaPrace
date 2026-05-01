@@ -1,13 +1,14 @@
 using DiplomovaPrace.Components;
 using DiplomovaPrace.Persistence;
 using DiplomovaPrace.Services;
+using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using Radzen;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ── Lokální konfigurace (pouze lokální, není v gitu) ──────────────────────
-// appsettings.Local.json může definovat: DatabasePath, Facility:NodesCsvPath,
+// -- Local configuration (local only, not committed) ------------------------
+// appsettings.Local.json may define: DatabasePath, Facility:NodesCsvPath,
 // Facility:EdgesCsvPath, Facility:ForceMigration
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
 
@@ -18,19 +19,20 @@ builder.Services.AddRazorComponents()
 // Add Razor Pages for auth (server-rendered, not interactive)
 builder.Services.AddRazorPages();
 
-// Registrace Radzen komponent
+// Register Radzen components
 builder.Services.AddRadzenComponents();
 
-// ── Databáze: EF Core + SQLite ─────────────────────────────────────────────
-// IDbContextFactory<AppDbContext> (Singleton) — bezpečné pro use ze Singleton služeb.
-// Každá operace si vytvoří vlastní krátkožijící DbContext přes factory.CreateDbContext().
-// DatabasePath: z appsettings.Local.json (D:\DataSet\metering.db) nebo fallback ContentRoot.
+// -- Database: EF Core + SQLite ---------------------------------------------
+// IDbContextFactory<AppDbContext> (Singleton) is safe for singleton services.
+// Each operation creates a short-lived DbContext via factory.CreateDbContext().
+// DatabasePath: from appsettings.Local.json or ContentRoot fallback.
 var dbPath = builder.Configuration["DatabasePath"]
     ?? Path.Combine(builder.Environment.ContentRootPath, "metering.db");
+var activeFacilityName = builder.Configuration["Facility:ActiveFacilityName"] ?? "Smart Company Facility";
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlite($"Data Source={dbPath}"));
 
-// ── Persistence vrstva ─────────────────────────────────────────────────────
+// -- Persistence layer -------------------------------------------------------
 builder.Services.AddSingleton<IMeasurementRepository, EfMeasurementRepository>();
 
 builder.Services.AddScoped<ICsvMeasurementImportService, CsvMeasurementImportService>();
@@ -38,18 +40,19 @@ builder.Services.AddSingleton<FacilityEditorStateService>();
 builder.Services.AddScoped<FacilityNodeSeriesImportService>();
 builder.Services.AddScoped<FacilityImportService>();
 builder.Services.AddScoped<FacilityQueryService>();
-// FacilityDataBindingRegistry: Singleton — načte dataset_bindings_fixed.csv jednou při startu.
+builder.Services.AddScoped<FacilityMembershipService>();
+// FacilityDataBindingRegistry: singleton loaded once on startup.
 builder.Services.AddSingleton<FacilityDataBindingRegistry>();
 builder.Services.AddSingleton<FacilityWeatherSourceResolver>();
 builder.Services.AddScoped<NodeAnalyticsPreviewService>();
 builder.Services.AddScoped<FacilityAlertSummaryService>();
 
-// ── Aplikační služby ───────────────────────────────────────────────────────
-// Editor služby (zůstávají in-memory — Fáze 2 DB migrace editoru přijde later)
+// -- Application services ----------------------------------------------------
+// Editor services remain in-memory for now.
 builder.Services.AddSingleton<IBuildingConfigurationService, InMemoryBuildingConfigurationService>();
 builder.Services.AddScoped<IEditorSessionService, EditorSessionService>();
 
-// ── Auth-shell v1: Lokální email + password + cookies ─────────────────────
+// -- Auth shell v1: local email + password + cookies ------------------------
 builder.Services.AddScoped<AuthenticationService>();
 builder.Services.AddAuthentication("CookieAuth")
     .AddCookie("CookieAuth", options =>
@@ -63,17 +66,16 @@ builder.Services.AddAuthentication("CookieAuth")
 
 var app = builder.Build();
 
-// ── Inicializace databáze ──────────────────────────────────────────────────
-// EnsureCreated: bezpečné pro vývoj — vytvoří DB a tabulky pokud neexistují.
-// POZOR: EnsureCreated je nekompatibilní s Migrate() — nepoužívat oboje zároveň.
-// Pro produkci (Fáze 3+) nahradit za: dbContextFactory.CreateDbContext().Database.Migrate()
-// a přidat migraci pomocí: dotnet ef migrations add InitialMeasurements
+// -- Database initialization -------------------------------------------------
+// EnsureCreated is acceptable for development and creates DB/tables when missing.
+// Note: EnsureCreated is incompatible with Migrate(); do not use both together.
+// For production, switch to Database.Migrate() + explicit EF migrations.
 {
     using var scope = app.Services.CreateScope();
     var factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
     await using var db = await factory.CreateDbContextAsync();
     await db.Database.EnsureCreatedAsync();
-    // Ensure AppUsers table exists (for auth-shell v1)
+    // Ensure AppUsers table exists (auth-shell v1)
     await db.Database.ExecuteSqlRawAsync(@"
         CREATE TABLE IF NOT EXISTS ""AppUsers"" (
             ""Id"" INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -84,11 +86,12 @@ var app = builder.Build();
         );
         CREATE UNIQUE INDEX IF NOT EXISTS ""IX_AppUsers_Email"" ON ""AppUsers"" (""Email"");
     ");
+    await AppDbSchemaBootstrap.EnsureFacilityMembershipSchemaAsync(db);
     await AppDbSchemaBootstrap.EnsurePhaseOneRelationshipSchemaAsync(db);
-    app.Logger.LogInformation("Databáze inicializována: {Path}", dbPath);
+    app.Logger.LogInformation("Database initialized: {Path}", dbPath);
 
-    // ── Force migration: pokud je nastaven flag, smaž stávající facility před seedem ──
-    // Po úspěšné migraci nastavit Facility:ForceMigration na "false" v appsettings.Local.json.
+    // -- Force migration: if flag is enabled, remove existing facility before seed --
+    // After successful migration, set Facility:ForceMigration to false.
     if (app.Configuration["Facility:ForceMigration"] == "true")
     {
         await using var dbMigration = await factory.CreateDbContextAsync();
@@ -98,15 +101,15 @@ var app = builder.Build();
         {
             dbMigration.Facilities.Remove(existingFacility);
             await dbMigration.SaveChangesAsync();
-            app.Logger.LogInformation("Force migration: stávající facility odstraněna z DB pro reseed z nových CSV.");
+            app.Logger.LogInformation("Force migration: existing facility removed for reseed.");
         }
         else
         {
-            app.Logger.LogInformation("Force migration: facility v DB nebyla nalezena (fresh DB nebo již provedeno).");
+            app.Logger.LogInformation("Force migration: facility not found (fresh DB or already completed).");
         }
     }
 
-    // ── Seed: facility-centric schematic model (Sprint 2) ──────────────────
+    // -- Seed: facility-centric schematic model ------------------------------
     var facilityImporter = scope.ServiceProvider.GetRequiredService<FacilityImportService>();
     var envForFacility = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
     await facilityImporter.SeedAsync(envForFacility.ContentRootPath);
@@ -127,6 +130,50 @@ app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path;
+    var isFacilityWorkbenchRequest = path.Equals("/") || path.StartsWithSegments("/facility");
+
+    if (!isFacilityWorkbenchRequest || context.User?.Identity?.IsAuthenticated != true)
+    {
+        await next();
+        return;
+    }
+
+    var appUserIdClaim = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (!int.TryParse(appUserIdClaim, out var appUserId) || appUserId <= 0)
+    {
+        context.Response.Redirect("/login");
+        return;
+    }
+
+    using var scope = app.Services.CreateScope();
+    var dbFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+    var membershipService = scope.ServiceProvider.GetRequiredService<FacilityMembershipService>();
+
+    await using var db = await dbFactory.CreateDbContextAsync(context.RequestAborted);
+    var activeFacilityId = await db.Facilities
+        .Where(f => f.Name == activeFacilityName)
+        .Select(f => (int?)f.Id)
+        .FirstOrDefaultAsync(context.RequestAborted);
+
+    if (!activeFacilityId.HasValue)
+    {
+        await next();
+        return;
+    }
+
+    var membership = await membershipService.ResolveForUserAndFacilityAsync(appUserId, activeFacilityId.Value, context.RequestAborted);
+    if (membership is null)
+    {
+        context.Response.Redirect("/access-denied");
+        return;
+    }
+
+    await next();
+});
 
 app.UseAntiforgery();
 

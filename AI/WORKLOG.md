@@ -6,6 +6,103 @@
 [2026-05-01]
 
 ### Task
+FacilityMembership milestone v1 — facility-scoped membership + minimal role gating
+
+### What changed
+
+**New persistence role model:**
+- Added `DiplomovaPrace/Persistence/FacilityMembershipRole.cs`.
+- Roles: `Owner`, `Admin`, `Viewer`.
+- Added helper methods:
+  - `ParseOrViewer(...)` for safe role parsing
+  - `CanUseEditor(...)` for Owner/Admin edit gating
+
+**New membership table entity:**
+- Added `DiplomovaPrace/Persistence/FacilityMembershipEntity.cs`.
+- Fields:
+  - `Id` (PK)
+  - `FacilityId` (FK -> Facilities)
+  - `AppUserId` (FK -> AppUsers)
+  - `Role` (string source-of-truth for facility role)
+  - `CreatedAtUtc`
+
+**Entity/navigation updates:**
+- `DiplomovaPrace/Persistence/AppUserEntity.cs`
+  - added `FacilityMemberships` collection.
+- `DiplomovaPrace/Persistence/Schematic/FacilityEntity.cs`
+  - added `FacilityMemberships` collection.
+
+**EF model updates:**
+- `DiplomovaPrace/Persistence/AppDbContext.cs`
+  - added `DbSet<FacilityMembershipEntity> FacilityMemberships`.
+  - configured table `FacilityMemberships` with:
+    - unique index: `(FacilityId, AppUserId)`
+    - index: `AppUserId`
+    - required `Role` (max length 32)
+    - FK cascade rules to `Facilities` and `AppUsers`.
+
+**Schema bootstrap for existing SQLite DBs:**
+- `DiplomovaPrace/Persistence/AppDbSchemaBootstrap.cs`
+  - added `EnsureFacilityMembershipSchemaAsync(...)`.
+  - creates `FacilityMemberships` table and indexes via `CREATE ... IF NOT EXISTS`.
+
+**Startup wiring:**
+- `DiplomovaPrace/Program.cs`
+  - registered `FacilityMembershipService`.
+  - calls `AppDbSchemaBootstrap.EnsureFacilityMembershipSchemaAsync(db)` during startup initialization.
+
+**Runtime membership resolution + default bootstrap behavior:**
+- Added `DiplomovaPrace/Services/FacilityMembershipService.cs`.
+- Added `ResolveForUserAndFacilityAsync(appUserId, facilityId)`:
+  - resolves current user membership for active facility.
+  - bootstrap default behavior:
+    - if facility has no memberships yet -> create `Owner` for current user
+    - otherwise, if current user has no membership -> create `Viewer` for current user
+  - returns resolved role and whether bootstrap was applied.
+
+**FacilityWorkbench role-gated runtime behavior:**
+- `DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`
+  - injects `FacilityMembershipService` and `AuthenticationStateProvider`.
+  - during `ReloadData(...)`, resolves current signed-in user ID claim + membership for current active facility.
+  - editor permission now derived from membership role (`Owner/Admin` editable, `Viewer` read-only).
+  - Edit schematic buttons are disabled for read-only role.
+  - `ToggleEditMode()` now hard-blocks editor entry for read-only role and sets status message.
+  - existing node edit checks now include role gate via `CanCurrentUserEditFacility`.
+
+### What was NOT changed (per scope)
+- No invitation flow.
+- No facility member management UI.
+- No ownership transfer feature.
+- No FacilityWorkbench redesign.
+- No broader auth/policy system.
+
+### Database changes
+- Added logical schema for table: `FacilityMemberships`.
+- Applied through startup bootstrap SQL (`CREATE TABLE IF NOT EXISTS ...`) to support current EnsureCreated-based workflow without migration reset.
+
+### Build
+- `dotnet build` successful: 0 errors.
+
+### Runtime sanity check
+- `dotnet run --project DiplomovaPrace` startup successful.
+- Verified logs:
+  - FacilityMembership schema bootstrap executed (`CREATE TABLE IF NOT EXISTS FacilityMemberships` + indexes)
+  - app listening on `http://localhost:5016`
+  - host started without runtime exceptions.
+
+### What remains for the next milestone
+1. Membership management UI (list/add/remove members).
+2. Invitation flow.
+3. Explicit ownership/admin transfer mechanics.
+4. Richer policy/authorization integration beyond basic editor gating.
+5. Optional route-level access denied behavior based on facility membership.
+
+---
+
+### Date
+[2026-05-01]
+
+### Task
 Auth-shell v1 milestone — local email + password, cookie authentication, account UI
 
 ### What changed

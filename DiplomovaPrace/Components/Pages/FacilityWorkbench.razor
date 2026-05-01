@@ -1,20 +1,25 @@
 @page "/"
 @page "/facility"
 @using System.Globalization
+@using System.Security.Claims
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @using DiplomovaPrace.Services
+@using DiplomovaPrace.Persistence
 @using DiplomovaPrace.Persistence.Schematic
 @using DiplomovaPrace.Components.Editor
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject FacilityQueryService FacilityQueryService
+@inject FacilityMembershipService FacilityMembershipService
 @inject FacilityEditorStateService FacilityEditorStateService
 @inject FacilityDataBindingRegistry BindingRegistry
 @inject FacilityNodeSeriesImportService NodeSeriesImportService
 @inject NodeAnalyticsPreviewService AnalyticsPreview
 @inject IEditorSessionService SessionService
 @inject IJSRuntime JSRuntime
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @layout DiplomovaPrace.Components.Layout.FacilityLayout
 @implements IDisposable
 
@@ -78,7 +83,7 @@
                             <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5.5 0a.5.5 0 0 1 .5.5v4A1.5 1.5 0 0 1 4.5 6h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5m5 0a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 10 4.5v-4a.5.5 0 0 1 .5-.5M0 10.5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 6 11.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5m10 1a1.5 1.5 0 0 1 1.5-1.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0z"/></svg>
                         </button>
                         <button class="wb-toolbar-icon-btn wb-toolbar-icon-btn-primary"
-                                @onclick="ToggleEditMode" title="Edit schematic" disabled="@(_facility is null)">
+                            @onclick="ToggleEditMode" title="@EditSchematicButtonTitle" disabled="@(_facility is null || !CanCurrentUserEditFacility)">
                             <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/></svg>
                         </button>
                     </div>
@@ -716,7 +721,7 @@
                                 </div>
                                 <div class="ep-field">
                                     <label>Unit</label>
-                                    <input class="form-control form-control-sm" @bind="_importUnitInput" @bind:event="oninput" maxlength="40" placeholder="kW, kWh, �C" />
+                                    <input class="form-control form-control-sm" @bind="_importUnitInput" @bind:event="oninput" maxlength="40" placeholder="kW, kWh, deg C" />
                                 </div>
                             </div>
                             <div class="ep-field-row">
@@ -790,7 +795,7 @@
                                                 @binding.ExactSignalCode.Value
                                                 @if (!string.IsNullOrWhiteSpace(binding.Unit))
                                                 {
-                                                    <span> � @binding.Unit</span>
+                                                    <span> | @binding.Unit</span>
                                                 }
                                             </div>
                                             <div class="wb-link-item-note">@BuildBindingPreviewText(binding)</div>
@@ -1100,8 +1105,8 @@
                         </button>
                         <button class="wb-toolbar-icon-btn wb-toolbar-icon-btn-primary"
                                 @onclick="ToggleEditMode"
-                            title="Edit schematic"
-                                disabled="@(_facility is null)">
+                            title="@EditSchematicButtonTitle"
+                                disabled="@(_facility is null || !CanCurrentUserEditFacility)">
                             <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/></svg>
                         </button>
                     </div>
@@ -2264,6 +2269,7 @@
     private readonly Dictionary<string, FacilityNodeEditorState> _editorNodeStatesByKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, FacilityNodeStylePreset> _stylePresetsByKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<FacilitySavedWorkingSet> _savedWorkingSets = [];
+    private FacilityMembershipResolution? _facilityMembershipResolution;
     private bool _isSchematicEditorEnabled;
     private string _editorLabelInput = string.Empty;
     private string _editorNodeTypeInput = string.Empty;
@@ -2359,8 +2365,12 @@
     private bool _editModeCanRedo => _editRedoStack.Count > 0;
     private bool _isCuratedNode;
     private const double EditorGridSize = 20.0;
-    private bool CanEditFocusedNode => _selectedFacilityNode is not null && !FacilityNodeSemantics.IsWeatherContextNode(_selectedFacilityNode.NodeKey);
+    private bool CanCurrentUserEditFacility => _facilityMembershipResolution?.CanUseEditor == true;
+    private bool CanEditFocusedNode => CanCurrentUserEditFacility && _selectedFacilityNode is not null && !FacilityNodeSemantics.IsWeatherContextNode(_selectedFacilityNode.NodeKey);
     private bool CanRemoveFocusedLeafNode => _selectedFacilityNode is not null && CanEditFocusedNode && !HasChildren(_selectedFacilityNode.NodeKey);
+    private string EditSchematicButtonTitle => CanCurrentUserEditFacility
+        ? "Edit schematic"
+        : $"Read-only access ({(_facilityMembershipResolution?.Role.ToString() ?? FacilityMembershipRole.Viewer.ToString())})";
     private bool IsEditorMultiSelectActive => _isEditModeOpen && _selectionSet.Count > 1;
     private bool ShouldShowEditorFloorAreaField => IsAreaNodeType(ResolveEffectiveEditorNodeTypeForDraft());
     
@@ -4812,6 +4822,23 @@ private static OverviewTreemapRect FindTailRect(IReadOnlyList<OverviewTreemapRec
         await Task.WhenAll(facilityTask, editorStateTask, stylePresetsTask, workingSetsTask);
 
         _facility = BuildSchemaFacilityWithoutWeatherNode(facilityTask.Result);
+        _facilityMembershipResolution = null;
+        if (_facility is not null)
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var userIdClaim = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(userIdClaim, out var appUserId))
+            {
+                _facilityMembershipResolution = await FacilityMembershipService.ResolveForUserAndFacilityAsync(appUserId, _facility.Id);
+            }
+        }
+
+        if (!CanCurrentUserEditFacility)
+        {
+            _isEditModeOpen = false;
+            _isSchematicEditorEnabled = false;
+        }
+
         _schematicLayout = _facility is not null ? SchematicComposerV2.Compose(_facility) : null;
         SyncEditorNodeStateCache(editorStateTask.Result);
         SyncStylePresetCache(stylePresetsTask.Result);
@@ -9691,6 +9718,12 @@ private static OverviewTreemapRect FindTailRect(IReadOnlyList<OverviewTreemapRec
 
     private async Task ToggleEditMode()
     {
+        if (!CanCurrentUserEditFacility)
+        {
+            _editorStatusMessage = "Editor is read-only for the current facility membership.";
+            return;
+        }
+
         _isEditModeOpen = !_isEditModeOpen;
         _isSchematicEditorEnabled = _isEditModeOpen;
         _editorActiveTool = "select";

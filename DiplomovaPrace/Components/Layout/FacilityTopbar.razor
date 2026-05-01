@@ -5,9 +5,9 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
 <header class="facility-topbar text-white d-flex align-items-center px-3 px-lg-4" style="height: 72px; box-shadow: 0 2px 8px rgba(2, 6, 23, 0.35); flex-shrink: 0; position: relative; z-index: 1050;">
-    @* Leva cast: Branding & Navigace *@
+    @* Left section: Branding & navigation *@
     <div class="d-flex align-items-center" style="flex: 1; min-width: 0;">
-        <a class="facility-brand text-white text-decoration-none d-inline-flex align-items-center" href="/facility" title="Přejít na Facility Workbench">
+        <a class="facility-brand text-white text-decoration-none d-inline-flex align-items-center" href="/facility" title="Go to Facility Workbench">
             <span class="facility-brand-mark me-2">FW</span>
             <span class="d-flex flex-column">
                 <span class="facility-brand-title">Facility Workbench</span>
@@ -16,14 +16,14 @@
         </a>
     </div>
 
-    @* Stredni cast: Centralni facility selector *@
+    @* Center section: Facility selector *@
     <div class="d-flex justify-content-center align-items-center" style="flex: 1; min-width: 0;">
         <div class="position-relative">
             <button type="button"
                     class="facility-selector-trigger"
                     @onclick="ToggleFacilitySelector"
                     aria-expanded="@_isFacilitySelectorOpen"
-                    title="Výběr aktivní budovy">
+                    title="Select active facility">
                 <i class="bi bi-buildings facility-selector-icon"></i>
                 <span class="d-flex flex-column text-center align-items-center flex-grow-1">
                     <span class="facility-selector-label">Active facility</span>
@@ -36,8 +36,8 @@
             {
                 <div class="card shadow border-0 position-absolute start-50 translate-middle-x mt-2" style="width: 320px; z-index: 1200;">
                     <div class="card-header bg-light py-2 d-flex align-items-center justify-content-between">
-                        <span class="fw-semibold">Výběr budovy</span>
-                        <button class="btn btn-sm btn-outline-secondary" @onclick="CloseFacilitySelector">Zavřít</button>
+                        <span class="fw-semibold">Select facility</span>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="CloseFacilitySelector">Close</button>
                     </div>
                     <div class="list-group list-group-flush">
                         <button type="button" class="list-group-item list-group-item-action active d-flex align-items-center justify-content-between" @onclick="OpenFacilityWorkspace">
@@ -46,7 +46,7 @@
                         </button>
                         <div class="list-group-item text-muted small d-flex align-items-center">
                             <i class="bi bi-info-circle me-2"></i>
-                            Další budovy budou dostupné v navazujícím kroku.
+                            Additional facilities will be available in a follow-up milestone.
                         </div>
                     </div>
                 </div>
@@ -54,7 +54,7 @@
         </div>
     </div>
 
-    @* Prava cast: Account & Utility *@
+    @* Right section: Account & utility *@
     <div class="d-flex justify-content-end align-items-center gap-2" style="flex: 1; min-width: 0;">
         <AuthorizeView>
             <Authorized>
@@ -65,7 +65,7 @@
                     <a href="/logout" style="color: #f8fafc; text-decoration: none; padding: 0.5rem 1rem; border-radius: 8px; background: rgba(220, 38, 38, 0.2); border: 1px solid rgba(220, 38, 38, 0.5); font-size: 0.875rem; transition: all 0.16s ease;" 
                        onmouseover="this.style.background='rgba(220, 38, 38, 0.3)'; this.style.borderColor='rgba(220, 38, 38, 0.7)'" 
                        onmouseout="this.style.background='rgba(220, 38, 38, 0.2)'; this.style.borderColor='rgba(220, 38, 38, 0.5)'">
-                        Odhlásit
+                        Sign out
                     </a>
                 </div>
             </Authorized>
@@ -73,11 +73,11 @@
                 <a href="/login" style="color: #f8fafc; text-decoration: none; padding: 0.5rem 1rem; border-radius: 8px; background: rgba(34, 211, 238, 0.2); border: 1px solid rgba(34, 211, 238, 0.5); font-size: 0.875rem; transition: all 0.16s ease;" 
                    onmouseover="this.style.background='rgba(34, 211, 238, 0.3)'; this.style.borderColor='rgba(34, 211, 238, 0.7)'" 
                    onmouseout="this.style.background='rgba(34, 211, 238, 0.2)'; this.style.borderColor='rgba(34, 211, 238, 0.5)'">
-                    Přihlásit
+                    Sign in
                 </a>
             </NotAuthorized>
         </AuthorizeView>
-        @* Vyhrazeno pro pripadne dalsi utility buttony *@
+        @* Reserved for future utility buttons *@
         <div id="facility-toolbar-portal-right"></div>
     </div>
 </header>

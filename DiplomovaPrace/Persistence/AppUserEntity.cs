@@ -29,4 +29,6 @@ public class AppUserEntity
 
     /// <summary>Posledňí přihlášení — null pokud se ještě nikdy přihlásil.</summary>
     public DateTime? LastLoginUtc { get; set; }
+
+    public ICollection<FacilityMembershipEntity> FacilityMemberships { get; set; } = new List<FacilityMembershipEntity>();
 }

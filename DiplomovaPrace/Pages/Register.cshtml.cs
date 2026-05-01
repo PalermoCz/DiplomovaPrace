@@ -29,19 +29,19 @@ namespace DiplomovaPrace.Pages
             // Validate input
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password) || string.IsNullOrEmpty(confirmPassword))
             {
-                ErrorMessage = "Všechna pole jsou vyžadována.";
+                ErrorMessage = "All fields are required.";
                 return Page();
             }
 
             if (password != confirmPassword)
             {
-                ErrorMessage = "Hesla se nepohodují.";
+                ErrorMessage = "Passwords do not match.";
                 return Page();
             }
 
             if (password.Length < 6)
             {
-                ErrorMessage = "Heslo musí mít alespoň 6 znaků.";
+                ErrorMessage = "Password must be at least 6 characters long.";
                 return Page();
             }
 
@@ -51,7 +51,7 @@ namespace DiplomovaPrace.Pages
             
             if (existingUser != null)
             {
-                ErrorMessage = "Uživatel s tímto emailem již existuje.";
+                ErrorMessage = "An account with this email already exists.";
                 return Page();
             }
 
@@ -90,7 +90,7 @@ namespace DiplomovaPrace.Pages
             }
             catch (Exception ex)
             {
-                ErrorMessage = $"Chyba: {ex.Message}";
+                ErrorMessage = $"Error: {ex.Message}";
                 return Page();
             }
         }

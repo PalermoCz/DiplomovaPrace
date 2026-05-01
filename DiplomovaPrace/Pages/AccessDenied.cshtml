@@ -1,0 +1,82 @@
+@page "/access-denied"
+@model DiplomovaPrace.Pages.AccessDeniedModel
+@{
+    ViewData["Title"] = "Access denied";
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Access denied</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0f172a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            color: #e2e8f0;
+        }
+
+        .card {
+            width: min(520px, 92vw);
+            background: #111827;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 28px rgba(2, 6, 23, 0.45);
+        }
+
+        h1 {
+            margin: 0 0 0.75rem;
+            font-size: 1.35rem;
+        }
+
+        p {
+            margin: 0 0 0.75rem;
+            color: #cbd5e1;
+            line-height: 1.5;
+        }
+
+        .actions {
+            margin-top: 1rem;
+            display: flex;
+            gap: 0.65rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.55rem 0.95rem;
+            border-radius: 8px;
+            text-decoration: none;
+            border: 1px solid #475569;
+            color: #e2e8f0;
+            background: #1e293b;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            border-color: #2563eb;
+            background: #1d4ed8;
+            color: #dbeafe;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>No facility access</h1>
+        <p>Your account is authenticated, but it is not a member of the active facility.</p>
+        <p>Please ask a facility Owner or Admin to grant you access.</p>
+        <div class="actions">
+            <a class="btn btn-primary" href="/logout">Sign out</a>
+            <a class="btn" href="/login">Sign in with another account</a>
+        </div>
+    </div>
+</body>
+</html>

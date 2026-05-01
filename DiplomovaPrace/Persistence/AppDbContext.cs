@@ -41,6 +41,9 @@ public class AppDbContext : DbContext
     /// <summary>Tabulka aplikačních uživatelů — lokální email + password auth.</summary>
     public DbSet<AppUserEntity> AppUsers => Set<AppUserEntity>();
 
+      /// <summary>Uživatelské členství ve facility s facility-scoped rolí.</summary>
+      public DbSet<FacilityMembershipEntity> FacilityMemberships => Set<FacilityMembershipEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -162,6 +165,38 @@ public class AppDbContext : DbContext
 
             entity.Property(e => e.CreatedAtUtc)
                   .HasDefaultValueSql("CURRENT_TIMESTAMP");
+        });
+
+        // ── FacilityMembershipEntity (Facility-scoped role model) ───────────
+
+        modelBuilder.Entity<FacilityMembershipEntity>(entity =>
+        {
+            entity.ToTable("FacilityMemberships");
+            entity.HasKey(e => e.Id);
+
+            entity.HasIndex(e => new { e.FacilityId, e.AppUserId })
+                  .IsUnique()
+                  .HasDatabaseName("IX_FacilityMemberships_FacilityId_AppUserId");
+
+            entity.HasIndex(e => e.AppUserId)
+                  .HasDatabaseName("IX_FacilityMemberships_AppUserId");
+
+            entity.Property(e => e.Role)
+                  .IsRequired()
+                  .HasMaxLength(32);
+
+            entity.Property(e => e.CreatedAtUtc)
+                  .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasOne(e => e.Facility)
+                  .WithMany(f => f.FacilityMemberships)
+                  .HasForeignKey(e => e.FacilityId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.AppUser)
+                  .WithMany(u => u.FacilityMemberships)
+                  .HasForeignKey(e => e.AppUserId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }
