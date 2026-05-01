@@ -6,18 +6,15 @@ using DiplomovaPrace.Models;
 public class CsvMeasurementImportService : ICsvMeasurementImportService
 {
     private readonly IMeasurementRepository _repository;
-    private readonly IBuildingStateService _buildingState;
 
-    public CsvMeasurementImportService(IMeasurementRepository repository, IBuildingStateService buildingState)
+    public CsvMeasurementImportService(IMeasurementRepository repository)
     {
         _repository = repository;
-        _buildingState = buildingState;
     }
 
     public async Task<CsvImportResult> ImportAsync(Stream csvStream, CancellationToken ct = default)
     {
         var errors = new List<CsvImportError>();
-        var unknownDevices = new HashSet<string>();
         var recordsToSave = new List<MeasurementRecord>();
         
         int totalLines = 0;
@@ -50,25 +47,6 @@ public class CsvMeasurementImportService : ICsvMeasurementImportService
         
         totalLines = 1;
 
-        var validDevices = new HashSet<string>();
-        var building = _buildingState.Building;
-        if (building != null)
-        {
-            foreach (var floor in building.Floors)
-            {
-                foreach (var room in floor.Rooms)
-                {
-                    foreach (var device in room.Devices)
-                    {
-                        if (device.Type.IsMeteringDevice())
-                        {
-                            validDevices.Add(device.Id);
-                        }
-                    }
-                }
-            }
-        }
-
         while (true)
         {
             var line = await reader.ReadLineAsync(ct);
@@ -98,13 +76,6 @@ public class CsvMeasurementImportService : ICsvMeasurementImportService
             {
                 errors.Add(new CsvImportError(totalLines, "DeviceId je prázdné."));
                 errorCount++;
-                continue;
-            }
-
-            if (!validDevices.Contains(deviceId))
-            {
-                unknownDevices.Add(deviceId);
-                skippedCount++;
                 continue;
             }
 
@@ -170,7 +141,7 @@ public class CsvMeasurementImportService : ICsvMeasurementImportService
             SkippedCount: skippedCount,
             ErrorCount: errorCount,
             Errors: errors,
-            UnknownDevices: unknownDevices.ToList()
+            UnknownDevices: Array.Empty<string>()
         );
     }
 }

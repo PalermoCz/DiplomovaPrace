@@ -1,403 +1,71 @@
 # CURRENT_TASK.md
 
-## Název úkolu
-FacilityWorkbench — přesný replace-only fix pro 3 chyby
-
-Tento task je čistě REPLACE-ONLY.
-Neimprovizuj.
-Nevymýšlej alternativní řešení.
-Neprováděj refactor.
-Nedělej další změny mimo přesně uvedené bloky.
-
-Uprav pouze:
-- `DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`
-- `DiplomovaPrace/Components/Pages/FacilityWorkbench.razor.css`
-
-Nepoužívej service refactor.
-Nesahej do `NodeAnalyticsPreviewService.cs`.
-Nesahej do treemapy, editoru, schematicu, loading railu ani jiné části aplikace.
-
----
-
-# Cíl
-Opravit přesně tyto 3 chyby:
-
-1. `Selected / With data / No data` musí být interně konzistentní
-2. první výběr nodeů musí správně načíst Overview
-3. tabs strip `Trend / Baseline / Scatter / Power / EUI` musí být skutečně samostatný bullet a nesmí sdílet ohraničení s `Data Source + Signal`
-
----
-
-# KROK 1 — Oprava selection summary classification
-
-## Najdi v `FacilityWorkbench.razor` tuto metodu:
-```csharp
-private SelectionSummaryClassificationSnapshot BuildSelectionSummaryClassificationSnapshot()
-````
-
-## Smaž CELÉ aktuální tělo této metody
-
-a nahraď ho přesně tímto:
-
-```csharp
-private SelectionSummaryClassificationSnapshot BuildSelectionSummaryClassificationSnapshot()
-{
-    var selectedNodeKeys = _selectionOrder
-        .Where(_selectionSet.Contains)
-        .Where(nodeKey => !string.IsNullOrWhiteSpace(nodeKey))
-        .Where(nodeKey => !IsWeatherNode(nodeKey))
-        .Distinct(StringComparer.OrdinalIgnoreCase)
-        .ToList();
-
-    if (selectedNodeKeys.Count == 0)
-    {
-        return new SelectionSummaryClassificationSnapshot([], [], [], []);
-    }
-
-    var supportedItems = SelectionSummaryItems
-        .Where(item => selectedNodeKeys.Contains(item.NodeKey, StringComparer.OrdinalIgnoreCase))
-        .Where(IsLeafOrAnalyticNode)
-        .Where(item => !FacilityNodeSemantics.IsWeatherContextNode(item.NodeKey))
-        .ToList();
-
-    var supportedNodeKeys = supportedItems
-        .Select(item => item.NodeKey)
-        .Where(nodeKey => !string.IsNullOrWhiteSpace(nodeKey))
-        .Distinct(StringComparer.OrdinalIgnoreCase)
-        .ToList();
-
-    var withDataNodeKeys = selectedNodeKeys
-        .Where(NodeHasAnyAnalysisData)
-        .Distinct(StringComparer.OrdinalIgnoreCase)
-        .ToList();
-
-    var withDataNodeKeySet = withDataNodeKeys.ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-    var noDataNodeKeys = selectedNodeKeys
-        .Where(nodeKey => !withDataNodeKeySet.Contains(nodeKey))
-        .Distinct(StringComparer.OrdinalIgnoreCase)
-        .ToList();
-
-    return new SelectionSummaryClassificationSnapshot(
-        supportedItems,
-        supportedNodeKeys,
-        withDataNodeKeys,
-        noDataNodeKeys);
-}
-```
-
-***
-
-# KROK 2 — Oprava aggregate scope pro Overview
-
-## Najdi v `FacilityWorkbench.razor` tuto metodu:
-
-```csharp
-private IReadOnlyList<string> GetSelectionAggregateNodeKeys()
-```
-
-## Smaž CELÉ aktuální tělo této metody
-
-a nahraď ho přesně tímto:
-
-```csharp
-private IReadOnlyList<string> GetSelectionAggregateNodeKeys()
-{
-    return _selectionOrder
-        .Where(_selectionSet.Contains)
-        .Where(nodeKey => !string.IsNullOrWhiteSpace(nodeKey))
-        .Where(nodeKey => !IsWeatherNode(nodeKey))
-        .Where(NodeHasAnyAnalysisData)
-        .Distinct(StringComparer.OrdinalIgnoreCase)
-        .ToList();
-}
-```
-
-***
-
-# KROK 3 — Oprava unavailable state property
-
-## Najdi v `FacilityWorkbench.razor` tento řádek:
-
-```csharp
-private bool ShouldShowOverviewUnavailableState => !ShouldShowOverviewLoadingSkeleton && IsOverviewAvailabilityDecisionReady() && ShouldShowOverviewUnavailable();
-```
-
-## Nahraď ho přesně tímto:
-
-```csharp
-private bool ShouldShowOverviewUnavailableState => !ShouldShowOverviewLoadingSkeleton && ShouldShowOverviewUnavailable();
-```
-
-***
-
-# KROK 4 — Oprava `ShouldShowOverviewUnavailable()`
-
-## Najdi v `FacilityWorkbench.razor` tuto metodu:
-
-```csharp
-private bool ShouldShowOverviewUnavailable()
-```
-
-## Smaž CELÉ aktuální tělo této metody
-
-a nahraď ho přesně tímto:
-
-```csharp
-private bool ShouldShowOverviewUnavailable()
-{
-    if (!HasSelectedNodes)
-    {
-        return false;
-    }
-
-    var aggregateScopeNodeKeys = GetSelectionAggregateNodeKeys();
-    if (aggregateScopeNodeKeys.Count == 0)
-    {
-        return true;
-    }
-
-    return _selectionAggregateOverview is null || _selectionAggregateOverview.Summary is null;
-}
-```
-
-***
-
-# KROK 5 — Oprava `ResolveOverviewUnavailableMessage()`
-
-## Najdi v `FacilityWorkbench.razor` tuto metodu:
-
-```csharp
-private string ResolveOverviewUnavailableMessage()
-```
-
-## Smaž CELÉ aktuální tělo této metody
-
-a nahraď ho přesně tímto:
-
-```csharp
-private string ResolveOverviewUnavailableMessage()
-{
-    var aggregateScopeNodeKeys = GetSelectionAggregateNodeKeys();
-    if (aggregateScopeNodeKeys.Count == 0)
-    {
-        return "The current selection has no nodes with compatible analytics data for aggregate overview.";
-    }
-
-    if (!string.IsNullOrWhiteSpace(_selectionAggregateOverview?.Message))
-    {
-        return _selectionAggregateOverview.Message;
-    }
-
-    return "Aggregate overview data is unavailable for the current interval.";
-}
-```
-
-***
-
-# KROK 6 — Nech `Selected` jako skutečný `SelectionCount`
-
-Tento krok je kontrolní.
-
-## V `FacilityWorkbench.razor` najdi tento blok:
-
-```razor
-<div class="cp-sel-donut-center" aria-hidden="true">
-    <div class="cp-sel-count-big">@SelectionCount</div>
-    <div class="cp-sel-count-label">Selected</div>
-</div>
-```
-
-## Pokud je tam jiný výraz než `@SelectionCount`, vrať ho přesně na tento blok:
-
-```razor
-<div class="cp-sel-donut-center" aria-hidden="true">
-    <div class="cp-sel-count-big">@SelectionCount</div>
-    <div class="cp-sel-count-label">Selected</div>
-</div>
-```
-
-***
-
-# KROK 7 — Oprava wrapperu Analysis části, aby tabs strip nebyl ve stejné outer card
-
-## V `FacilityWorkbench.razor` najdi tento řádek:
-
-```razor
-<div class="overview-widget overview-widget-soft analysis-workspace-shell">
-```
-
-## Nahraď ho přesně tímto:
-
-```razor
-<div class="analysis-workspace-shell">
-```
-
-***
-
-# KROK 8 — Oprava CSS pro skutečně samostatný tabs bullet
-
-## V `FacilityWorkbench.razor.css` najdi tento blok:
-
-```css
-.analysis-workspace-shell {
-    border-style: solid;
-    gap: 0.72rem;
-}
-```
-
-## Nahraď ho přesně tímto:
-
-```css
-.analysis-workspace-shell {
-    display: flex;
-    flex-direction: column;
-    gap: 0.72rem;
-}
-```
-
-***
-
-## V `FacilityWorkbench.razor.css` najdi tento blok:
-
-```css
-.analysis-module-strip {
-    margin-top: 0.18rem;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.42rem;
-    width: 100%;
-    padding: 0.48rem 0.56rem;
-    border: 1px solid var(--wb-border);
-    border-radius: 0.95rem;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 251, 255, 0.96) 100%);
-    box-shadow: var(--wb-shadow-soft);
-}
-```
-
-## Nahraď ho přesně tímto:
-
-```css
-.analysis-module-strip {
-    margin-top: 0.72rem;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.42rem;
-    width: auto;
-    max-width: 100%;
-}
-```
-
-***
-
-## V `FacilityWorkbench.razor.css` najdi tento blok:
-
-```css
-.analysis-control-tabs-row {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    margin-top: 0;
-    width: 100%;
-}
-```
-
-## Nahraď ho přesně tímto:
-
-```css
-.analysis-control-tabs-row {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    margin-top: 0;
-}
-```
-
-***
-
-## V `FacilityWorkbench.razor.css` najdi tento blok:
-
-```css
-.analysis-module-nav {
-    width: auto;
-    max-width: 100%;
-    border-color: #d7e2f1;
-    background: rgba(255, 255, 255, 0.9);
-}
-```
-
-## Nahraď ho přesně tímto:
-
-```css
-.analysis-module-nav {
-    width: auto;
-    max-width: 100%;
-}
-```
-
-***
-
-# KROK 9 — Build a nic dalšího
-
-Po všech replace:
-
-1.  build
-2.  nic dalšího neupravuj
-3.  neposílej další návrhy
-
-***
-
-# Akceptační kritéria
-
-Task je hotový jen pokud:
-
-1.  Selection karta ukazuje:
-    *   `Selected = skutečný SelectionCount`
-2.  Pro selection typu `19 selected` už nevznikne stav:
-    *   `16 with data`
-    *   `2 no data`
-3.  První výběr nodeů už neskončí blank / chybným overview stavem
-4.  `Overview unavailable` se zobrazí jen když aggregate scope opravdu neexistuje nebo overview result opravdu není k dispozici
-5.  `Trend / Baseline / Scatter / Power / EUI` je vizuálně samostatný bullet a nesdílí outer border s `Data Source + Signal`
-6.  Build projde
-
-***
-
-# Povinný výstup agenta
-
-Na konci napiš:
-
-1.  že jsi přesně nahradil `BuildSelectionSummaryClassificationSnapshot()`
-2.  že jsi přesně nahradil `GetSelectionAggregateNodeKeys()`
-3.  že jsi přesně nahradil `ShouldShowOverviewUnavailableState`
-4.  že jsi přesně nahradil `ShouldShowOverviewUnavailable()`
-5.  že jsi přesně nahradil `ResolveOverviewUnavailableMessage()`
-6.  že jsi přesně nahradil Analysis wrapper a CSS bloky pro tabs strip
-7.  jestli build prošel
-
-Pokud toto nevyjmenuješ, task je nesplněný.
-
-````
-
----
-
-# Krátký prompt pro agenta
-
-```text
-Otevři CURRENT_TASK.md a udělej přesně jen uvedené replace operace.
-
-Důležité:
-- nic nevymýšlej
-- nic nerefactoruj
-- nic neopravuj bokem
-- jen najdi přesné bloky a nahraď je přesně zadaným kódem
-- scope:
-  - FacilityWorkbench.razor
-  - FacilityWorkbench.razor.css
-
-Na konci povinně napiš:
-1. které bloky jsi nahradil
-2. že jsi nic dalšího neměnil
-3. jestli build prošel
+## Goal
+Simulate the state as if the current thesis dataset CSV files had been imported manually, by migrating active seeded bindings into app-local imported storage and removing runtime dependence on external dataset disk paths.
+
+## Problem
+The intended final product should run on hosted server-side .db files and uploaded CSV runtime data only.
+However, the current runtime still appears to mix:
+- seeded bindings resolved from external dataset paths
+- app-local imported bindings stored under App_Data/facility-imports
+
+We need to use the existing import/binding model to migrate the currently used seed-bound CSV files into app-local storage.
+
+## Desired direction
+Implement a narrow one-time migration milestone only.
+Do not redesign the architecture.
+Do not implement users/auth yet.
+Do not implement multi-facility hardening yet.
+
+## Scope
+Implementation only.
+
+Read first:
+- AI/AGENT_CONTEXT.md
+- AI/CURRENT_TASK.md
+- AI/WORKLOG.md
+- AI/DATA_VISUALIZATION_AUDIT.md
+
+Then inspect at minimum:
+- DiplomovaPrace/Services/FacilityDataBindingRegistry.cs
+- DiplomovaPrace/Services/FacilityNodeSeriesImportService.cs
+- DiplomovaPrace/Services/FacilityEditorStateService.cs
+- DiplomovaPrace/Services/NodeAnalyticsPreviewService.cs
+- DiplomovaPrace/Program.cs
+- DiplomovaPrace/appsettings.json
+- DiplomovaPrace/appsettings.Local.json
+- any binding/state types needed for imported binding persistence
+
+## Required implementation
+1. Enumerate currently active seeded bindings for the current active facility/runtime.
+2. For each seeded binding:
+   - resolve the current source CSV file using the existing seeded binding path resolution
+   - convert/copy it into the same app-local imported storage format used by manual node CSV import
+   - persist imported binding metadata in the same way as manual import
+3. Only after successful per-binding migration, suppress/tombstone the old seeded binding.
+4. Produce a migration result summary:
+   - migrated
+   - skipped
+   - failed
+   - unresolved source paths
+5. Validate that runtime analytics still works after migration.
+6. If safe, perform one verification run with external dataset binding paths disabled/empty (or otherwise clearly bypassed) to confirm hosting-readiness direction.
+
+## Do NOT change
+- Do not redesign the whole data architecture
+- Do not implement multi-facility support yet
+- Do not implement users/auth yet
+- Do not change FacilityWorkbench UI
+- Do not broaden into deployment implementation yet
+
+## Constraints
+- Keep the migration narrow and reversible
+- Use the existing app-local import/binding persistence model whenever possible
+- Do not tombstone old bindings before successful imported replacement exists
+- Build must pass
+- Update AI/WORKLOG.md after implementation
+
+## Guardrails
+- This is a one-time dataset-decoupling milestone, not a broad data rewrite
+- Focus on removing runtime dependency on external dataset disk paths
+- If any binding cannot be migrated cleanly, stop and report it explicitly

@@ -1,11 +1,8 @@
 @rendermode InteractiveServer
-@inject IBuildingConfigurationService ConfigService
-@inject IActiveBuildingService ActiveBuildingService
-@implements IDisposable
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">Buildings Management</a>
+        <a class="navbar-brand" href="">Facility Workbench</a>
     </div>
 </div>
 
@@ -14,53 +11,12 @@
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="nav flex-column nav-full pb-3">
 
-        @* ── Globální výběr aktivní budovy ──────────────── *@
-        <div class="px-3 mb-3 mt-2" @onclick:stopPropagation="true">
-            <span class="text-white-50 small fw-bold text-uppercase mb-2 d-block">Legacy</span>
-            <Radzen.Blazor.RadzenDropDown 
-                    @key="_dropdownKey"
-                    TValue="string"
-                    Data="@_buildings"
-                    TextProperty="Name"
-                    ValueProperty="Id"
-                    Value="@ActiveBuildingService.ActiveBuildingId"
-                    ValueChanged="(string id) => SelectBuilding(id)"
-                    AllowFiltering="true"
-                    FilterCaseSensitivity="Radzen.FilterCaseSensitivity.CaseInsensitive"
-                    Placeholder="-- Vyhledat budovu --"
-                    class="w-100" />
-        </div>
-
         <hr class="text-white-50 mx-3 my-2" />
-        <div class="px-3 text-info small text-uppercase fw-bold mb-1 mt-2">Hlavní pohled</div>
+        <div class="px-3 text-info small text-uppercase fw-bold mb-1 mt-2">Hlavní produktový pohled</div>
 
         <div class="nav-item px-3 mb-2">
             <NavLink class="nav-link border border-info rounded" href="facility" Match="NavLinkMatch.All" style="background-color: rgba(13, 202, 240, 0.1);">
                 <span class="bi bi-diagram-2 text-info" aria-hidden="true"></span> Facility Schematic
-            </NavLink>
-        </div>
-
-        <hr class="text-white-50 mx-3 my-2" />
-        <div class="px-3 text-muted small text-uppercase fw-bold mb-1 mt-2">Analytika</div>
-
-        <div class="nav-item px-3 mb-1">
-            <NavLink class="nav-link" href="dashboard">
-                <span class="bi bi-speedometer2" aria-hidden="true"></span> Přehled budovy
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3 mb-1">
-            <NavLink class="nav-link" href="kpi">
-                <span class="bi bi-graph-up" aria-hidden="true"></span> Analytika (KPI)
-            </NavLink>
-        </div>
-
-        <hr class="text-white-50 mx-3 my-2" />
-        <div class="px-3 text-muted small text-uppercase fw-bold mb-1 mt-2">Model objektu</div>
-
-        <div class="nav-item px-3 mb-2">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-diagram-3" aria-hidden="true"></span> Mapový pohled
             </NavLink>
         </div>
 
@@ -73,60 +29,9 @@
             </NavLink>
         </div>
 
-        <div class="nav-item px-3 mb-1">
-            <NavLink class="nav-link" href="editor">
-                <span class="bi bi-pencil-square" aria-hidden="true"></span> Konfigurace
-            </NavLink>
-        </div>
-        
-        <div class="nav-item px-3 mb-1 mt-2">
-            <button class="btn btn-link text-white-50 text-decoration-none nav-link px-3" @onclick="CreateBuilding">
-                <span class="bi bi-plus-circle" aria-hidden="true"></span> Přidat objekt
-            </button>
+        <div class="px-3 mt-2 mb-1 text-white-50 small">
+            Legacy/reference stránky (dashboard, kpi, building, editor) jsou dostupné pouze přes přímou URL.
         </div>
 
     </nav>
 </div>
-
-@code {
-    private List<DiplomovaPrace.Models.Configuration.BuildingConfig> _buildings = [];
-    private int _dropdownKey = 1;
-
-    protected override async Task OnInitializedAsync()
-    {
-        var all = await ConfigService.GetAllBuildingsAsync();
-        _buildings = all.ToList();
-
-        if (ActiveBuildingService.ActiveBuildingId is null && _buildings.Count > 0)
-            ActiveBuildingService.SetActiveBuilding(_buildings[0].Id);
-
-        ConfigService.OnConfigurationChanged         += OnDataChanged;
-        ActiveBuildingService.OnActiveBuildingChanged += OnDataChanged;
-    }
-
-    private async void OnDataChanged()
-    {
-        var all = await ConfigService.GetAllBuildingsAsync();
-        _buildings = all.ToList();
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private void SelectBuilding(string id)
-    {
-        ActiveBuildingService.SetActiveBuilding(id);
-        _dropdownKey++; // Force remount to clear filter text and any stuck popup state
-    }
-
-    private async Task CreateBuilding()
-    {
-        var created = await ConfigService.CreateBuildingAsync(
-            $"Budova {_buildings.Count + 1}", null, null);
-        ActiveBuildingService.SetActiveBuilding(created.Id);
-    }
-
-    public void Dispose()
-    {
-        ConfigService.OnConfigurationChanged          -= OnDataChanged;
-        ActiveBuildingService.OnActiveBuildingChanged -= OnDataChanged;
-    }
-}

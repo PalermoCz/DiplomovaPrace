@@ -31,15 +31,7 @@ builder.Services.AddDbContextFactory<AppDbContext>(options =>
 // ── Persistence vrstva ─────────────────────────────────────────────────────
 builder.Services.AddSingleton<IMeasurementRepository, EfMeasurementRepository>();
 
-// MeasurementPersistenceService: Singleton BackgroundService s Channel<T>
-// Registrujeme jako Singleton i jako IHostedService aby byl dostupný pro DI inject
-// (SimulationService ho potřebuje přímo — IHostedService interface nestačí).
-builder.Services.AddSingleton<MeasurementPersistenceService>();
-builder.Services.AddHostedService(sp => sp.GetRequiredService<MeasurementPersistenceService>());
-
 builder.Services.AddScoped<ICsvMeasurementImportService, CsvMeasurementImportService>();
-builder.Services.AddScoped<IKpiService, KpiService>();
-builder.Services.AddScoped<IBaselineService, BaselineService>();
 builder.Services.AddSingleton<FacilityEditorStateService>();
 builder.Services.AddScoped<FacilityNodeSeriesImportService>();
 builder.Services.AddScoped<FacilityImportService>();
@@ -51,17 +43,9 @@ builder.Services.AddScoped<NodeAnalyticsPreviewService>();
 builder.Services.AddScoped<FacilityAlertSummaryService>();
 
 // ── Aplikační služby ───────────────────────────────────────────────────────
-builder.Services.AddSingleton<IBuildingStateService, BuildingStateService>();
-builder.Services.AddSingleton<SimulationService>();
-builder.Services.AddSingleton<ISimulationService>(sp => sp.GetRequiredService<SimulationService>());
-builder.Services.AddHostedService(sp => sp.GetRequiredService<SimulationService>());
-
 // Editor služby (zůstávají in-memory — Fáze 2 DB migrace editoru přijde later)
 builder.Services.AddSingleton<IBuildingConfigurationService, InMemoryBuildingConfigurationService>();
 builder.Services.AddScoped<IEditorSessionService, EditorSessionService>();
-builder.Services.AddSingleton<IActiveBuildingService, ActiveBuildingService>();
-builder.Services.AddSingleton<ExpressionEvaluator>();
-builder.Services.AddSingleton<IDisplayRuleEvaluator, DisplayRuleEvaluator>();
 
 var app = builder.Build();
 

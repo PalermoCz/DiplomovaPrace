@@ -2210,7 +2210,6 @@
     
     // Facility Node State
     private DiplomovaPrace.Persistence.Schematic.SchematicNodeEntity? _selectedFacilityNode;
-    private DiplomovaPrace.Models.Kpi.MeterKpiResult? _nodePreviewData;
     private CuratedNodeSummary? _curatedPreviewData;
     private CuratedSelectionAggregateOverviewResult? _selectionAggregateOverview;
     private CuratedNodeDeviationSummary? _curatedDeviationData;
@@ -7646,7 +7645,6 @@ private static OverviewTreemapRect FindTailRect(IReadOnlyList<OverviewTreemapRec
             _selectionSignalAnalysisCts?.Dispose();
             _selectionSignalAnalysisCts = null;
             _activeAnalyticsSignalCodeValue = string.Empty;
-            _nodePreviewData = null;
             _curatedPreviewData = null;
             _curatedDeviationData = null;
             _curatedTimeSeriesData = null;
@@ -7688,14 +7686,13 @@ private static OverviewTreemapRect FindTailRect(IReadOnlyList<OverviewTreemapRec
         
         var shouldLoadAggregateOverview = aggregateNodeKeys.Count > 0;
         var shouldLoadCuratedFocusPreview = _isCuratedNode && _selectedFacilityNode is not null;
-        var shouldLoadMeterPreview = !_isCuratedNode && _selectedFacilityNode is not null && !string.IsNullOrWhiteSpace(_selectedFacilityNode.MeterUrn);
         var hasPotentialSignalAnalytics = GetSignalAnalyticsScopeNodeKeys().Count > 0;
         var shouldRefreshOverviewChart = aggregateNodeKeys.Count > 0 && CurrentOverviewSemanticsMode != OverviewAggregateSemanticsMode.Net;
         var loadingScopes = new Dictionary<string, (int CompletedSteps, int TotalSteps)>(StringComparer.OrdinalIgnoreCase)
         {
             ["scope"] = (0, 1),
             ["overview"] = (0, shouldLoadAggregateOverview ? 6 : 0),
-            ["focus-preview"] = (0, shouldLoadMeterPreview ? 4 : shouldLoadCuratedFocusPreview ? 1 : 0),
+            ["focus-preview"] = (0, shouldLoadCuratedFocusPreview ? 1 : 0),
             ["analysis"] = (0, hasPotentialSignalAnalytics ? 6 : 0),
             ["visual-chart"] = (0, shouldRefreshOverviewChart ? 1 : 0),
             ["visual-overlay"] = (0, 1)
@@ -7792,7 +7789,6 @@ private static OverviewTreemapRect FindTailRect(IReadOnlyList<OverviewTreemapRec
                 if (!string.IsNullOrWhiteSpace(customValidationMessage))
                 {
                     _customIntervalValidationMessage = customValidationMessage;
-                    _nodePreviewData = null;
                     _curatedPreviewData = null;
                     _curatedTimeSeriesData = null;
                     _curatedCompareTimeSeriesData = null;
@@ -7856,7 +7852,6 @@ private static OverviewTreemapRect FindTailRect(IReadOnlyList<OverviewTreemapRec
                     progress: CreateLoadingScopeProgress("overview"));
             }
 
-            _nodePreviewData = null;
             _curatedPreviewData = null;
             _curatedDeviationData = null;
             _curatedTimeSeriesData = null;
@@ -7916,33 +7911,6 @@ private static OverviewTreemapRect FindTailRect(IReadOnlyList<OverviewTreemapRec
                     SeedOverviewChartCache(aggregateNodeKeys, interval.From, interval.To, _timeSeriesMode, OverviewAggregateSemanticsMode.Net, _selectionAggregateOverview?.TimeSeries);
                     NormalizeOverviewContributorSelection();
                 }
-            }
-            else if (!skipPostRefresh && _selectedFacilityNode is not null && !string.IsNullOrWhiteSpace(_selectedFacilityNode.MeterUrn))
-            {
-                var previewTask = AnalyticsPreview.GetPreviewDataAsync(
-                    _selectedFacilityNode.MeterUrn,
-                    interval.From,
-                    interval.To,
-                    progress: CreateLoadingScopeProgress("focus-preview"));
-
-                if (aggregateTask is not null)
-                {
-                    await Task.WhenAll(previewTask, aggregateTask);
-                    _selectionAggregateOverview = aggregateTask.Result;
-                }
-                else
-                {
-                    _selectionAggregateOverview = null;
-                    await previewTask;
-                }
-
-                _nodePreviewData = previewTask.Result;
-                NormalizeOverviewSemanticsMode();
-                _overviewChartTimeSeriesData = CurrentOverviewSemanticsMode == OverviewAggregateSemanticsMode.Net
-                    ? _selectionAggregateOverview?.TimeSeries
-                    : null;
-                SeedOverviewChartCache(aggregateNodeKeys, interval.From, interval.To, _timeSeriesMode, OverviewAggregateSemanticsMode.Net, _selectionAggregateOverview?.TimeSeries);
-                NormalizeOverviewContributorSelection();
             }
             else if (!skipPostRefresh)
             {
@@ -9694,7 +9662,6 @@ private static OverviewTreemapRect FindTailRect(IReadOnlyList<OverviewTreemapRec
         _selectionSignalAvailability = new();
         _selectionSignalAnalyticsResult = null;
         _activeAnalyticsSignalCodeValue = string.Empty;
-        _nodePreviewData = null;
         _curatedPreviewData = null;
         _selectionAggregateOverview = null;
         _curatedDeviationData = null;

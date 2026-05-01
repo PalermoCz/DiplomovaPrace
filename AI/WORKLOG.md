@@ -1,5 +1,327 @@
 # Worklog
 
+---
+
+### Date
+[2026-05-01]
+
+### Task
+Narrowed final legacy editor-tail cleanup without session-contract changes
+
+### What changed
+
+**Deleted files:**
+- `DiplomovaPrace/Components/Pages/EditorView.razor`
+- `DiplomovaPrace/Components/Editor/EditorToolbar.razor`
+- `DiplomovaPrace/Components/Editor/EditorTreeNav.razor`
+- `DiplomovaPrace/Components/Editor/EditorCanvas.razor`
+- `DiplomovaPrace/Components/Editor/EditorPropertiesPanel.razor`
+- `DiplomovaPrace/Services/IActiveBuildingService.cs`
+- `DiplomovaPrace/Services/ActiveBuildingService.cs`
+- `DiplomovaPrace/Services/IKpiService.cs`
+- `DiplomovaPrace/Services/KpiService.cs`
+- `DiplomovaPrace/Services/StateColorMapper.cs`
+
+**`DiplomovaPrace/Components/Layout/NavMenu.razor`:**
+- Removed the remaining legacy building/config block (active building dropdown and related create-building action).
+- Removed the code-behind logic that depended on `IBuildingConfigurationService` and `IActiveBuildingService`.
+- Kept facility-first primary nav and import navigation intact.
+
+**`DiplomovaPrace/Services/NodeAnalyticsPreviewService.cs`:**
+- Removed `GetPreviewDataAsync(...)`.
+- Removed `IKpiService` constructor dependency and backing field.
+- Removed the now-unused `using DiplomovaPrace.Models.Kpi;` import.
+
+**`DiplomovaPrace/Program.cs`:**
+- Removed `builder.Services.AddScoped<IKpiService, KpiService>();`
+- Removed `builder.Services.AddSingleton<IActiveBuildingService, ActiveBuildingService>();`
+
+### Dependency check result
+- `EditorView.razor` was the last live caller of `NodeAnalyticsPreviewService.GetPreviewDataAsync(...)`.
+- After EditorView/editor-cluster deletion and NavMenu cleanup, no surviving source references to `IActiveBuildingService`/`ActiveBuildingService` remained.
+- `StateColorMapper` became unreferenced after deleting `EditorCanvas.razor`.
+
+### Guardrails respected
+- No changes to `IEditorSessionService`.
+- No changes to `EditorSessionService`.
+- No changes to `IBuildingConfigurationService`, `InMemoryBuildingConfigurationService`, or `BuildingConfiguration`.
+- No changes to `FacilityWorkbench`.
+- No changes to `ImportView`.
+
+### Build
+- `dotnet build` successful via workspace build task (`DiplomovaPrace net10.0 úspěšné`, total `Sestavení úspěšné`).
+
+---
+
+### Date
+[2026-05-01]
+
+### Task
+Narrow removal of confirmed-dead KPI preview path in FacilityWorkbench
+
+### Validation evidence
+- `ActiveBuildingService.ActiveBuildingId` is never set from `FacilityWorkbench`; it starts `null`.
+- `KpiService.GetDeviceAndBuildingAsync` returns `(null, null)` immediately when `ActiveBuildingId` is null/empty, causing `CalculateBasicKpiAsync` to return `MeterKpiResult` with `RecordCount = 0`.
+- `NodeAnalyticsPreviewService.GetPreviewDataAsync` sees `RecordCount == 0` and returns `null`.
+- `_nodePreviewData` (the assignment target) was never referenced in the FacilityWorkbench markup — only assigned in code.
+- Even if `ActiveBuildingId` were set, `InMemoryBuildingConfigurationService` holds only the old demo building with traditional device IDs, which would never match facility-first MeterUrn values (e.g. "V.Z82").
+- **Conclusion: the path is confirmed dead.**
+
+### What changed
+
+**`DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`:**
+- Removed `private DiplomovaPrace.Models.Kpi.MeterKpiResult? _nodePreviewData;` field declaration.
+- Removed all five `_nodePreviewData = null;` assignment sites (in the no-selection clear block, custom interval validation block, general pre-branch reset block, and `ClearPreviewState()`).
+- Removed `var shouldLoadMeterPreview = ...` variable.
+- Updated `loadingScopes["focus-preview"]` ternary: removed the `shouldLoadMeterPreview ? 4 :` arm; now just `shouldLoadCuratedFocusPreview ? 1 : 0`.
+- Removed the entire `else if (!skipPostRefresh && _selectedFacilityNode is not null && !string.IsNullOrWhiteSpace(_selectedFacilityNode.MeterUrn))` branch that called `AnalyticsPreview.GetPreviewDataAsync`.
+
+### What was NOT changed
+- `NodeAnalyticsPreviewService.GetPreviewDataAsync` — kept because `EditorView.razor` (line 377) still calls it.
+- `KpiService` / `IKpiService` — kept because they still have at least one live caller (`EditorView` → `GetPreviewDataAsync`).
+- `IActiveBuildingService` / `ActiveBuildingService` — out of scope.
+- `IBuildingConfigurationService` / `InMemoryBuildingConfigurationService` — out of scope.
+- `EditorView.razor` — untouched per task constraints.
+- All other FacilityWorkbench logic — untouched.
+
+### Build
+- `dotnet build` successful (6.3 s, zero errors, zero warnings).
+
+### What remains for the next step
+- `NodeAnalyticsPreviewService.GetPreviewDataAsync` still exists and is used by `EditorView.razor`.
+- `KpiService` / `IKpiService` still registered and used via the EditorView path.
+- If/when `EditorView` is cleaned up or removed as a legacy surface, `GetPreviewDataAsync` and its KpiService chain can be removed at that time.
+- `IActiveBuildingService` / `ActiveBuildingService` / `IBuildingConfigurationService` / `InMemoryBuildingConfigurationService` remain intact for now — separate future cleanup scope.
+- Legacy documentation/comments that mention the non-curated meter preview path can be cleaned in a future documentation-focused pass.
+
+---
+
+### Date
+[2026-05-01]
+
+### Task
+Třetí safe legacy service-layer deletion bundle — odstranění simulation/state persistence tria
+
+### What changed
+
+**Deleted files:**
+- `DiplomovaPrace/Services/SimulationService.cs`
+- `DiplomovaPrace/Services/ISimulationService.cs`
+- `DiplomovaPrace/Services/MeasurementPersistenceService.cs`
+- `DiplomovaPrace/Services/BuildingStateService.cs`
+- `DiplomovaPrace/Services/IBuildingStateService.cs`
+
+**`DiplomovaPrace/Program.cs`:**
+- Removed `builder.Services.AddSingleton<MeasurementPersistenceService>();`
+- Removed `builder.Services.AddHostedService(sp => sp.GetRequiredService<MeasurementPersistenceService>());`
+- Removed `builder.Services.AddSingleton<IBuildingStateService, BuildingStateService>();`
+- Removed `builder.Services.AddSingleton<SimulationService>();`
+- Removed `builder.Services.AddSingleton<ISimulationService>(sp => sp.GetRequiredService<SimulationService>());`
+- Removed `builder.Services.AddHostedService(sp => sp.GetRequiredService<SimulationService>());`
+
+### Dependency check result
+- `CsvMeasurementImportService` has no remaining `IBuildingStateService` dependency.
+- `EditorView` has no remaining `IBuildingStateService` dependency.
+- `MeasurementPersistenceService` had no active callers after simulated DB writes were disabled earlier; only `Program.cs` still registered it and `SimulationService` still accepted it as an optional constructor dependency.
+- No active surviving FacilityWorkbench/import/editor product path referenced `SimulationService`, `ISimulationService`, `BuildingStateService`, or `IBuildingStateService`.
+
+### Build
+- `dotnet build` successful via the workspace build task after the deletion bundle.
+
+### Left intentionally for later
+- `BuildingConfiguration.cs` and the `IBuildingConfigurationService` / `InMemoryBuildingConfigurationService` path remain intact per scope.
+- `IActiveBuildingService` / `ActiveBuildingService` remain intact per scope.
+- `StateColorMapper` remains intact per scope.
+- Legacy documentation/comments that still describe the removed building-state/simulation architecture can be cleaned separately in a later documentation-focused pass.
+
+---
+
+### Date
+[2026-05-01]
+
+### Task
+Minimal decoupling step before the third legacy service-layer deletion bundle
+
+### What changed
+
+**`DiplomovaPrace/Services/CsvMeasurementImportService.cs`:**
+- Removed the `IBuildingStateService` constructor dependency and backing field.
+- Removed the legacy device-whitelist build that walked `BuildingStateService.Building -> Floors -> Rooms -> Devices`.
+- Removed the skip path that rejected CSV rows when `DeviceId` was not present in the old demo-building metering graph.
+- Kept the import contract otherwise unchanged: valid rows are still parsed and batch-saved to `IMeasurementRepository`, and `UnknownDevices` now returns an empty list because that legacy whitelist validation no longer exists.
+
+**`DiplomovaPrace/Components/Pages/EditorView.razor`:**
+- Removed `@inject IBuildingStateService StateService` because it became unused.
+- Removed the dead `ConfigService.ToBuildingDomainModel(...)` + `StateService.ReplaceBuilding(...)` publish path from `HandleApplyToVisualization()`.
+- Kept the existing validation gate and `SessionService.MarkPublished()` state transition intact.
+- Updated the success toast so it no longer claims publication to the removed `/building` visualization route.
+
+### Dependency check result
+- No unexpected live dependency required a replacement architecture.
+- `CsvMeasurementImportService` used `IBuildingStateService` only for the legacy demo-building metering whitelist.
+- `EditorView` used `IBuildingStateService` only for the dead runtime publish path.
+
+### Build
+- `dotnet build` successful via the workspace build task after the decoupling edits.
+
+### What remains for the next bundle
+- `IBuildingStateService` / `BuildingStateService` still remain registered and implemented.
+- `SimulationService` still depends on `IBuildingStateService` and remains intentionally untouched in this milestone.
+- `MeasurementPersistenceService` remains intentionally untouched in this milestone.
+- Legacy comments/contracts that still describe `ReplaceBuilding()` as the editor publication bridge can be cleaned up together with the next deletion bundle if that bundle removes the remaining legacy service layer.
+
+---
+
+### Date
+[2026-05-01]
+
+### Task
+Druhý narrow legacy deletion milestone — odstranění old building-view UI clusteru a jeho helper služeb
+
+### What changed
+
+**Deleted files:**
+- `DiplomovaPrace/Components/Pages/BuildingView.razor` — legacy building-view page, accessible only via direct URL
+- `DiplomovaPrace/Components/Building/BuildingViewer.razor` — top-level component orchestrating the old SVG building view
+- `DiplomovaPrace/Components/Building/FloorPlan.razor` — SVG floor plan renderer
+- `DiplomovaPrace/Components/Building/RoomShape.razor` — SVG room shape component
+- `DiplomovaPrace/Components/Building/DeviceIcon.razor` — SVG device icon component
+- `DiplomovaPrace/Components/Building/DeviceDetailPanel.razor` — device detail sidebar panel
+- `DiplomovaPrace/Components/Building/FloorSummaryPanel.razor` — floor summary sidebar panel
+- `DiplomovaPrace/Components/Building/RoomSummaryPanel.razor` — room summary sidebar panel
+- `DiplomovaPrace/Components/Building/ExpressionPanel.razor` — expression calculator panel
+- `DiplomovaPrace/Services/ExpressionEvaluator.cs` — expression evaluation helper, only used by ExpressionPanel
+- `DiplomovaPrace/Services/DisplayRuleEvaluator.cs` — display rule helper (IDisplayRuleEvaluator), only used by RoomShape and DeviceIcon
+
+**Program.cs changes:**
+- Removed `builder.Services.AddSingleton<ExpressionEvaluator>();`
+- Removed `builder.Services.AddSingleton<IDisplayRuleEvaluator, DisplayRuleEvaluator>();`
+
+### Dependency check result
+- `ExpressionEvaluator` / `IDisplayRuleEvaluator` were only referenced inside the deleted cluster files — no live surface dependency found.
+- `FacilityTimeSeriesPanel`, `FacilityTemperatureLoadScatterPanel`, `FacilityLoadDurationCurvePanel`, `FacilityCompareTimeSeriesPanel` in the Building folder are NOT part of the old cluster and were intentionally kept.
+- NavMenu had no nav link to `/building`; the route was accessible only via direct URL.
+
+### Build
+- `dotnet build` successful ("Sestavení úspěšné za 3,6s").
+
+### Leftover legacy work intentionally left for later
+- `SimulationService` — still runs as IHostedService with its `_persistence` field; full removal is a separate milestone.
+- `MeasurementPersistenceService` — still registered; can be cleaned up together with SimulationService.
+- `IBuildingStateService.AddMeasurement` in-memory ring buffer path — still present in the interface and BuildingStateService; deferred.
+- `BuildingStateService` / `IBuildingStateService` — kept per task scope.
+- `IBuildingConfigurationService` / `InMemoryBuildingConfigurationService` — kept per task scope.
+- `IActiveBuildingService` / `ActiveBuildingService` — kept per task scope.
+- `StateColorMapper` — kept per task scope.
+- Nav/layout/editor/import surfaces — untouched per task scope.
+
+---
+
+### Date
+[2026-05-01]
+
+### Task
+Containment fix: zastavení zápisu simulovaných měření do reálné DB
+
+### What changed
+
+**`DiplomovaPrace/Services/SimulationService.cs`:**
+- Removed the two lines in `SimulateTick()` that called `_persistence?.Enqueue(measurement)`.
+- The in-memory ring buffer call (`_stateService.AddMeasurement`) was kept intact — legacy BuildingView live charts are unaffected.
+- The `_persistence` field and constructor parameter remain in the class (not injected to anything harmful, just unused from a write perspective).
+
+### Write path disabled
+
+Before:
+```
+SimulationService.SimulateTick()
+  → _stateService.AddMeasurement(device.Id, measurement)   // in-memory
+  → _persistence?.Enqueue(measurement)                     // ← DB write — REMOVED
+```
+After:
+```
+SimulationService.SimulateTick()
+  → _stateService.AddMeasurement(device.Id, measurement)   // in-memory only
+```
+
+### Guardrails kept
+- `MeasurementPersistenceService` registration and service left intact (CsvMeasurementImportService uses `IMeasurementRepository` directly — unaffected).
+- `SimulationService` still runs as IHostedService (BuildingView UI still gets live simulated state).
+- No changes to BuildingView, BuildingStateService, FacilityWorkbench, CsvMeasurementImportService, or any other service.
+
+### Build
+- `dotnet build` successful ("Sestavení úspěšné za 4,0s").
+
+### Leftover legacy work intentionally left for later
+- `SimulationService` itself (with its `_persistence` field/constructor) remains — full removal is a separate deletion sprint.
+- `MeasurementPersistenceService` remains registered — can be cleaned up when SimulationService is fully removed.
+- BuildingView / BuildingViewer component cluster removal: deferred per task scope.
+- `IBuildingStateService.AddMeasurement` in-memory ring buffer path: still active for BuildingView, deferred.
+
+---
+
+### Date
+[2026-05-01]
+
+### Task
+Implementační krok: první narrow legacy deletion milestone — odstranění legacy KPI/dashboard stacku
+
+### What changed
+
+**Deleted files:**
+- `DiplomovaPrace/Components/Pages/DashboardView.razor` — legacy Energetický Dashboard page, no live references outside this slice
+- `DiplomovaPrace/Components/Pages/KpiView.razor` — legacy KPI analytics page, no live references outside this slice
+- `DiplomovaPrace/Services/BaselineService.cs` — service used only by DashboardView
+- `DiplomovaPrace/Services/IBaselineService.cs` — interface used only by DashboardView and BaselineService
+- `DiplomovaPrace/Models/Kpi/BaselineModels.cs` — models (BaselineResult, BaselineStatus) used only by BaselineService and DashboardView
+
+**`DiplomovaPrace/Program.cs`:**
+- Removed DI registration: `builder.Services.AddScoped<IBaselineService, BaselineService>();`
+
+### Guardrails kept
+- `KpiService.cs` and `IKpiService.cs` were NOT deleted — they have a live dependency in `NodeAnalyticsPreviewService` (active FacilityWorkbench analytics service uses `IKpiService.CalculateBasicKpiAsync`)
+- `Models/Kpi/KpiModels.cs` was NOT deleted — `KpiQuery` and `MeterKpiResult` are used by `NodeAnalyticsPreviewService`
+- `IKpiService` DI registration in Program.cs was NOT removed for the same reason
+- No changes to BuildingView, BuildingStateService, SimulationService, EditorView, ImportView, FacilityWorkbench
+
+### Leftover legacy references for next bundle
+- `KpiService.cs` + `IKpiService.cs` + `Models/Kpi/KpiModels.cs` remain because `NodeAnalyticsPreviewService` depends on them. These can only be cleaned up if `NodeAnalyticsPreviewService` is refactored to use a more direct measurement query path, or if `IKpiService` is renamed/reframed as a shared measurement utility.
+- `AnalyticsProgressUpdate` model (used by both KpiService and NodeAnalyticsPreviewService) must also be kept.
+
+### Build
+- `dotnet build` successful after all changes.
+
+---
+
+### Date
+[2026-05-01]
+
+### Task
+Implementační krok: minimal navigation cleanup pro facility-first produktový směr
+
+### What changed
+
+**`DiplomovaPrace/Components/Layout/NavMenu.razor`:**
+- Updated top shell branding from `Buildings Management` to `Facility Workbench` to avoid legacy-first framing.
+- Kept one clear primary entry point to the main product surface (`/facility` as `Facility Schematic`).
+- Removed duplicate/confusing peer navigation path (`Mapový pohled`) that led to the same FacilityWorkbench route (`/`).
+- Removed legacy/reference pages from normal peer nav exposure:
+  - `/dashboard` (`Přehled budovy`)
+  - `/kpi` (`Analytika (KPI)`)
+  - `/editor` (`Konfigurace`)
+- Kept direct URL access to legacy pages intact and added a muted note that legacy/reference pages are available only via direct URL.
+- Reworded legacy building selector caption to `Referenční kontext (legacy)` so it does not compete with the facility-first product surface.
+
+### Guardrails kept
+- No changes to FacilityWorkbench behavior.
+- No changes to FacilityTopbar navigation.
+- No route/page removal.
+- No service/data flow/auth/deployment changes.
+- No broad layout redesign.
+
+### Build
+- `dotnet build` successful via the workspace build task after the navigation cleanup edits.
+
 ### Date
 [2026-04-29]
 

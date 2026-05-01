@@ -1,5 +1,4 @@
-﻿using DiplomovaPrace.Models.Kpi;
-using Microsoft.AspNetCore.Hosting;
+﻿using Microsoft.AspNetCore.Hosting;
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.IO;
@@ -817,7 +816,6 @@ public class NodeAnalyticsPreviewService
     private static readonly TimeSpan RawTimeSeriesThreshold = TimeSpan.FromDays(7);
     private static readonly TimeSpan HourlyTimeSeriesThreshold = TimeSpan.FromDays(45);
 
-    private readonly IKpiService _kpiService;
     private readonly IWebHostEnvironment _env;
     private readonly FacilityDataBindingRegistry _bindingRegistry;
     private readonly FacilityEditorStateService _facilityEditorStateService;
@@ -827,14 +825,12 @@ public class NodeAnalyticsPreviewService
     private readonly ConcurrentDictionary<string, (DateTime MinUtc, DateTime MaxUtc)> _timeDomainCache = new(StringComparer.OrdinalIgnoreCase);
 
     public NodeAnalyticsPreviewService(
-        IKpiService kpiService,
         IWebHostEnvironment env,
         FacilityDataBindingRegistry bindingRegistry,
         FacilityEditorStateService facilityEditorStateService,
         FacilityQueryService facilityQueryService,
         FacilityWeatherSourceResolver weatherSourceResolver)
     {
-        _kpiService = kpiService;
         _env = env;
         _bindingRegistry = bindingRegistry;
         _facilityEditorStateService = facilityEditorStateService;
@@ -858,23 +854,6 @@ public class NodeAnalyticsPreviewService
             CompletedSteps = completedSteps,
             TotalSteps = totalSteps
         });
-    }
-
-    public async Task<MeterKpiResult?> GetPreviewDataAsync(
-        string meterUrn,
-        DateTime from,
-        DateTime to,
-        CancellationToken ct = default,
-        IProgress<AnalyticsProgressUpdate>? progress = null)
-    {
-        var query = new KpiQuery(meterUrn, from, to);
-        var result = await _kpiService.CalculateBasicKpiAsync(query, ct, progress);
-
-        // Pokud nemĂˇme ĹľĂˇdnĂˇ data, vracĂ­me null
-        if (result.RecordCount == 0)
-            return null;
-
-        return result;
     }
 
     public bool SupportsComparePreview(string? nodeKey)
