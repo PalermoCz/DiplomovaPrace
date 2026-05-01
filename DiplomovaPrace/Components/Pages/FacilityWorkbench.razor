@@ -27,6 +27,10 @@
 
 @* Layout CSS is in FacilityWorkbench.razor.css (scoped) *@
 
+<CascadingAuthenticationState>
+    <FacilityTopbar OnMembersClicked="ToggleMembersPanel" />
+</CascadingAuthenticationState>
+
 <div class="facility-workbench">
 
     @* == FOCUS MODE OVERLAY ====================================== *@
@@ -2158,6 +2162,18 @@
             }
         </div> @* closes wb-analytics *@
     } @* closes else (dashboard mode) *@
+
+    @* == MEMBERS MANAGEMENT MODAL ================================ *@
+    @if (_showMembersPanel && _facility is not null)
+    {
+        <div class="wb-members-panel-overlay" @onclick="CloseMembersPanel">
+            <div class="wb-members-panel-modal" @onclick:stopPropagation="true">
+                <FacilityMembersPanel @ref="_membersPanelRef"
+                                     FacilityId="@_facility.Id"
+                                     OnClose="CloseMembersPanel" />
+            </div>
+        </div>
+    }
 </div> @* closes facility-workbench *@
 
 @code {
@@ -2377,6 +2393,8 @@
     // UI State
     private bool _isSchematicFullscreen = false;
     private bool _isEditModeOpen = false;
+    private bool _showMembersPanel = false;
+    private FacilityMembersPanel? _membersPanelRef;
     private string _editorActiveTool = "select";
     private string _selectedInterval = "last7d";
     private DateTime _customFromUtc = DateTime.UtcNow.Date.AddDays(-7);
@@ -9757,6 +9775,18 @@ private static OverviewTreemapRect FindTailRect(IReadOnlyList<OverviewTreemapRec
                 await GoHomeAsync();
             }));
         }
+    }
+
+    private void ToggleMembersPanel()
+    {
+        _showMembersPanel = !_showMembersPanel;
+        StateHasChanged();
+    }
+
+    private void CloseMembersPanel()
+    {
+        _showMembersPanel = false;
+        StateHasChanged();
     }
 
     private async Task ExitSchematicOverlayAsync()

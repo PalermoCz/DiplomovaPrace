@@ -17,11 +17,18 @@ namespace DiplomovaPrace.Pages
         private readonly DiplomovaPrace.Services.AuthenticationService _authService;
 
         public string? ErrorMessage { get; set; }
+        public bool ShowInviteSuccess { get; set; }
 
         public LoginModel(IDbContextFactory<AppDbContext> dbFactory, DiplomovaPrace.Services.AuthenticationService authService)
         {
             _dbFactory = dbFactory;
             _authService = authService;
+        }
+
+        public IActionResult OnGet(string? invited)
+        {
+            ShowInviteSuccess = invited == "1";
+            return Page();
         }
 
         public async Task<IActionResult> OnPostAsync(string email, string password)

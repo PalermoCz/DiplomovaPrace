@@ -6,6 +6,150 @@
 [2026-05-01]
 
 ### Task
+Members UX polish + explicit add-by-email validation + local dev account normalization
+
+### What changed
+
+**Topbar UX polish:**
+- Updated [DiplomovaPrace/Components/Layout/FacilityTopbar.razor](DiplomovaPrace/Components/Layout/FacilityTopbar.razor) to reduce crowding between Members, signed-in email, and Sign out.
+- Replaced inline hover JS styles with CSS classes for:
+  - clearer spacing and wrapping in `.account-actions`
+  - dedicated user chip `.topbar-user-chip` with email truncation
+  - consistent button/link styles for Members, Sign in, Sign out
+- Added responsive adjustments for narrower screens.
+
+**Members modal layout fixes:**
+- Updated [DiplomovaPrace/Components/Editor/FacilityMembersPanel.razor.css](DiplomovaPrace/Components/Editor/FacilityMembersPanel.razor.css):
+  - increased role select width and right padding (`.member-role-select`) to prevent text/chevron overlap
+  - improved row action layout with better min-width handling
+  - improved small-screen stacking for member rows and add form controls
+
+**Add-by-email validation UX:**
+- Updated [DiplomovaPrace/Services/FacilityMembersManagementService.cs](DiplomovaPrace/Services/FacilityMembersManagementService.cs):
+  - `AddMemberByEmailAsync` now returns explicit status result (`Success`, `InvalidEmailFormat`, `UserNotFound`, `AlreadyMember`) instead of nullable DTO.
+  - Added server-side email format validation/normalization.
+- Updated [DiplomovaPrace/Components/Editor/FacilityMembersPanel.razor](DiplomovaPrace/Components/Editor/FacilityMembersPanel.razor):
+  - switched add-email input to explicit inline validation feedback (no browser-native-only hint dependence)
+  - added status-specific messages for invalid format, user not found, and already member
+  - preserved successful add flow and CRUD behavior
+
+**Local dev account normalization at startup (Development only):**
+- Updated [DiplomovaPrace/Program.cs](DiplomovaPrace/Program.cs):
+  - added development startup normalization that:
+    - ensures `matej.klibr@tul.cz` exists and password is reset to `password`
+    - ensures `viewer@example.com` exists with password `password`
+    - ensures `admin@example.com` exists with password `password`
+    - ensures `viewer@example.com` is member of active facility with `Viewer` role
+    - ensures `admin@example.com` is member of active facility with `Admin` role
+  - added safe cleanup path for known throwaway account `copilot.topbar.check2@example.com` only when it has no facility memberships
+  - logs normalization summary on startup
+
+**Safeguards and scope integrity:**
+- Last-owner and self-removal safeguards remain unchanged.
+- No graph/data/binding restore logic touched.
+- No invitation flow added.
+- No auth architecture redesign.
+
+---
+
+### Date
+[2026-05-01]
+
+### Task
+Members management UI milestone — members listing, add by email, role change, removal with safeguards
+
+### What changed
+
+**New service:**
+- Added `DiplomovaPrace/Services/FacilityMembersManagementService.cs`.
+- Methods:
+  - `GetFacilityMembersAsync(int facilityId)` → lists members with email, role, created date
+  - `AddMemberByEmailAsync(int facilityId, int currentUserId, string email)` → finds existing user by email, validates not already member, creates membership with Viewer role
+  - `UpdateMemberRoleAsync(int facilityId, int membershipId, FacilityMembershipRole newRole, int currentUserId)` → checks: not removing last Owner, doesn't lock out current user, updates Role
+  - `RemoveMemberAsync(int facilityId, int membershipId, int currentUserId)` → checks: not last Owner, doesn't remove self, deletes membership
+  - Private helper: `CountOwnersByFacilityAsync(int facilityId)` → ensures last-Owner safeguard
+- Safeguards:
+  - Last-Owner protection: at least one Owner always remains in a facility
+  - Self-lockout protection: warns if trying to remove self from Owner/Admin role
+  - User lookup validation: rejects adding non-existent user or duplicate membership
+- DI Registration: Added to `Program.cs` as scoped service
+
+**New Blazor component:**
+- Added `DiplomovaPrace/Components/Editor/FacilityMembersPanel.razor`.
+- UI elements:
+  - Members table with columns: Email, Role (dropdown), Created date, Actions (Remove button)
+  - Add member form: email input + Add button
+  - Permission gating: component only visible to Owner/Admin
+  - Error/success messaging with validation feedback
+  - Loading state with spinner during async operations
+- Features:
+  - Lists current members with timestamps
+  - Role dropdown allows changing roles (with safeguards enforced server-side)
+  - Remove button with confirmation, locked for last Owner
+  - Automatic permission check based on resolved membership role
+  - Modal-friendly design with close button
+
+**New component styles:**
+- Added `DiplomovaPrace/Components/Editor/FacilityMembersPanel.razor.css`.
+- Scoped styles for:
+  - `.members-panel` layout (flex container)
+  - `.members-panel-header` with close button
+  - `.members-table` with Bootstrap table styling
+  - `.add-member-form` input section
+  - Role dropdown styling
+  - Confirmation dialog styling
+  - Loading spinner
+  - Error/success message styling
+
+**FacilityWorkbench integration:**
+- Added modal overlay to `DiplomovaPrace/Components/Pages/FacilityWorkbench.razor`
+  - `_showMembersPanel` state boolean
+  - `_membersPanelRef` component reference
+  - `ToggleMembersPanel()` method to show/hide
+  - `CloseMembersPanel()` method to close (called from modal backdrop or close button)
+  - Modal markup with overlay and component rendering
+- Added to `FacilityWorkbench.razor.css`:
+  - `.wb-members-panel-overlay` (semi-transparent backdrop)
+  - `.wb-members-panel-modal` (centered white modal box)
+  - Fade-in and slide-in animations
+
+**FacilityTopbar integration:**
+- Added to `DiplomovaPrace/Components/Layout/FacilityTopbar.razor`
+  - Members management button with `bi-people-fill` icon in right toolbar
+  - `_isMembersPanelOpen` state boolean
+  - `ToggleMembersPanel()` method (currently local; can be connected to parent via callback)
+  - Portal div for future button rendering coordination
+
+**Database schema:**
+- No changes: `FacilityMemberships` table already exists from previous milestone
+- All CRUD operations target existing schema
+
+**How it works:**
+1. User with Owner/Admin role sees members button in topbar
+2. Clicking button opens members panel modal in workbench
+3. Panel displays current facility members with email, role, created date
+4. User can:
+   - Add existing registered user by email (creates Viewer membership)
+   - Change member role via dropdown (Owner/Admin/Viewer)
+   - Remove member via button (blocked if last Owner or self)
+5. All operations validated server-side with permission checks
+6. Error messages guide user (e.g., "Cannot remove last Owner")
+7. Panel closes on backdrop click or close button
+
+**Access control:**
+- Panel only visible to Owner/Admin
+- Viewer role cannot open management UI
+- Self-removal prevented with warning message
+- Last-Owner protection prevents facility orphaning
+
+**Build status:** ✅ Successful
+
+---
+
+### Date
+[2026-05-01]
+
+### Task
 FacilityMembership milestone v1 — facility-scoped membership + minimal role gating
 
 ### What changed

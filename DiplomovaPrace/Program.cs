@@ -41,6 +41,7 @@ builder.Services.AddScoped<FacilityNodeSeriesImportService>();
 builder.Services.AddScoped<FacilityImportService>();
 builder.Services.AddScoped<FacilityQueryService>();
 builder.Services.AddScoped<FacilityMembershipService>();
+builder.Services.AddScoped<FacilityMembersManagementService>();
 // FacilityDataBindingRegistry: singleton loaded once on startup.
 builder.Services.AddSingleton<FacilityDataBindingRegistry>();
 builder.Services.AddSingleton<FacilityWeatherSourceResolver>();
@@ -54,6 +55,7 @@ builder.Services.AddScoped<IEditorSessionService, EditorSessionService>();
 
 // -- Auth shell v1: local email + password + cookies ------------------------
 builder.Services.AddScoped<AuthenticationService>();
+builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 builder.Services.AddAuthentication("CookieAuth")
     .AddCookie("CookieAuth", options =>
     {
@@ -88,6 +90,7 @@ var app = builder.Build();
     ");
     await AppDbSchemaBootstrap.EnsureFacilityMembershipSchemaAsync(db);
     await AppDbSchemaBootstrap.EnsurePhaseOneRelationshipSchemaAsync(db);
+    await AppDbSchemaBootstrap.EnsureInviteColumnsAsync(db);
     app.Logger.LogInformation("Database initialized: {Path}", dbPath);
 
     // -- Force migration: if flag is enabled, remove existing facility before seed --
@@ -113,6 +116,28 @@ var app = builder.Build();
     var facilityImporter = scope.ServiceProvider.GetRequiredService<FacilityImportService>();
     var envForFacility = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
     await facilityImporter.SeedAsync(envForFacility.ContentRootPath);
+
+    if (app.Environment.IsDevelopment())
+    {
+        var authService = scope.ServiceProvider.GetRequiredService<AuthenticationService>();
+        await using var dbDev = await factory.CreateDbContextAsync();
+        var normalization = await NormalizeLocalDevelopmentAccountsAsync(dbDev, authService, activeFacilityName);
+
+        app.Logger.LogInformation(
+            "Dev account normalization completed. UsersCreated={UsersCreated}, UsersUpdated={UsersUpdated}, MembershipsCreated={MembershipsCreated}, MembershipsUpdated={MembershipsUpdated}, RemovedThrowawayUsers={RemovedThrowawayUsers}",
+            normalization.UsersCreated,
+            normalization.UsersUpdated,
+            normalization.MembershipsCreated,
+            normalization.MembershipsUpdated,
+            normalization.RemovedThrowawayUsers.Count);
+
+        if (normalization.RemovedThrowawayUsers.Count > 0)
+        {
+            app.Logger.LogInformation(
+                "Dev account normalization removed throwaway users: {Emails}",
+                string.Join(", ", normalization.RemovedThrowawayUsers));
+        }
+    }
 }
 
 // Configure the HTTP request pipeline.
@@ -186,6 +211,152 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.Run();
+
+static async Task<DevAccountNormalizationResult> NormalizeLocalDevelopmentAccountsAsync(
+    AppDbContext db,
+    AuthenticationService authService,
+    string activeFacilityName,
+    CancellationToken ct = default)
+{
+    var result = new DevAccountNormalizationResult();
+
+    var activeFacilityId = await db.Facilities
+        .Where(f => f.Name == activeFacilityName)
+        .Select(f => (int?)f.Id)
+        .FirstOrDefaultAsync(ct);
+
+    if (!activeFacilityId.HasValue)
+    {
+        return result;
+    }
+
+    var matejUser = await EnsureUserWithPasswordAsync(db, authService, "matej.klibr@tul.cz", "password", result, ct);
+    var viewerUser = await EnsureUserWithPasswordAsync(db, authService, "viewer@example.com", "password", result, ct);
+    var adminUser = await EnsureUserWithPasswordAsync(db, authService, "admin@example.com", "password", result, ct);
+
+    // Persist new users first so generated IDs exist before membership upserts.
+    await db.SaveChangesAsync(ct);
+
+    await EnsureMembershipRoleAsync(db, activeFacilityId.Value, viewerUser.Id, FacilityMembershipRole.Viewer.ToString(), result, ct);
+    await EnsureMembershipRoleAsync(db, activeFacilityId.Value, adminUser.Id, FacilityMembershipRole.Admin.ToString(), result, ct);
+
+    await CleanupKnownThrowawayValidationUsersAsync(
+        db,
+        new[]
+        {
+            "copilot.topbar.check2@example.com"
+        },
+        result,
+        ct);
+
+    await db.SaveChangesAsync(ct);
+
+    return result;
+}
+
+static async Task<AppUserEntity> EnsureUserWithPasswordAsync(
+    AppDbContext db,
+    AuthenticationService authService,
+    string email,
+    string password,
+    DevAccountNormalizationResult result,
+    CancellationToken ct)
+{
+    var normalizedEmail = email.Trim().ToLowerInvariant();
+
+    var user = await db.AppUsers
+        .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail, ct);
+
+    if (user is null)
+    {
+        user = new AppUserEntity
+        {
+            Email = normalizedEmail,
+            PasswordHash = authService.HashPassword(password),
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        db.AppUsers.Add(user);
+        result.UsersCreated++;
+        return user;
+    }
+
+    user.Email = normalizedEmail;
+    user.PasswordHash = authService.HashPassword(password);
+    result.UsersUpdated++;
+    return user;
+}
+
+static async Task EnsureMembershipRoleAsync(
+    AppDbContext db,
+    int facilityId,
+    int appUserId,
+    string role,
+    DevAccountNormalizationResult result,
+    CancellationToken ct)
+{
+    var membership = await db.FacilityMemberships
+        .FirstOrDefaultAsync(m => m.FacilityId == facilityId && m.AppUserId == appUserId, ct);
+
+    if (membership is null)
+    {
+        db.FacilityMemberships.Add(new FacilityMembershipEntity
+        {
+            FacilityId = facilityId,
+            AppUserId = appUserId,
+            Role = role,
+            CreatedAtUtc = DateTime.UtcNow
+        });
+        result.MembershipsCreated++;
+        return;
+    }
+
+    if (!string.Equals(membership.Role, role, StringComparison.OrdinalIgnoreCase))
+    {
+        membership.Role = role;
+        result.MembershipsUpdated++;
+    }
+}
+
+static async Task CleanupKnownThrowawayValidationUsersAsync(
+    AppDbContext db,
+    IEnumerable<string> candidateEmails,
+    DevAccountNormalizationResult result,
+    CancellationToken ct)
+{
+    foreach (var email in candidateEmails)
+    {
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+
+        var user = await db.AppUsers
+            .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail, ct);
+
+        if (user is null)
+        {
+            continue;
+        }
+
+        var hasMembership = await db.FacilityMemberships
+            .AnyAsync(m => m.AppUserId == user.Id, ct);
+
+        if (hasMembership)
+        {
+            continue;
+        }
+
+        db.AppUsers.Remove(user);
+        result.RemovedThrowawayUsers.Add(normalizedEmail);
+    }
+}
+
+sealed class DevAccountNormalizationResult
+{
+    public int UsersCreated { get; set; }
+    public int UsersUpdated { get; set; }
+    public int MembershipsCreated { get; set; }
+    public int MembershipsUpdated { get; set; }
+    public List<string> RemovedThrowawayUsers { get; } = new();
+}
 
 
 

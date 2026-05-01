@@ -30,5 +30,14 @@ public class AppUserEntity
     /// <summary>Posledňí přihlášení — null pokud se ještě nikdy přihlásil.</summary>
     public DateTime? LastLoginUtc { get; set; }
 
+    /// <summary>Invite token for email-based account setup. Null when no pending invite.</summary>
+    public string? InviteToken { get; set; }
+
+    /// <summary>Expiry of the invite token. Null when no pending invite.</summary>
+    public DateTime? InviteTokenExpiresUtc { get; set; }
+
+    /// <summary>True when the user has set their own password (false for freshly-invited accounts).</summary>
+    public bool IsPasswordSet { get; set; } = true;
+
     public ICollection<FacilityMembershipEntity> FacilityMemberships { get; set; } = new List<FacilityMembershipEntity>();
 }

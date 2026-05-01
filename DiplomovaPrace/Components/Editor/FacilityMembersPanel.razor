@@ -1,0 +1,416 @@
+@using DiplomovaPrace.Services
+@using DiplomovaPrace.Persistence
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@inject FacilityMembersManagementService MembersService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager Navigation
+
+<div class="members-panel">
+    <div class="members-panel-header">
+        <h5 class="mb-0">
+            <i class="bi bi-people me-2"></i>
+            Facility Members
+        </h5>
+        <button type="button" class="btn-close" @onclick="OnCloseClick" aria-label="Close"></button>
+    </div>
+
+    <div class="members-panel-body">
+        @if (_isLoading)
+        {
+            <div class="d-flex align-items-center justify-content-center p-4">
+                <div class="spinner-border spinner-border-sm" role="status"></div>
+                <span class="ms-2">Loading members...</span>
+            </div>
+        }
+        else if (_members is null || _members.Count == 0)
+        {
+            <div class="alert alert-info m-3">
+                <i class="bi bi-info-circle me-2"></i>
+                No members yet.
+            </div>
+        }
+        else
+        {
+            <div class="members-list">
+                @foreach (var member in _members)
+                {
+                    <div class="member-item">
+                        <div class="member-info">
+                            <div class="member-email">@member.Email</div>
+                            <div class="member-meta">
+                                @if (_currentUserId == member.AppUserId)
+                                {
+                                    <span class="badge bg-secondary-subtle text-secondary me-2">You</span>
+                                }
+                                @if (!member.IsPasswordSet)
+                                {
+                                    <span class="badge bg-warning-subtle text-warning me-2" title="Invited — password not yet set">Invite pending</span>
+                                }
+                                <span class="text-muted small">@member.CreatedAtUtc.ToString("yyyy-MM-dd")</span>
+                            </div>
+                        </div>
+                        <div class="member-actions">
+                            @if (CanManageMembers)
+                            {
+                                <select class="form-select form-select-sm member-role-select"
+                                        value="@member.Role"
+                                        @onchange="@((ChangeEventArgs e) => OnRoleChangeAsync(member, e.Value?.ToString()))"
+                                        disabled="@(!CanChangeRole(member))"
+                                        aria-label="Change role">
+                                    <option value="Viewer">Viewer</option>
+                                    <option value="Admin">Admin</option>
+                                    @if (_currentUserRole == FacilityMembershipRole.Owner)
+                                    {
+                                        <option value="Owner">Owner</option>
+                                    }
+                                </select>
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger"
+                                        @onclick="@(() => OnRemoveMemberClick(member))"
+                                        disabled="@(!CanRemoveMember(member))"
+                                        title="@GetRemoveButtonTitle(member)"
+                                        aria-label="Remove member">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            }
+                            else
+                            {
+                                <div class="member-role-badge">
+                                    <span class="badge bg-secondary-subtle text-secondary">
+                                        @member.Role
+                                    </span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    @if (CanManageMembers)
+    {
+        <div class="members-panel-add">
+            <div class="add-member-form">
+                <div class="add-member-email-group">
+                    <input type="text"
+                           inputmode="email"
+                           autocomplete="email"
+                           class="form-control form-control-sm @(HasAddMemberEmailValidationError ? "is-invalid" : string.Empty)"
+                           value="@_addMemberEmail"
+                           @oninput="OnAddMemberEmailInput"
+                           placeholder="Email address"
+                           aria-label="Email address to add"
+                           aria-invalid="@HasAddMemberEmailValidationError" />
+                    @if (HasAddMemberEmailValidationError)
+                    {
+                        <div class="invalid-feedback d-block">
+                            @_addMemberEmailValidationMessage
+                        </div>
+                    }
+                </div>
+                <select class="form-select form-select-sm add-member-role-select"
+                        @bind="_addMemberRole"
+                        aria-label="Role for new member">
+                    <option value="Viewer">Viewer</option>
+                    <option value="Admin">Admin</option>
+                    @if (_currentUserRole == FacilityMembershipRole.Owner)
+                    {
+                        <option value="Owner">Owner</option>
+                    }
+                </select>
+                <button type="button"
+                        class="btn btn-sm btn-primary add-member-button"
+                        @onclick="OnAddMemberAsync"
+                        disabled="@(_isAddingMember || string.IsNullOrWhiteSpace(_addMemberEmail))"
+                        aria-label="Add member">
+                    <i class="bi bi-plus-lg me-1"></i>
+                    Add
+                </button>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(_addMemberMessage))
+            {
+                <div class="alert @_addMemberAlertClass mt-2 mb-0">
+                    @_addMemberMessage
+                </div>
+            }
+        </div>
+    }
+
+    @if (_showRemoveConfirm)
+    {
+        <div class="members-panel-modal-backdrop">
+            <div class="members-panel-modal">
+                <div class="modal-header">
+                    <h6 class="mb-0">Remove Member</h6>
+                </div>
+                <div class="modal-body">
+                    <p>Remove <strong>@_memberToRemove?.Email</strong> from this facility?</p>
+                    <p class="text-muted small mb-0">This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="OnRemoveCancel">Cancel</button>
+                    <button type="button" class="btn btn-danger btn-sm" @onclick="OnRemoveConfirmAsync" disabled="@_isRemovingMember">
+                        @if (_isRemovingMember)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        Remove
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int FacilityId { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    private List<FacilityMemberDto>? _members;
+    private int _currentUserId;
+    private FacilityMembershipRole _currentUserRole = FacilityMembershipRole.Viewer;
+    private bool _isLoading = true;
+    private bool _showRemoveConfirm = false;
+    private FacilityMemberDto? _memberToRemove;
+    private bool _isRemovingMember = false;
+
+    private string _addMemberEmail = string.Empty;
+    private string _addMemberRole = "Viewer";
+    private bool _isAddingMember = false;
+    private string _addMemberEmailValidationMessage = string.Empty;
+    private string _addMemberMessage = string.Empty;
+    private string _addMemberAlertClass = "alert-warning";
+
+    private bool HasAddMemberEmailValidationError => !string.IsNullOrWhiteSpace(_addMemberEmailValidationMessage);
+
+    public bool CanManageMembers { get; private set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            if (authState?.User?.Identity?.IsAuthenticated == true)
+            {
+                var userIdClaim = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (int.TryParse(userIdClaim, out var userId))
+                    _currentUserId = userId;
+            }
+
+            CanManageMembers = await MembersService.IsUserOwnerOrAdminAsync(FacilityId, _currentUserId);
+
+            var role = await MembersService.GetUserRoleAsync(FacilityId, _currentUserId);
+            _currentUserRole = role ?? FacilityMembershipRole.Viewer;
+
+            _members = await MembersService.GetMembersAsync(FacilityId);
+            _isLoading = false;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error initializing members panel: {ex.Message}");
+            _isLoading = false;
+        }
+    }
+
+    private bool CanChangeRole(FacilityMemberDto member)
+    {
+        if (!CanManageMembers) return false;
+        return member.AppUserId != _currentUserId;
+    }
+
+    private bool CanRemoveMember(FacilityMemberDto member)
+    {
+        if (!CanManageMembers) return false;
+        return member.AppUserId != _currentUserId;
+    }
+
+    private string GetRemoveButtonTitle(FacilityMemberDto member)
+    {
+        if (member.AppUserId == _currentUserId)
+            return "Cannot remove yourself";
+
+        if (member.Role == FacilityMembershipRole.Owner.ToString() &&
+            _members?.Count(m => m.Role == FacilityMembershipRole.Owner.ToString()) == 1)
+            return "Cannot remove last owner";
+
+        return "Remove member";
+    }
+
+    private async Task OnRoleChangeAsync(FacilityMemberDto member, string? newRole)
+    {
+        if (string.IsNullOrWhiteSpace(newRole)) return;
+
+        try
+        {
+            var result = await MembersService.UpdateMemberRoleAsync(member.MembershipId, newRole, _currentUserRole, _currentUserId);
+            if (result == UpdateRoleResult.Success && _members is not null)
+            {
+                var idx = _members.IndexOf(member);
+                if (idx >= 0)
+                    _members[idx] = member with { Role = newRole };
+            }
+            else if (result == UpdateRoleResult.InsufficientPermission)
+            {
+                _addMemberMessage = "You do not have permission to assign that role.";
+                _addMemberAlertClass = "alert-warning";
+            }
+            else if (result == UpdateRoleResult.CannotDemoteLastOwner)
+            {
+                _addMemberMessage = "Cannot demote the last Owner.";
+                _addMemberAlertClass = "alert-warning";
+            }
+            else if (result == UpdateRoleResult.SelfLockoutBlocked)
+            {
+                _addMemberMessage = "You cannot change your own role.";
+                _addMemberAlertClass = "alert-warning";
+            }
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error updating role: {ex.Message}");
+        }
+    }
+
+    private void OnRemoveMemberClick(FacilityMemberDto member)
+    {
+        _memberToRemove = member;
+        _showRemoveConfirm = true;
+    }
+
+    private void OnRemoveCancel()
+    {
+        _showRemoveConfirm = false;
+        _memberToRemove = null;
+    }
+
+    private async Task OnRemoveConfirmAsync()
+    {
+        if (_memberToRemove is null) return;
+
+        _isRemovingMember = true;
+        try
+        {
+            var result = await MembersService.RemoveMemberAsync(_memberToRemove.MembershipId, _currentUserId);
+
+            if (result == FacilityMemberRemovalResult.Success)
+            {
+                _members?.Remove(_memberToRemove);
+                _showRemoveConfirm = false;
+                _memberToRemove = null;
+            }
+            else
+            {
+                var errorMsg = result switch
+                {
+                    FacilityMemberRemovalResult.CannotRemoveSelf => "Cannot remove yourself",
+                    FacilityMemberRemovalResult.CannotRemoveLastOwner => "Cannot remove last owner",
+                    FacilityMemberRemovalResult.MemberNotFound => "Member not found",
+                    _ => "Removal failed"
+                };
+                _addMemberMessage = $"Error: {errorMsg}";
+                _addMemberAlertClass = "alert-warning";
+            }
+        }
+        catch (Exception ex)
+        {
+            _addMemberMessage = $"Error: {ex.Message}";
+            _addMemberAlertClass = "alert-warning";
+        }
+        finally
+        {
+            _isRemovingMember = false;
+        }
+    }
+
+    private void OnAddMemberEmailInput(ChangeEventArgs args)
+    {
+        _addMemberEmail = args.Value?.ToString() ?? string.Empty;
+        _addMemberEmailValidationMessage = string.Empty;
+    }
+
+    private async Task OnAddMemberAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_addMemberEmail)) return;
+
+        _isAddingMember = true;
+        _addMemberEmailValidationMessage = string.Empty;
+        _addMemberMessage = string.Empty;
+
+        try
+        {
+            var baseUrl = Navigation.BaseUri.TrimEnd('/');
+            var result = await MembersService.AddMemberByEmailAsync(
+                FacilityId, _addMemberEmail, _addMemberRole, _currentUserRole, baseUrl);
+
+            switch (result.Status)
+            {
+                case AddMemberByEmailStatus.Success when result.Member is not null:
+                    _members ??= new List<FacilityMemberDto>();
+                    _members.Insert(0, result.Member);
+                    _addMemberEmail = string.Empty;
+                    _addMemberRole = "Viewer";
+                    _addMemberMessage = $"Added {result.Member.Email} as {result.Member.Role}.";
+                    _addMemberAlertClass = "alert-success";
+                    break;
+
+                case AddMemberByEmailStatus.InviteSent when result.Member is not null:
+                    _members ??= new List<FacilityMemberDto>();
+                    _members.Insert(0, result.Member);
+                    _addMemberEmail = string.Empty;
+                    _addMemberRole = "Viewer";
+                    _addMemberMessage = $"Invite sent to {result.Member.Email}. They will receive an email to set their password.";
+                    _addMemberAlertClass = "alert-success";
+                    break;
+
+                case AddMemberByEmailStatus.EmailDeliveryFailed when result.Member is not null:
+                    _members ??= new List<FacilityMemberDto>();
+                    _members.Insert(0, result.Member);
+                    _addMemberEmail = string.Empty;
+                    _addMemberRole = "Viewer";
+                    _addMemberMessage = $"Account created for {result.Member.Email}, but invite email delivery failed.";
+                    _addMemberAlertClass = "alert-warning";
+                    break;
+
+                case AddMemberByEmailStatus.InvalidEmailFormat:
+                    // Show only the inline field error — no secondary alert
+                    _addMemberEmailValidationMessage = "Enter a valid email format (for example: name@example.com).";
+                    break;
+
+                case AddMemberByEmailStatus.AlreadyMember:
+                    _addMemberMessage = "This user is already a member of the facility.";
+                    _addMemberAlertClass = "alert-info";
+                    break;
+
+                case AddMemberByEmailStatus.InsufficientPermission:
+                    _addMemberMessage = "You do not have permission to assign that role.";
+                    _addMemberAlertClass = "alert-warning";
+                    break;
+
+                default:
+                    _addMemberMessage = "Unable to add this member.";
+                    _addMemberAlertClass = "alert-warning";
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            _addMemberMessage = $"Error: {ex.Message}";
+            _addMemberAlertClass = "alert-warning";
+        }
+        finally
+        {
+            _isAddingMember = false;
+        }
+    }
+
+    private async Task OnCloseClick()
+    {
+        await OnClose.InvokeAsync();
+    }
+}

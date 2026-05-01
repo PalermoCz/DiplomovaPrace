@@ -33,6 +33,30 @@ public static class AppDbSchemaBootstrap
         ");
     }
 
+    public static async Task EnsureInviteColumnsAsync(AppDbContext db, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(db);
+
+        await db.Database.OpenConnectionAsync(ct);
+        try
+        {
+            var columns = await GetColumnNamesAsync(db, "AppUsers", ct);
+
+            if (!columns.Contains("InviteToken", StringComparer.OrdinalIgnoreCase))
+                await db.Database.ExecuteSqlRawAsync("ALTER TABLE \"AppUsers\" ADD COLUMN \"InviteToken\" TEXT NULL");
+
+            if (!columns.Contains("InviteTokenExpiresUtc", StringComparer.OrdinalIgnoreCase))
+                await db.Database.ExecuteSqlRawAsync("ALTER TABLE \"AppUsers\" ADD COLUMN \"InviteTokenExpiresUtc\" TEXT NULL");
+
+            if (!columns.Contains("IsPasswordSet", StringComparer.OrdinalIgnoreCase))
+                await db.Database.ExecuteSqlRawAsync("ALTER TABLE \"AppUsers\" ADD COLUMN \"IsPasswordSet\" INTEGER NOT NULL DEFAULT 1");
+        }
+        finally
+        {
+            await db.Database.CloseConnectionAsync();
+        }
+    }
+
     public static async Task EnsurePhaseOneRelationshipSchemaAsync(AppDbContext db, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(db);

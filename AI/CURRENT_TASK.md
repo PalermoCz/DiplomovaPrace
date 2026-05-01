@@ -1,50 +1,37 @@
 # CURRENT_TASK.md
 
 ## Goal
-Clean up the local project file clutter safely without losing the currently restored working schematic or the restored CSV-backed data bindings.
+Implement the next users/auth milestone properly:
+- premium topbar account area UX
+- invite-by-email access flow
+- set-password / account-activation flow
+- change password for signed-in users
+- role policy guard: Admin cannot invite or promote Owner
 
-## Problem
-The richer schematic and bindings are now working again, but the repository/project folder is cluttered with many temporary forensic, recovery, export, and backup files.
+## Product direction
+The current members feature is no longer enough.
 
-We must clean up the mess safely.
+We now want a real and simple collaboration flow that behaves like a normal web app:
 
-Critical rule:
-The currently working schematic and restored data bindings must NOT be lost again.
+1. Facility members can be managed from the Members panel.
+2. If the typed email belongs to an existing account:
+   - attach that account to the active facility with the selected role.
+3. If the typed email does NOT belong to an existing account:
+   - create the account
+   - send a real invite email
+   - the invited user should open a link and set their own password
+   - no plaintext or pre-generated password should be emailed
 
-## Current known working runtime core
-Treat these as critical runtime assets unless proven otherwise:
-- `DiplomovaPrace/metering.db`
-- `DiplomovaPrace/facility-editor-state.json`
-- `DiplomovaPrace/App_Data/facility-imports/`
+This should behave like a real invite/access flow, not only "attach an already registered user".
 
-These must be preserved.
+## Why this direction
+ASP.NET Core Identity already supports:
+- users
+- passwords
+- confirmation/reset tokens
+- email confirmation / recovery style flows
 
-## Likely cleanup candidates
-Examples currently visible in the repo/project folder:
-- helper scripts:
-  - `add_membership.py`
-  - `check_db.py`
-  - `check_git_db.py`
-  - `check_null_types.py`
-  - `check_users.py`
-  - `get_user.py`
-  - `reconstruct_added_nodes.py`
-  - `validate_added.py`
-- export/temp forensic files:
-  - `combined_db_export.json`
-  - `ddrive_combined_db_export.json`
-  - `db_export/...`
-  - `db_export/ddrive_temp_db/...`
-- safety backups / restore snapshots:
-  - `facility-editor-state.pre-binding-fix.json`
-  - `facility-editor-state.pre-importedBindings-restore.json`
-  - `facility-editor-state.pre-restore-20260501.json`
-  - `metering.db.backup-pre-ddrive-restore`
-
-## Desired direction
-Do a safe cleanup only.
-Do NOT implement new features.
-Do NOT touch graph logic or auth logic unless required for cleanup safety.
+We should use token-based account setup instead of sending a generated password by email.
 
 ## Scope
 Implementation only.
@@ -55,44 +42,108 @@ Read first:
 - AI/WORKLOG.md
 
 Then inspect at minimum:
-- current repo/project file tree
-- current runtime file paths actually used by the app
-- current working DB/editor-state/imports state
+- current authentication service and login/register flows
+- current members panel flow
+- current topbar implementation
+- current membership service/model
+- current startup/auth configuration
+- any existing email sender abstractions or placeholders
+- any current account management/profile surfaces
 
 ## Required work
-1. First create a **golden snapshot** of the currently working runtime state in a safe archive location.
-   At minimum snapshot:
-   - `DiplomovaPrace/metering.db`
-   - `DiplomovaPrace/facility-editor-state.json`
-   - `DiplomovaPrace/App_Data/facility-imports/`
-2. Then classify current clutter into:
-   - KEEP
-   - ARCHIVE
-   - DELETE
-3. Perform cleanup safely:
-   - preserve critical runtime files
-   - move useful recovery artifacts to an archive folder if they may still be valuable
-   - delete only clearly temporary/helper/export clutter
-4. Do NOT delete the recovered working graph/data state.
-5. After cleanup, verify runtime:
-   - app starts
-   - login still works
-   - facility schematic still renders
-   - bindings/data still appear on nodes
+
+### A. Topbar redesign
+Make the right side of the topbar feel premium and visually aligned with the quality of:
+- the app title
+- the Active Facility selector
+
+Requirements:
+1. Members stays as a separate action for Owner/Admin.
+2. Email + sign-out must no longer look like three random panels.
+3. Redesign the account area into a single cohesive account control/menu.
+4. It should feel visually premium and consistent with the rest of the topbar.
+5. Keep all user-facing text English only.
+
+### B. Invite-by-email flow
+Replace the current "existing user only" semantics with real invite/access semantics.
+
+Required behavior:
+1. Owner/Admin enters email + target role in Members panel.
+2. If the email belongs to an existing account:
+   - add membership for the active facility if not already present
+3. If the email does NOT belong to an existing account:
+   - create the account
+   - generate a secure token-based setup flow
+   - send a real email with a link that allows the user to set their own password
+4. Do NOT send plaintext or pre-generated passwords by email.
+5. Keep clear validation for:
+   - invalid email format
+   - already a member
+6. For invalid email format, show only the single lower error message (do not show duplicate inline + lower message).
+
+### C. Account activation / set-password flow
+Implement the invited-user onboarding path.
+
+Requirements:
+1. Add a page/flow for invited users to set their password from the emailed link.
+2. Use a proper Identity-style token flow.
+3. If needed, combine with email confirmation logic.
+4. Keep the flow small and practical; do not over-engineer invitation lifecycle yet.
+
+### D. Change password
+Add a simple change-password feature for signed-in users.
+
+Requirements:
+1. Signed-in users must be able to change their password.
+2. Prefer placing this under the account area/menu.
+3. Require current password + new password + confirmation.
+4. Keep the flow simple and clear.
+
+### E. Role policy rules
+Enforce role-creation/promotion restrictions.
+
+Required policy:
+1. Owner can invite / assign / promote:
+   - Owner
+   - Admin
+   - Viewer
+2. Admin can invite / assign / promote only:
+   - Admin
+   - Viewer
+3. Admin must NOT be able to:
+   - invite Owner
+   - promote anyone to Owner
+4. Apply this both:
+   - in UI
+   - and in backend/service validation
+5. Keep last-owner protection intact.
+6. Keep self-lockout protection intact.
+
+### F. Email sending implementation
+Implement a real outgoing email path suitable for this app milestone.
+
+Requirements:
+1. Use a proper email sender abstraction/service.
+2. Prefer a real email provider approach compatible with ASP.NET Core Identity practices.
+3. Avoid fragile ad-hoc SMTP-only design unless absolutely required.
+4. Keep secrets/config outside source code.
+5. If real sending cannot be completed fully in the current environment, implement the flow cleanly and document the exact remaining configuration step.
 
 ## Do NOT change
-- Do not alter the currently restored graph content
-- Do not alter imported binding behavior unless required for cleanup safety
-- Do not start a new feature milestone
-- Do not delete D-drive source artifacts blindly if they might still be the only provenance backup
+- Do not touch schematic graph restore
+- Do not touch bindings/import logic
+- Do not redesign graph/workbench architecture
+- Do not broaden into a full enterprise collaboration/invitation lifecycle
+- Do not weaken current role safeguards
 
 ## Constraints
-- Safety first
-- Snapshot first, cleanup second
-- Runtime verification required after cleanup
+- Keep the milestone practical and shippable
+- Build must pass
+- Runtime sanity check must pass
 - All user-facing text must remain English only
 
 ## Guardrails
-- If any file is uncertain, archive it instead of deleting it
-- Prefer moving uncertain artifacts to an archive folder over hard deletion
-- Report exactly what was kept, archived, and deleted
+- Use token-based password setup, not emailed plaintext passwords
+- Treat backend role restrictions as mandatory, not only UI hints
+- If any email infrastructure step cannot be completed automatically, leave the code clean and report the exact manual configuration needed
+- Update AI/WORKLOG.md after implementation
